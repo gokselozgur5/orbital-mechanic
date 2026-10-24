@@ -1,0 +1,78 @@
+{
+  "version": 1,
+  "configById": {
+    "Image!orbital1": {
+      "imageMode": {
+        "imageTopic": "/camera/image_raw",
+        "calibrationTopic": "/camera/camera_info",
+        "synchronize": false
+      }
+    },
+    "3D!orbital2": {
+      "topics": {
+        "/scan": {
+          "visible": true,
+          "pointSize": 3,
+          "cubeOutline": false,
+          "pointShape": "circle",
+          "colorMode": "flat",
+          "flatColor": "#50e3c2"
+        }
+      },
+      "cameraState": {
+        "distance": 8,
+        "perspective": false
+      },
+      "followTf": "base_link",
+      "fixedFrame": "odom"
+    },
+    "RawMessages!orbital3": {
+      "defaultExpanded": true,
+      "topicPath": "/motion/state"
+    },
+    "Plot!orbital4": {
+      "paths": [
+        {
+          "label": "Command linear (m/s)",
+          "value": "/motion/guarded_cmd_vel.linear.x"
+        },
+        {
+          "label": "Measured linear (m/s)",
+          "value": "/odom.twist.twist.linear.x"
+        },
+        {
+          "label": "Command angular (rad/s)",
+          "value": "/motion/guarded_cmd_vel.angular.z"
+        },
+        {
+          "label": "Measured angular (rad/s)",
+          "value": "/odom.twist.twist.angular.z"
+        }
+      ],
+      "showLegend": true,
+      "followingViewWidth": 20
+    }
+  },
+  "layout": {
+    "direction": "row",
+    "first": {
+      "direction": "column",
+      "first": "Image!orbital1",
+      "second": "3D!orbital2",
+      "splitPercentage": 50.0
+    },
+    "second": {
+      "direction": "column",
+      "first": "RawMessages!orbital3",
+      "second": "Plot!orbital4",
+      "splitPercentage": 50.0
+    },
+    "splitPercentage": 50.0
+  },
+  "globalVariables": {},
+  "userNodes": {},
+  "linkedGlobalVariables": [],
+  "playbackConfig": {
+    "speed": 1
+  }
+}

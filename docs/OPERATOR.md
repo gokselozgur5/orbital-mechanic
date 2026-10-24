@@ -30,3 +30,11 @@ Earlier test attempts failed before adequate diagnosis was captured: one did not
 ## Discovery and cancellation follow-up
 
 A final integration trial returned success for a reverse jog with zero displacement. The client previously started its short publishing deadline before request-subscriber discovery completed. It now waits for discovery and verifies guard acknowledgment. Final four-direction acceptance measured0.0841m forward/reverse and checked actual turn direction. All four cancellation signals stopped via the independent command watchdog: SIGKILL0.4040s/0.0449m, SIGINT0.4117s/0.0478m, SIGTERM0.3770s/0.0401m, SIGHUP0.3729s/0.0449m. The client filename is `orbital-operator.py` to avoid shadowing Python's standard `operator` module; the old filename caused a reproduced CI import failure.
+
+## Combined Foxglove view
+
+Import `config/foxglove-operator.json` from the desktop Layout menu → Import from file. It contains an Image panel for `/camera/image_raw`, a 3D lidar view in `odom` following `base_link`, a raw `/motion/state` view, and commanded/measured linear/angular velocity plots. It contains no publish or direct-drive controls; use the guarded CLI for motion.
+
+The file uses native desktop `configById` and mosaic `layout` data, not the SDK's notebook `content` tree. The first notebook-format attempt was rejected as incompatible; the generator now converts to native version1 and maps public `ThreeDee` to internal `3D`. Native importer shape/version and all four panel references were checked against the installed desktop app; user-rendered acceptance is still pending.
+
+To regenerate, use an isolated development environment with `foxglove-sdk==0.30.2`, then run `python scripts/generate-foxglove-layout.py`. The simulator does not require that SDK. Foxglove UI manipulation is currently handled by the user; do not automate its clicks or keyboard input without renewed authorization.
