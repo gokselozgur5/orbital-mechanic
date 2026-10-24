@@ -52,6 +52,12 @@ The source now separates planar `base_footprint` from the elevated `base_link`, 
 
 **This correction is not deployed into the running world yet.** Thor remains on the previous geometry while the user examines Foxglove. Only the read-only `scripts/check-frames.py` was transferred: it correctly exited 1 on the old frame tree while confirming fresh odometry and the expected publisher-node graph. After coordinated deployment/restart, run it plus the existing motion/operator/fault/sensor checks before claiming live acceptance. Its publisher-node and observed-parent checks do not prove per-message TF ownership; this installed Jazzy callback metadata lacks publisher GIDs.
 
+## Offline target lifecycle policy
+
+`orbital/navigation.py` now provides run/epoch/sequence target identity, named-target allowlisting, explicit stationary arm, 0.5-second advancing-health freshness and cancellation-terminal interlocks. Seven new unit cases cover reset/loss/replay and stale-result behavior; all 34 local unit tests pass. See [NAVIGATION_POLICY.md](NAVIGATION_POLICY.md).
+
+This is not connected to ROS/Nav2 and emits no commands. Actual health validation, action/cancel races, target deadlines, measured arrivals and live failure acceptance remain required. It does not change the current simulation.
+
 ## Runtime ownership and boundaries
 
 Thor root: `/home/jensen/.goske/codex/orbital-mechanic`. Perform operational work inside `tmux orbital-work`; use `scripts/launch-thor.sh` and `scripts/stop-thor.sh` to manage transient user service `orbital-demo`. There is no boot-start configuration. Source `scripts/ros-env.sh` for ROS tools.
