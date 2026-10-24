@@ -23,7 +23,8 @@ children=()
 cleanup() {
   trap - EXIT INT TERM
   for pid in "${children[@]}"; do kill -- -"$pid" 2>/dev/null || true; done
-  sleep 2
+  # Bound local grace; systemd owns and terminates detached descendants.
+  sleep .2
   for pid in "${children[@]}"; do kill -KILL -- -"$pid" 2>/dev/null || true; done
   wait || true
 }

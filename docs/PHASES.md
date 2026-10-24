@@ -26,7 +26,7 @@ Thor runs ROS 2 Jazzy and Gazebo Harmonic; the Mac views Gazebo through local no
 5. Link commit and evidence to the issue; close it only when all criteria are verified.
 6. Review the entire phase gate before closing the milestone. Future phase prototypes do not imply their phase is complete.
 
-The current motion policy is an early tested prototype. Uncommitted ROS motion integration is not deployed and must satisfy Phase 1 issues before acceptance. Existing machine-model code similarly contributes to Phase 3 without completing it.
+The motion policy and ROS integration are implemented; STATUS.md records the acceptance evidence and remaining Phase 1 gates. Existing machine-model code contributes to Phase 3 without completing it.
 
 ## Scope control
 

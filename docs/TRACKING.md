@@ -39,4 +39,4 @@ Created 2026-10-24. GitHub is the authority for current open/closed state; this 
 
 Phase 0 scope and setup are accepted based on the user-approved baseline, docs/EVIDENCE.md, confirmed Mac Gazebo/Foxglove viewing and this dependency-ordered backlog. Its acceptance issue and milestone are closed after publishing these documents.
 
-Policy review #2 is complete. ROS integration #3 passed its Thor deployment and motion checks; evidence is in STATUS.md and MOTION.md. Next: #4 (failure acceptance), then #5 (operator controls). Do not report Phase 1 as complete until both gates pass.
+Policy review #2 is complete. ROS integration #3 passed its Thor deployment and motion checks; evidence is in STATUS.md and MOTION.md. Failure acceptance #4 passed; detailed results are in MOTION_EVIDENCE.md. Next: #5 (operator controls). Do not report Phase 1 as complete until the operator gate passes.
