@@ -32,6 +32,8 @@ trap 'result=$?; if (( result != 0 )); then bash scripts/stop-thor.sh || true; f
 /usr/bin/python3 -m unittest discover -s tests -v > "$report/unit.log" 2>&1
 fresh_world
 timeout 20 /usr/bin/python3 scripts/check-frames.py > "$report/frames-before.json"
+timeout 45 /usr/bin/python3 scripts/check-body-stability.py > "$report/body-stability.json"
+fresh_world
 timeout 45 /usr/bin/python3 scripts/check-motion.py > "$report/motion.json"
 fresh_world
 timeout 160 /usr/bin/python3 scripts/check-operator.py > "$report/operator.json"

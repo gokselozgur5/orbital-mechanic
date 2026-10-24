@@ -10,7 +10,7 @@ The original accepted baseline was motion code `c63e9cd` (archive `eedc3fd`) and
 
 The user handles Foxglove clicks, keyboard input and layout import. Do not automate that UI without renewed authorization. Avoid restarting the simulator while the user is inspecting it without coordinating. Read-only probes and offline preparation can continue.
 
-Next: complete Phase 2 known-map localization and guarded navigation. The six milestones and 15 issues are indexed in [TRACKING.md](TRACKING.md); [PHASES.md](PHASES.md) defines acceptance.
+Next: complete Phase 2 known-map localization and guarded navigation. Localization commissioning exposed and isolated a physical tipping defect; the corrected body and bounded acceleration passed the full runtime regression described below. The six milestones and 15 issues are indexed in [TRACKING.md](TRACKING.md); [PHASES.md](PHASES.md) defines acceptance.
 
 ## Installed and running baseline
 
@@ -24,7 +24,7 @@ Next: complete Phase 2 known-map localization and guarded navigation. The six mi
 
 The guard accepts bounded stamped `/motion/request` commands. Startup, stop, timeout and invalid feedback latch motion off; explicit re-arm requires fresh stationary feedback. Old commands cannot restart motion. This is a trusted local-process safety boundary, not authentication or collision avoidance.
 
-Eight live motion checks passed. Final operator acceptance measured approximately 0.0841 m forward and reverse, verified both turn directions, and required subscriber discovery plus guard acknowledgment before reporting successful command delivery. SIGKILL/SIGINT/SIGTERM/SIGHUP cancellation stopped through the independent watchdog in 0.373–0.412 s and 0.040–0.048 m in that run.
+Eight live motion checks passed. The earlier operator baseline measured approximately 0.0841 m forward and reverse, verified both turn directions, and required subscriber discovery plus guard acknowledgment before reporting successful command delivery. SIGKILL/SIGINT/SIGTERM/SIGHUP cancellation stopped through the independent watchdog in 0.373–0.412 s and 0.040–0.048 m in that run.
 
 Pause/resume and world reset did not resume old motion. In the final combined fault run, killing the guard removed all 14 sampled demo processes in 0.223 s; clean restart was latched and stationary. The service cgroup owns detached Gazebo descendants, and bounded cleanup fixes were verified. These measured simulation cases are not universal stopping-distance guarantees.
 
@@ -42,7 +42,7 @@ The final combined run received 97 images in 20 seconds with approximately 50 ms
 
 All 24 unit tests pass on Mac and Thor, including six map cases. Repeated local generation is identical; Thor generated the same PGM SHA-256 `d08588af2b1186992411e32dbf1d703e47ea45d183666de13c04a84cbe9c5000`. The offline job exited 0 with the existing demo still active; it did not restart the world. Map and navigation-contract commits passed GitHub CI.
 
-See [NAVIGATION.md](NAVIGATION.md). AMCL convergence, measured TF geometry/ownership, localization loss/reset behavior, obstacle-aware routes and actual arrival at machines remain unimplemented or unverified. No autonomous navigation is claimed.
+See [NAVIGATION.md](NAVIGATION.md). AMCL convergence from a deliberately offset seed, stronger TF ownership evidence, localization loss/reset behavior, obstacle-aware routes and actual arrival at machines remain unverified. The frame-height correction itself is live-accepted below. No autonomous navigation is claimed.
 
 ## Frame geometry correction — live acceptance passed
 
@@ -53,6 +53,16 @@ The source now separates planar `base_footprint` from the elevated `base_link`, 
 Thor job `frame-runtime-acceptance-2` exited 0. Its source manifest matches the local frame, guard, launcher and runner files. All 36 unit tests passed on Thor; before/after live frame checks confirmed body/camera/lidar/wheel heights with zero positional error at the reported precision. Eight motion cases and four-direction/four-signal operator checks passed. Cancellation stops were 0.401–0.405 s and 0.041–0.045 m; independent forward/reverse timeout cases stopped in 0.051/0.058 m. Pause/reset stayed stopped, guard death removed 14 processes in 1.238 s, and a clean restart was latched.
 
 The final sensor probe passed with 95 images in 20 seconds and 87.6 ms final image receive age. The first packaged attempt exposed a transient-unit collection race after its initial frame/motion checks; `8ebdfb8` fixes it with a reproduced regression. Reports remain in Thor `runtime/phase-one-20261024T135645Z` and local private review artifacts. `check-frames.py` verifies advancing odometry and expected geometry/parents/publisher nodes; it does not prove per-message TF ownership because this installed Jazzy metadata lacks publisher GIDs.
+
+## Physical stability correction — runtime regression passed
+
+Localization commissioning revealed a failure missed by planar wheel-odometry checks: after movement the physical body pitched forward by 0.522876 rad (about 30 degrees). Gazebo model pose and 42 IMU samples independently agreed. Lidar then saw the floor in front and empty space behind; its planar-map residual was about 1.84 m mean absolute error. A deliberately offset AMCL seed failed the unchanged 0.10 m accuracy bound at 0.109 m and 0.163 m. The earlier 8 mm result from a correct origin seed was not adequate convergence evidence.
+
+The old combined center of mass was only 1.98 mm inside the wheel-axle edge of the support triangle. The body inertial origin now lies 0.08 m rearward, leaving about 65 mm minimum static support margin. DiffDrive acceleration is bounded to ±0.4 m/s² linear and ±0.8 rad/s² angular. Geometry and sensor mounts remain the same. A source regression fails for the old mass distribution; 37 local unit tests pass for the correction.
+
+Thor job `body-stability-acceptance` exited 0 with the corrected SDF. Four-direction IMU stability passed with 253 samples, followed by all motion/operator/failure/frame/sensor checks. Timeout stops at ±0.15 m/s took 0.685/0.723 s and 0.078/0.085 m; limits remain 1.2 s and 0.12 m. Four client-disconnect cases stopped in 0.622–0.686 s and 0.056–0.065 m. Pause/resume stayed stopped after 0.0217 m travel; reset did not resume; guard death removed 14 processes in 1.240 s. The final camera probe received 101 frames in 20 s, final receive age 10.3 ms, with all sensors fresh.
+
+These stopping times supersede the earlier instantaneous-drive measurements for the corrected model. The IMU regression rejects >0.05 rad roll/pitch and stops on failure; it is a commissioning test, not a continuous tilt interlock. Planar odometry alone cannot establish chassis stability. Raw report and source manifest: Thor `runtime/phase-one-20261024T141235Z`, local private review `body-acceptance.json`. The extended eight-case body probe also passed at operator speeds and guard maxima (±0.2 m/s, ±0.5 rad/s), with 461 advancing IMU samples and measured displacement/turn direction. Its peak pitch was below 0.000001 rad in this idealized simulation. Corrected-body AMCL commissioning remains in progress; no autonomous navigation is claimed.
 
 ## Offline target lifecycle policy
 
