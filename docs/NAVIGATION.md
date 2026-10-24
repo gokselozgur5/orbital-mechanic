@@ -1,6 +1,6 @@
 # Known-map navigation contract — preparation
 
-This is the Phase 2 design contract for issues #6/#7. It is not a claim that localization or navigation is running. Phase 1's rendered operator-view acceptance remains open. No live navigation deployment is performed by this document.
+This is the Phase 2 design contract for issues #6/#7. It is not a claim that localization or navigation is running. Phase 1's rendered operator-view acceptance is complete for the tested baseline; the subsequent frame correction still needs live regression checks. No live navigation deployment is performed by this document.
 
 ## Map and coordinates
 
@@ -47,7 +47,7 @@ Issue #6: generated map identity and geometry checks; exactly one owner per TF e
 
 Local acceptance: all 24 unit tests pass, including six map cases covering reference obstacles/free space, pixel/world coordinates, PGM vertical orientation, inflated reachability to the three goals, narrow-corridor rejection and explicit rejection of unsupported rotated/non-box static geometry. Two generations produced identical metadata and map bytes. Current grid: 210 × 170 cells at 0.05 m; PGM SHA-256 `d08588af2b1186992411e32dbf1d703e47ea45d183666de13c04a84cbe9c5000`.
 
-This only prepares part of issue #6. AMCL, measured TF geometry/timestamps, initial-pose/reset acceptance and all live navigation tests remain outstanding. The prototype does not bypass the Phase 1 viewer gate.
+This only prepares part of issue #6. AMCL, measured TF geometry/timestamps, initial-pose/reset acceptance and all live navigation tests remain outstanding. Offline reachability is not live navigation acceptance.
 
 ## Frame regression and live check
 
