@@ -17,6 +17,7 @@ subs = []
 def callback(topic, msg):
     row = results.setdefault(topic, {'count': 0})
     row['count'] += 1
+    row['_last_wall'] = time.monotonic()
     if hasattr(msg, 'header'):
         row['frame_id'] = msg.header.frame_id
         stamp = msg.header.stamp.sec + msg.header.stamp.nanosec / 1e9
@@ -37,15 +38,21 @@ def callback(topic, msg):
 spec = {'/camera/image_raw': Image, '/camera/camera_info': CameraInfo, '/scan': LaserScan, '/imu': Imu, '/odom': Odometry, '/joint_states': JointState, '/clock': Clock, '/tf': TFMessage, '/tf_static': TFMessage}
 for topic, kind in spec.items():
     qos = QoSProfile(depth=1, durability=DurabilityPolicy.TRANSIENT_LOCAL, reliability=ReliabilityPolicy.RELIABLE) if topic == '/tf_static' else qos_profile_sensor_data
+    # Large raw images need reliable delivery on this local DDS transport.
+    if topic == '/camera/image_raw': qos = QoSProfile(depth=1, reliability=ReliabilityPolicy.RELIABLE)
     subs.append(node.create_subscription(kind, topic, lambda msg, t=topic: callback(t,msg), qos))
 start = time.monotonic()
 while time.monotonic() - start < 20:
     rclpy.spin_once(node, timeout_sec=.2)
+end = time.monotonic()
+for row in results.values(): row['last_receive_age_s'] = end - row.pop('_last_wall')
 missing = sorted(set(spec) - set(results))
 image = results.get('/camera/image_raw', {})
 scan = results.get('/scan', {})
 valid = (not missing and all(row['count'] > 1 for topic, row in results.items() if topic != '/tf_static')
          and all(row.get('stamp_regressions', 0) == 0 for row in results.values())
+         and all(row['last_receive_age_s'] < 1.0 for topic, row in results.items() if topic != '/tf_static')
+         and 0 <= results.get('/clock', {}).get('sim_s', 0) - image.get('stamp_s', 0) < 1.0
          and image.get('bytes', 0) > 0 and image.get('width') == 640
          and image.get('height') == 480 and scan.get('finite_samples', 0) > 0
          and image.get('stamp_s', 0) > image.get('first_stamp_s', 0)
