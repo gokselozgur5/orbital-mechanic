@@ -3,14 +3,15 @@ import json
 import time
 from rclpy.clock import Clock, ClockType
 from rclpy.node import Node
+from rclpy.parameter import Parameter
 from std_msgs.msg import String
 from std_srvs.srv import Trigger
 from orbital.health_lease import HealthLease
 
 
 class HealthInterlock(Node):
-    def __init__(self):
-        super().__init__('orbital_health_interlock')
+    def __init__(self, *, name='orbital_health_interlock', use_sim_time=False):
+        super().__init__(name,parameter_overrides=[Parameter('use_sim_time',value=use_sim_time)])
         self.lease=HealthLease()
         self.stop_client=self.create_client(Trigger,'/motion/stop')
         self.health_sub=self.create_subscription(String,'/navigation/health',self.on_health,10)
