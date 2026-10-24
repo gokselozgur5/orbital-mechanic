@@ -32,6 +32,13 @@ class MotionTests(unittest.TestCase):
         self.assertEqual(g.reason,'command_timeout')
         self.assertFalse(g.command(.1,0,10.2,1.46))
 
+    def test_late_command_cannot_hide_timeout_when_timer_callback_is_delayed(self):
+        g = self.armed(); g.command(.1,0,10.1,1.1)
+        g.feedback(.1,0,10.5,1.5)
+        self.assertFalse(g.command(.1,0,10.5,1.5))
+        self.assertEqual(g.reason,'command_timeout')
+        self.assertEqual(g.output(1.5),(0,0))
+
     def test_stop_then_reset_does_not_replay_old_velocity(self):
         g = self.armed(); g.command(.1,0,10.1,1.1); g.stop()
         self.assertEqual(g.output(1.11),(0,0))
