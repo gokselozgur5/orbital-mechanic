@@ -6,11 +6,11 @@ Updated: 2026-10-24
 
 Phases 0 and 1 are accepted. Phase 1 motion policy, guarded ROS integration, bounded operator CLI, failure stopping and the combined Foxglove view now have acceptance evidence. On 2026-10-24 the user imported `foxglove-operator-desktop` and confirmed all four panels were visible. Independent read-only capture showed the robot camera, lidar points, stop reason and four commanded/measured velocity series; topic counters were advancing.
 
-This accepts the tested pre-frame-correction baseline: runtime motion code `c63e9cd` (source archive `eedc3fd`) and desktop layout `7fdf49c`. Frame correction `5378dac` is source-tested but still awaits coordinated deployment and renewed runtime checks. Phase acceptance does not certify an untested later runtime change.
+The original accepted baseline was motion code `c63e9cd` (archive `eedc3fd`) and desktop layout `7fdf49c`. Frame correction `5378dac` is now also live-accepted: the complete packaged run passed after the transient-unit race fix `8ebdfb8`; exact evidence and source hashes are recorded below.
 
 The user handles Foxglove clicks, keyboard input and layout import. Do not automate that UI without renewed authorization. Avoid restarting the simulator while the user is inspecting it without coordinating. Read-only probes and offline preparation can continue.
 
-Next: deploy and verify the frame correction when the user has finished viewing, then complete Phase 2 localization and guarded navigation. The six milestones and 15 issues are indexed in [TRACKING.md](TRACKING.md); [PHASES.md](PHASES.md) defines acceptance.
+Next: complete Phase 2 known-map localization and guarded navigation. The six milestones and 15 issues are indexed in [TRACKING.md](TRACKING.md); [PHASES.md](PHASES.md) defines acceptance.
 
 ## Installed and running baseline
 
@@ -28,7 +28,7 @@ Eight live motion checks passed. Final operator acceptance measured approximatel
 
 Pause/resume and world reset did not resume old motion. In the final combined fault run, killing the guard removed all 14 sampled demo processes in 0.223 s; clean restart was latched and stationary. The service cgroup owns detached Gazebo descendants, and bounded cleanup fixes were verified. These measured simulation cases are not universal stopping-distance guarantees.
 
-See [MOTION.md](MOTION.md), [MOTION_EVIDENCE.md](MOTION_EVIDENCE.md) and [OPERATOR.md](OPERATOR.md) for interfaces, limits and earlier failures. The local `scripts/check-phase-one.sh` convenience runner is an uncommitted draft and has not been executed end-to-end; the individual acceptance scripts have been run. That draft is not an additional phase gate.
+See [MOTION.md](MOTION.md), [MOTION_EVIDENCE.md](MOTION_EVIDENCE.md) and [OPERATOR.md](OPERATOR.md) for interfaces, limits and earlier failures. `scripts/check-phase-one.sh` now reproduces the full acceptance sequence and passed end-to-end on Thor, including frame checks before and after failure injection. It leaves a fresh latched world on success and stops the demo on failure.
 
 ## Camera freshness
 
@@ -44,13 +44,15 @@ All 24 unit tests pass on Mac and Thor, including six map cases. Repeated local 
 
 See [NAVIGATION.md](NAVIGATION.md). AMCL convergence, measured TF geometry/ownership, localization loss/reset behavior, obstacle-aware routes and actual arrival at machines remain unimplemented or unverified. No autonomous navigation is claimed.
 
-## Frame geometry correction — live acceptance pending
+## Frame geometry correction — live acceptance passed
 
 Read-only inspection found a 0.22 m vertical mismatch: live `odom→base_link` had z=0, while Gazebo reported the settled model near z=0 and its body at model-relative z=0.22. Consequently the ROS lidar/camera mount heights were 0.16/0.12 m instead of the model's nominal 0.38/0.34 m. Matching topic frame names did not establish matching physical geometry.
 
 The source now separates planar `base_footprint` from the elevated `base_link`, adds the fixed 0.22 m body transform and adjusts the guard's expected odometry child. Velocity requests remain in `base_link`; the frames have the same planar axes and differ only in height. Three cross-model regressions failed before this change; all 27 local unit tests pass afterward.
 
-**This correction is not deployed into the running world yet.** Thor remains on the previous geometry while the user examines Foxglove. Only the read-only `scripts/check-frames.py` was transferred: it correctly exited 1 on the old frame tree while confirming fresh odometry and the expected publisher-node graph. After coordinated deployment/restart, run it plus the existing motion/operator/fault/sensor checks before claiming live acceptance. Its publisher-node and observed-parent checks do not prove per-message TF ownership; this installed Jazzy callback metadata lacks publisher GIDs.
+Thor job `frame-runtime-acceptance-2` exited 0. Its source manifest matches the local frame, guard, launcher and runner files. All 36 unit tests passed on Thor; before/after live frame checks confirmed body/camera/lidar/wheel heights with zero positional error at the reported precision. Eight motion cases and four-direction/four-signal operator checks passed. Cancellation stops were 0.401–0.405 s and 0.041–0.045 m; independent forward/reverse timeout cases stopped in 0.051/0.058 m. Pause/reset stayed stopped, guard death removed 14 processes in 1.238 s, and a clean restart was latched.
+
+The final sensor probe passed with 95 images in 20 seconds and 87.6 ms final image receive age. The first packaged attempt exposed a transient-unit collection race after its initial frame/motion checks; `8ebdfb8` fixes it with a reproduced regression. Reports remain in Thor `runtime/phase-one-20261024T135645Z` and local private review artifacts. `check-frames.py` verifies advancing odometry and expected geometry/parents/publisher nodes; it does not prove per-message TF ownership because this installed Jazzy metadata lacks publisher GIDs.
 
 ## Offline target lifecycle policy
 
