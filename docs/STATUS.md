@@ -30,15 +30,11 @@ Anthropic is the selected future planner provider based on user-reported USD200 
 
 Use standard ROS control/navigation for motion, a restricted planner gateway, and independent evaluation. The current passive demo uses Gazebo's differential-drive plugin; the installed ros2_control/Nav2 packages are not yet integrated into autonomous motion.
 
-## Next work
+## Phase status and next work
 
-1. Refine the Foxglove layout (camera, lidar and machine telemetry); camera/TF client subscription is verified, but detailed panel usability has not been independently inspected.
-2. Add a command watchdog, latched stop and bounded manual-motion test before bridging motor commands.
-3. Add known-map navigation and trusted proximity checks.
-4. Connect the existing machine model to robot inspections/actions and the independent evaluator.
-5. Complete scripted missions before enabling Anthropic tool planning.
+Phase 0 design/setup is accepted: the user approved the baseline and phase-tracking proposal, sensor/lifecycle evidence is recorded, and Mac Gazebo/Foxglove opening is confirmed. The six milestones and 15 dependency-ordered issues are indexed in [TRACKING.md](TRACKING.md). [PHASES.md](PHASES.md) supersedes the earlier exploratory M-numbered ordering.
 
-No robot arm, physical repair, visual diagnosis, SLAM or LLM-controlled mission is claimed. M0 installation, simulation/transport and client opening are evidenced; detailed panel layout remains a usability follow-up. M1 control and M2 integration remain open.
+Next: Phase 1 issue #2 reviews the tested motion policy, #3 integrates ROS control, #4 verifies failure behavior and #5 provides operator controls. Early policy code exists; the ROS motion adapter/bridge/harness remain uncommitted and undeployed drafts. No navigation, integrated repair, robot arm, visual diagnosis, SLAM or LLM-controlled mission is claimed.
 
 ## Mac Gazebo viewer fix
 

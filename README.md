@@ -69,6 +69,9 @@ Include a healthy scenario and an unrecoverable fault so success cannot mean bli
 
 ## Design documents
 
+- [Agreed phases](docs/PHASES.md)
+- [GitHub phase and issue tracking](docs/TRACKING.md)
+
 - [Hardware/software requirements](docs/REQUIREMENTS.md)
 - [Operations and Mac viewing](docs/OPERATIONS.md)
 - [Architecture and component ownership](docs/ARCHITECTURE.md)
