@@ -78,10 +78,17 @@ class Operator(Node):
 
     def jog(self, direction, duration):
         self.ready()
+        discovery_start=time.monotonic()
+        while self.publisher.get_subscription_count()==0:
+            if time.monotonic()-discovery_start>5: raise RuntimeError('Guard request subscriber unavailable')
+            self.spin(.05)
+        publisher_wait=time.monotonic()-discovery_start
+        self.fresh()
         if self.state['latched']: raise RuntimeError('Stopped: run arm explicitly before jog')
         linear,angular={'forward':(.12,0.),'reverse':(-.12,0.),
                         'left':(0.,.3),'right':(0.,-.3)}[direction]
         end=time.monotonic()+duration
+        acknowledged=False
         try:
             while time.monotonic()<end:
                 self.fresh()
@@ -91,10 +98,13 @@ class Operator(Node):
                 msg.twist.linear.x=linear;msg.twist.angular.z=angular
                 self.publisher.publish(msg)
                 self.spin(min(.05,max(0,end-time.monotonic())))
+                acknowledged |= (self.state['reason']=='command_active'
+                    and self.state['linear_mps']==linear and self.state['angular_rps']==angular)
+            if not acknowledged: raise RuntimeError('Guard never acknowledged this jog')
         finally:
             if rclpy.ok(): self.call(self.stop_client)
         self.spin(.3)
-        return self.report()
+        return {**self.report(),'publisher_discovery_wait_s':publisher_wait,'command_acknowledged':acknowledged}
 
 
 def main():
