@@ -116,13 +116,18 @@ class Probe(Node):
             self.results.append({'case':name,'passed':True})
 
 
-rclpy.init()
-p=Probe()
-try:
-    p.run()
-    print(json.dumps({'passed':True,'checks':p.results},indent=2))
-finally:
-    try: p.call(p.stop_client)
+def main():
+    rclpy.init()
+    p=Probe()
+    try:
+        p.run()
+        print(json.dumps({'passed':True,'checks':p.results},indent=2))
     finally:
-        p.destroy_node()
-        rclpy.shutdown()
+        try: p.call(p.stop_client)
+        finally:
+            p.destroy_node()
+            rclpy.shutdown()
+
+
+if __name__ == "__main__":
+    main()

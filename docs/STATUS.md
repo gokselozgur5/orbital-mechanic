@@ -34,7 +34,7 @@ Use standard ROS control/navigation for motion, a restricted planner gateway, an
 
 Phase 0 design/setup is accepted: the user approved the baseline and phase-tracking proposal, sensor/lifecycle evidence is recorded, and Mac Gazebo/Foxglove opening is confirmed. The six milestones and 15 dependency-ordered issues are indexed in [TRACKING.md](TRACKING.md). [PHASES.md](PHASES.md) supersedes the earlier exploratory M-numbered ordering.
 
-Next: Phase 1 issue #4 verifies failure behavior, then #5 provides operator controls. Policy review #2 is complete. The guarded ROS adapter/bridge is deployed and its eight live acceptance cases pass; see MOTION.md. Failure injection and operator controls remain pending. No navigation, integrated repair, robot arm, visual diagnosis, SLAM or LLM-controlled mission is claimed.
+Next: Phase 1 issue #5 provides bounded operator controls and a usable motion view. Policy review #2 is complete. The guarded ROS adapter/bridge is deployed and its eight live acceptance cases pass; see MOTION.md. Failure injection now passes; operator controls remain pending. No navigation, integrated repair, robot arm, visual diagnosis, SLAM or LLM-controlled mission is claimed.
 
 ## Mac Gazebo viewer fix
 
@@ -42,4 +42,10 @@ User reported native Screen Sharing could not communicate with localhost. Verifi
 
 ## Guarded motion integration
 
-The Thor tmux `motion-integration-2` job passed 18 unit tests and eight live motion checks. Forward travel was 0.2233 m; the observed timeout latch arrived 0.3233 s after the drive loop returned (not a precise last-publish latency measurement). Reverse, rotation, explicit stop, blocked late commands and invalid input rejection passed. One server and one GUI remained. The robot was left latched stopped. See [MOTION.md](MOTION.md); process death, pause/reset and measured braking distances remain issue #4, not completed claims.
+The Thor tmux `motion-integration-2` job passed 18 unit tests and eight live motion checks. Forward travel was 0.2233 m; the observed timeout latch arrived 0.3233 s after the drive loop returned (not a precise last-publish latency measurement). Reverse, rotation, explicit stop, blocked late commands and invalid input rejection passed. One server and one GUI remained. The robot was left latched stopped. See [MOTION.md](MOTION.md); subsequent process-death, pause/reset and stopping measurements are recorded below.
+
+## Motion failure acceptance
+
+Two final fault runs passed after fixing long teardown and a transient-unit restart race. Final measured timeout stopping: forward 0.0562 m / 0.3805 s, reverse 0.0551 m / 0.3677 s. Pausing/resuming and world reset did not restart motion; guard SIGKILL terminated all 14 sampled demo processes in 0.3227 s. Fresh restart was latched/stationary; duplicate launch was rejected. Full evidence, limits, earlier failures and source identity checks: [MOTION_EVIDENCE.md](MOTION_EVIDENCE.md).
+
+Final 20-second sensor probe passed functionally, but camera delivery fell to 14 frames (~0.7 Hz); do not claim stable 5 Hz or unchanged camera performance. Lidar/odom/IMU remained about 10/20/20 Hz. Phase 1 stays open pending operator controls/view (#5).
