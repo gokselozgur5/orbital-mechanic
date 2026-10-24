@@ -61,6 +61,8 @@ class MotionGuard:
         return True
 
     def command(self, linear, angular, stamp, now):
+        # Enforce an expired deadline even if the periodic timer was delayed.
+        self.output(now)
         if self.latched:
             return False
         if not self._fresh(now):
