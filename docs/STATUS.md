@@ -12,9 +12,9 @@ Updated: 2026-10-24
 - Stop/restart test confirmed no Gazebo process or listener remained after stopping the service. The next launch had exactly one server and one GUI.
 - Eight ROS-free machine tests pass; scripted model baseline covers healthy, repaired latch and safely escalated jam.
 
-## Client limitation
+## Mac client status
 
-The existing Mac Foxglove Studio 1.84.0 crashes at startup, including with GPU acceleration disabled. Official Foxglove 3.4.2 was downloaded, its app signature verified, and installed separately under the local workspace. It opens successfully but requires account sign-in for the live view. No sign-in, subscription or upload was completed. User input is pending on account availability. macOS Screen Sharing was opened; the VNC transport and rendered desktop were independently verified.
+The existing Mac Foxglove Studio 1.84.0 crashes at startup, including with GPU acceleration disabled. Official Foxglove 3.4.2 was downloaded, its app signature verified, and installed separately under the local workspace. The user completed pairing and confirmed that Foxglove opened. Thor logs independently show the Mac client connected and subscribed to camera image/calibration and TF topics. No subscription purchase or data upload was initiated by the agent. macOS Screen Sharing was opened; the VNC transport and rendered desktop were independently verified.
 
 The optional bridge 0.8.5 overlay was built successfully for the old protocol. APT bridge 3.6.0 remains installed. Keep this distinction explicit; changing the bridge does not fix the old Mac application's startup crash.
 
@@ -32,10 +32,10 @@ Use standard ROS control/navigation for motion, a restricted planner gateway, an
 
 ## Next work
 
-1. Complete Foxglove client sign-in or choose an approved no-account viewer; verify camera/lidar panels.
+1. Refine the Foxglove layout (camera, lidar and machine telemetry); camera/TF client subscription is verified, but detailed panel usability has not been independently inspected.
 2. Add a command watchdog, latched stop and bounded manual-motion test before bridging motor commands.
 3. Add known-map navigation and trusted proximity checks.
 4. Connect the existing machine model to robot inspections/actions and the independent evaluator.
 5. Complete scripted missions before enabling Anthropic tool planning.
 
-No robot arm, physical repair, visual diagnosis, SLAM or LLM-controlled mission is claimed. M0 simulation/transport gates are evidenced; client GUI acceptance is pending. M1 control and M2 integration remain open.
+No robot arm, physical repair, visual diagnosis, SLAM or LLM-controlled mission is claimed. M0 installation, simulation/transport and client opening are evidenced; detailed panel layout remains a usability follow-up. M1 control and M2 integration remain open.
