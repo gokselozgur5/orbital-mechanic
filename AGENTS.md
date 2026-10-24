@@ -11,3 +11,5 @@ Keep hidden fault state out of planner observations. Enforce safety interlocks o
 Never commit credentials, private media, model weights, build outputs or recordings. Do not provision paid resources without authorization. Check staged files for secrets and unintended artifacts before publishing.
 
 Thor work belongs under `/home/jensen/.goske/codex/orbital-mechanic`; system packages use normal system paths. Use the user-service launcher so Gazebo descendants cannot survive stop/restart. Do not run a second world on the same Gazebo partition. Preserve the existing Mac Foxglove app; a newer client is installed separately under the local workspace. No Anthropic credential or paid call has been used.
+
+Follow docs/PHASES.md and docs/TRACKING.md. Use atomic commits: one coherent delivery with related tests; do not combine unrelated issues or create artificial commit counts. Thor operational commands run inside tmux orbital-work, while the simulator remains owned by its user-service cgroup. Do not deploy the existing motion integration drafts before their Phase 1 acceptance checks.
