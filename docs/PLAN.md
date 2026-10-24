@@ -1,6 +1,6 @@
 # Delivery strategy and implementation backlog
 
-Status: planning baseline, 2026-10-24. No runtime milestones completed.
+Status: planning baseline, 2026-10-24. M0 simulation and transport checks passed; Foxglove client sign-in/panel acceptance is pending. Passive M1 geometry/sensors and a model-only M2 prototype exist. Control, navigation and robot-to-machine integration remain open.
 
 ## Strategy
 
@@ -18,7 +18,7 @@ Build one observable vertical slice before broadening the robot. Prove machine c
 | M5 Demonstration | Held-out scenario suite, operator timeline and reproducible launch | Evaluation report with failures, costs, versions and limitations; clean-machine reproduction |
 | M6 Extensions | Arm, contact repair, richer perception, battery and multiple robots | Select one extension only after M5; each gets a separate acceptance contract |
 
-M0 is the next executable task. Do not install a full robotics stack or provision a cloud machine before selecting and checking the host.
+The user selected Thor and authorized installation; package and sensor smoke checks are now recorded in EVIDENCE.md. The next engineering task is guarded motion, while client sign-in remains a user dependency. No paid cloud machine is needed.
 
 ## Proposed evaluation gate
 

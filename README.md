@@ -2,7 +2,27 @@
 
 A simulated maintenance robot that investigates and repairs faults in a space station using ROS 2 and an LLM task planner.
 
-**Status: concept and project scaffold. No simulator or robot implementation exists yet.**
+**Status: working passive sensor demo on ARM64 Thor, plus a tested machine-model prototype. Autonomous navigation, physical maintenance and LLM control are not implemented yet.**
+
+## Run the current prototype
+
+On the configured Thor host:
+
+```bash
+cd /home/jensen/.goske/codex/orbital-mechanic
+bash scripts/launch-thor.sh
+```
+
+Stop with `bash scripts/stop-thor.sh`. The demonstration runs as a transient user service; it does not start at boot. See [operations](docs/OPERATIONS.md) for installation, Mac SSH forwarding, Foxglove compatibility and sensor verification.
+
+The world contains a wheeled robot, three machine props, camera, lidar, IMU and odometry. Machine telemetry comes from a separate simplified causal model. Its geometry and maintenance controls are not yet integrated with the robot.
+
+Run the ROS-independent checks on a development machine:
+
+```bash
+python3 -m unittest discover -s tests -v
+python3 scripts/run-machine-baseline.py
+```
 
 ## First mission
 
@@ -37,9 +57,11 @@ Include a healthy scenario and an unrecoverable fault so success cannot mean bli
 
 ## Roadmap
 
-- [ ] Choose development host, ROS 2 distribution and simulator after checking compatibility.
-- [ ] Build the room, robot and manual control baseline.
-- [ ] Implement deterministic fault scenarios and machine telemetry.
+- [x] Select Thor ARM64, install ROS 2 Jazzy/Gazebo Harmonic, and verify sensor rendering.
+- [x] Build the room, robot and passive sensor demonstration.
+- [ ] Implement guarded manual control and navigation.
+- [x] Prototype deterministic machine faults and read-only ROS telemetry.
+- [ ] Integrate robot proximity, inspection and maintenance with the model.
 - [ ] Add navigation and maintenance actions with safety tests.
 - [ ] Complete the mission with a scripted baseline.
 - [ ] Add the LLM tool interface and compare against that baseline.
@@ -47,10 +69,12 @@ Include a healthy scenario and an unrecoverable fault so success cannot mean bli
 
 ## Design documents
 
+- [Hardware/software requirements](docs/REQUIREMENTS.md)
+- [Operations and Mac viewing](docs/OPERATIONS.md)
 - [Architecture and component ownership](docs/ARCHITECTURE.md)
 - [Tool and scenario contracts](docs/CONTRACTS.md)
 - [Delivery strategy, milestones and evaluation](docs/PLAN.md)
 
 ## Continue development
 
-Read [AGENTS.md](AGENTS.md) and [docs/STATUS.md](docs/STATUS.md). This repository currently has documentation only; there are no installation commands, runnable demos or passing simulation tests to claim.
+Read [AGENTS.md](AGENTS.md) and [docs/STATUS.md](docs/STATUS.md). The status file distinguishes measured capabilities, prototype-only behavior and remaining work. Foxglove server connectivity is verified; the current Mac client still requires user account sign-in before GUI acceptance.
