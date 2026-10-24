@@ -4,7 +4,7 @@ Updated: 2026-10-24
 
 ## Current phase and next action
 
-Phase 0 design/setup is accepted. Phase 1 motion policy, ROS integration, bounded operator CLI and failure tests pass. Issue #5 remains open for user-rendered acceptance of the combined Foxglove camera/lidar/motion view. The initial layout import failed; its native desktop format is now corrected, but successful rendering has not been confirmed. Do not close Phase 1 based on JSON structure alone.
+Phase 0 design/setup is accepted. Phase 1 motion policy, ROS integration, bounded operator CLI and failure tests pass. Issue #5 remains open for user-rendered acceptance of the combined Foxglove camera/lidar/motion view. The initial layout import failed; its native desktop format is corrected, but the saved `foxglove-operator` record still contains the old notebook data (verified read-only). Import the distinctly named `config/foxglove-operator-desktop.json`; successful rendering has not been confirmed. Do not close Phase 1 based on JSON structure alone.
 
 The user handles Foxglove clicks, keyboard input and layout import. Do not automate that UI without renewed authorization. Avoid restarting the simulator while the user is inspecting it without coordinating. Read-only probes and offline preparation can continue.
 

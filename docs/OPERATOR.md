@@ -33,8 +33,14 @@ A final integration trial returned success for a reverse jog with zero displacem
 
 ## Combined Foxglove view
 
-Import `config/foxglove-operator.json` from the desktop Layout menu → Import from file. It contains an Image panel for `/camera/image_raw`, a 3D lidar view in `odom` following `base_link`, a raw `/motion/state` view, and commanded/measured linear/angular velocity plots. It contains no publish or direct-drive controls; use the guarded CLI for motion.
+Import `config/foxglove-operator-desktop.json` from the desktop Layout menu → Import from file. It contains an Image panel for `/camera/image_raw`, a 3D lidar view in `odom` following `base_link`, a raw `/motion/state` view, and commanded/measured linear/angular velocity plots. It contains no publish or direct-drive controls; use the guarded CLI for motion.
 
 The file uses native desktop `configById` and mosaic `layout` data, not the SDK's notebook `content` tree. The first notebook-format attempt was rejected as incompatible; the generator now converts to native version1 and maps public `ThreeDee` to internal `3D`. Native importer shape/version and all four panel references were checked against the installed desktop app; user-rendered acceptance is still pending.
 
 To regenerate, use an isolated development environment with `foxglove-sdk==0.30.2`, then run `python scripts/generate-foxglove-layout.py`. The simulator does not require that SDK. Foxglove UI manipulation is currently handled by the user; do not automate its clicks or keyboard input without renewed authorization.
+
+### Previously imported notebook layout
+
+The saved Foxglove layout named `foxglove-operator` was inspected read-only after the user reported it still did not work. Its stored data contained `version`, `content` and empty `configById`, with no native `layout` tree. Editing the source JSON on disk did not update that saved layout. The selected layout stayed in `Loading layout…`; the ROS WebSocket connection and topic list were working.
+
+Import the distinctly named `config/foxglove-operator-desktop.json` as a new layout and select `foxglove-operator-desktop`. Re-selecting the old saved `foxglove-operator` does not read the corrected file. No old user layout was modified or deleted by the agent. Rendered acceptance of the new import remains required.

@@ -24,7 +24,7 @@ layout=f.Layout(content=f.SplitContainer(direction='row',items=[
             ]))),
     ])),
 ]))
-output=Path(__file__).resolve().parents[1]/'config/foxglove-operator.json'
+output=Path(__file__).resolve().parents[1]/'config/foxglove-operator-desktop.json'
 # The SDK serializes notebook layouts. Desktop import expects mosaic layout data.
 notebook=json.loads(layout.to_json())
 configs={}
