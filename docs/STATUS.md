@@ -70,6 +70,12 @@ These stopping times supersede the earlier instantaneous-drive measurements for 
 
 This is not connected to ROS/Nav2 and emits no commands. Actual health validation, action/cancel races, target deadlines, measured arrivals and live failure acceptance remain required. It does not change the current simulation.
 
+## Offline localization health validator
+
+`orbital/localization.py` now validates independently fresh/advancing scan, odometry and IMU, finite planar pose/TF, normalized orientation and symmetric positive-semidefinite planar covariance. It retains a pending fault when a bad or late sample is followed by a good one before evaluation, so a callback burst cannot hide a broken lease. World reset requires an explicit seed and post-seed pose; old target identities remain cancelled through the existing navigation policy.
+
+Thirteen new cases and all 50 local unit tests pass. A discriminating test first reproduced acceptance of a non-planar ground transform, then passed after enforcing height/tilt bounds. See [LOCALIZATION_HEALTH.md](LOCALIZATION_HEALTH.md) for the exact room-specific contract and adapter obligations. This work is isolated on `codex/localization-health`; it is not deployed, does not move the robot and does not complete live reset/loss/Nav2 acceptance.
+
 ## Runtime ownership and boundaries
 
 Thor root: `/home/jensen/.goske/codex/orbital-mechanic`. Perform operational work inside `tmux orbital-work`; use `scripts/launch-thor.sh` and `scripts/stop-thor.sh` to manage transient user service `orbital-demo`. There is no boot-start configuration. Source `scripts/ros-env.sh` for ROS tools.
