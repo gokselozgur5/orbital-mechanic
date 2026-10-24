@@ -21,3 +21,9 @@ M0: select an existing development host and verify simulator camera/lidar output
 ## Open decisions and limitations
 
 Host, exact package pins and LLM provider remain unresolved. No dependencies installed, simulator smoke test performed, paid resources provisioned or runtime tests passed. Documentation checks do not establish simulator compatibility on the eventual host.
+
+## Host preflight — 2026-10-24
+
+User-selected Thor host was reached after its ED25519 fingerprint was independently confirmed by the user. Observed Ubuntu 24.04.3, aarch64, L4T R38.2.2, 122 GiB RAM and 47 GiB free on a 95%-used root filesystem. Docker is present. No /opt/ros installation or gz executable was found by the initial checks. No installation or simulation workload was started.
+
+The implementation target is now ARM64 Thor, diverging from the proposed amd64 baseline. Gazebo rendering and package availability still require a smoke test; do not treat M0 as passed. Do not delete existing data to make space. The old Thor R38.4 snapshot does not describe this inspected host. Keep addresses and authentication details outside repository documentation.
