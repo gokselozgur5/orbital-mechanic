@@ -2,7 +2,7 @@
 
 A simulated maintenance robot that investigates and repairs faults in a space station using ROS 2 and an LLM task planner.
 
-**Status: guarded simulated motion and fresh sensor delivery are verified on ARM64 Thor. Operator CLI safety tests pass; rendered Foxglove layout acceptance is pending. Known-map generation and a machine model are tested offline. Autonomous navigation, integrated maintenance and LLM control are not implemented yet.**
+**Status: guarded simulated motion and fresh sensor delivery are verified on ARM64 Thor. Operator CLI safety tests and the rendered Foxglove view are accepted for the tested baseline; a subsequent frame-height correction still awaits live regression checks. Known-map generation and a machine model are tested offline. Autonomous navigation, integrated maintenance and LLM control are not implemented yet.**
 
 ## Run the current prototype
 
@@ -60,7 +60,7 @@ Include a healthy scenario and an unrecoverable fault so success cannot mean bli
 - [x] Select Thor ARM64, install ROS 2 Jazzy/Gazebo Harmonic, and verify sensor rendering.
 - [x] Build the room, robot and passive sensor demonstration.
 - [x] Implement and verify guarded manual controls and failure stopping.
-- [ ] Accept the composed operator view and complete Phase 1.
+- [x] Accept the composed operator view and complete Phase 1.
 - [ ] Integrate localization and autonomous navigation.
 - [x] Prototype deterministic machine faults and read-only ROS telemetry.
 - [ ] Integrate robot proximity, inspection and maintenance with the model.

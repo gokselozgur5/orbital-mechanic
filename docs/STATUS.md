@@ -4,11 +4,13 @@ Updated: 2026-10-24
 
 ## Current phase and next action
 
-Phase 0 design/setup is accepted. Phase 1 motion policy, ROS integration, bounded operator CLI and failure tests pass. Issue #5 remains open for user-rendered acceptance of the combined Foxglove camera/lidar/motion view. The initial layout import failed; its native desktop format is corrected, but the saved `foxglove-operator` record still contains the old notebook data (verified read-only). Import the distinctly named `config/foxglove-operator-desktop.json`; successful rendering has not been confirmed. Do not close Phase 1 based on JSON structure alone.
+Phases 0 and 1 are accepted. Phase 1 motion policy, guarded ROS integration, bounded operator CLI, failure stopping and the combined Foxglove view now have acceptance evidence. On 2026-10-24 the user imported `foxglove-operator-desktop` and confirmed all four panels were visible. Independent read-only capture showed the robot camera, lidar points, stop reason and four commanded/measured velocity series; topic counters were advancing.
+
+This accepts the tested pre-frame-correction baseline: runtime motion code `c63e9cd` (source archive `eedc3fd`) and desktop layout `7fdf49c`. Frame correction `5378dac` is source-tested but still awaits coordinated deployment and renewed runtime checks. Phase acceptance does not certify an untested later runtime change.
 
 The user handles Foxglove clicks, keyboard input and layout import. Do not automate that UI without renewed authorization. Avoid restarting the simulator while the user is inspecting it without coordinating. Read-only probes and offline preparation can continue.
 
-Next: confirm the rendered operator view, then complete Phase 2 localization and guarded navigation. Offline map preparation does not bypass that gate. The six milestones and 15 issues are indexed in [TRACKING.md](TRACKING.md); [PHASES.md](PHASES.md) defines acceptance.
+Next: deploy and verify the frame correction when the user has finished viewing, then complete Phase 2 localization and guarded navigation. The six milestones and 15 issues are indexed in [TRACKING.md](TRACKING.md); [PHASES.md](PHASES.md) defines acceptance.
 
 ## Installed and running baseline
 
