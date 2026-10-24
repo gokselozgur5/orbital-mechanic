@@ -2,7 +2,7 @@
 
 A simulated maintenance robot that investigates and repairs faults in a space station using ROS 2 and an LLM task planner.
 
-**Status: working passive sensor demo on ARM64 Thor, plus a tested machine-model prototype. Autonomous navigation, physical maintenance and LLM control are not implemented yet.**
+**Status: guarded simulated motion and fresh sensor delivery are verified on ARM64 Thor. Operator CLI safety tests pass; rendered Foxglove layout acceptance is pending. Known-map generation and a machine model are tested offline. Autonomous navigation, integrated maintenance and LLM control are not implemented yet.**
 
 ## Run the current prototype
 
@@ -42,7 +42,7 @@ The first version uses interactive switches and reset controls. Physical part re
 
 The LLM does not drive the motor control loop. Fault ground truth belongs to the evaluator; the planner sees only observations. Machine telemetry may initially use a documented simplified model rather than an electrical or mechanical digital twin.
 
-Claude Code can develop and test the system. Using it as the runtime task planner is an optional experiment; no provider is selected yet.
+Anthropic is selected for the future task planner. No API credential is connected and no paid calls have been made. A scripted mission and independent evaluator come first; Claude Code may assist development separately from the runtime planner.
 
 ## MVP acceptance
 
@@ -59,7 +59,9 @@ Include a healthy scenario and an unrecoverable fault so success cannot mean bli
 
 - [x] Select Thor ARM64, install ROS 2 Jazzy/Gazebo Harmonic, and verify sensor rendering.
 - [x] Build the room, robot and passive sensor demonstration.
-- [ ] Implement guarded manual control and navigation.
+- [x] Implement and verify guarded manual controls and failure stopping.
+- [ ] Accept the composed operator view and complete Phase 1.
+- [ ] Integrate localization and autonomous navigation.
 - [x] Prototype deterministic machine faults and read-only ROS telemetry.
 - [ ] Integrate robot proximity, inspection and maintenance with the model.
 - [ ] Add navigation and maintenance actions with safety tests.
