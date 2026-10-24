@@ -32,7 +32,7 @@ class GuardNode(Node):
         self.timer = self.create_timer(.05, self.tick, clock=self.steady_clock)
 
     def feedback(self, msg):
-        if msg.header.frame_id != 'odom' or msg.child_frame_id != 'base_link':
+        if msg.header.frame_id != 'odom' or msg.child_frame_id != 'base_footprint':
             self.guard.stop('invalid_odometry_frame')
             self.guard.feedback_at = None
             self.tick()

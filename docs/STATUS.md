@@ -42,6 +42,14 @@ All 24 unit tests pass on Mac and Thor, including six map cases. Repeated local 
 
 See [NAVIGATION.md](NAVIGATION.md). AMCL convergence, measured TF geometry/ownership, localization loss/reset behavior, obstacle-aware routes and actual arrival at machines remain unimplemented or unverified. No autonomous navigation is claimed.
 
+## Frame geometry correction — live acceptance pending
+
+Read-only inspection found a 0.22 m vertical mismatch: live `odom→base_link` had z=0, while Gazebo reported the settled model near z=0 and its body at model-relative z=0.22. Consequently the ROS lidar/camera mount heights were 0.16/0.12 m instead of the model's nominal 0.38/0.34 m. Matching topic frame names did not establish matching physical geometry.
+
+The source now separates planar `base_footprint` from the elevated `base_link`, adds the fixed 0.22 m body transform and adjusts the guard's expected odometry child. Velocity requests remain in `base_link`; the frames have the same planar axes and differ only in height. Three cross-model regressions failed before this change; all 27 local unit tests pass afterward.
+
+**This correction is not deployed into the running world yet.** Thor remains on the previous geometry while the user examines Foxglove. Only the read-only `scripts/check-frames.py` was transferred: it correctly exited 1 on the old frame tree while confirming fresh odometry and the expected publisher-node graph. After coordinated deployment/restart, run it plus the existing motion/operator/fault/sensor checks before claiming live acceptance. Its publisher-node and observed-parent checks do not prove per-message TF ownership; this installed Jazzy callback metadata lacks publisher GIDs.
+
 ## Runtime ownership and boundaries
 
 Thor root: `/home/jensen/.goske/codex/orbital-mechanic`. Perform operational work inside `tmux orbital-work`; use `scripts/launch-thor.sh` and `scripts/stop-thor.sh` to manage transient user service `orbital-demo`. There is no boot-start configuration. Source `scripts/ros-env.sh` for ROS tools.

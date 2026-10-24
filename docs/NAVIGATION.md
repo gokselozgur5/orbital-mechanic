@@ -25,8 +25,8 @@ Use a conservative circular collision radius 0.37 m initially (body half-diagona
 ## Transform and localization ownership
 
 - `map→odom`: AMCL only, using the generated known map and `/scan`. No parallel identity transform or ground-truth publisher masquerading as localization.
-- `odom→base_link`: existing Gazebo differential-drive bridge only. Validate timestamps and compare the model/link origin before accepting the 3D frame geometry.
-- `base_link→sensor/wheel frames`: robot_state_publisher only. Verify the URDF/SDF body-origin offset and scan mounting height; do not infer correct geometry solely from matching frame names.
+- `odom→base_footprint`: Gazebo differential-drive bridge only. Wheel odometry is planar; the child is the ground projection, not the elevated body.
+- `base_footprint→base_link→sensor/wheel frames`: robot_state_publisher only. The fixed body height is 0.22 m, lidar height 0.38 m, camera mount height 0.34 m and wheel centers 0.12 m above the nominal ground plane. The SDF spawn clearance is not a TF offset. Verify live heights and timing before acceptance.
 - Use simulation time for sensor/TF alignment, steady wall time for safety deadlines. AMCL may future-date TF by its configured transform tolerance; the validator must use lookup-at-current-simulation-time and an explicit allowed tolerance, not reject all future transform stamps indiscriminately.
 
 Start from a documented initial pose at the clear origin, with finite conservative covariance. AMCL must converge before accepting navigation. A stationary robot need not produce new `/amcl_pose` messages at a fixed rate, so localization health must also consider fresh scan input and current TF availability; using only pose-message age would create false loss alarms.
@@ -48,3 +48,11 @@ Issue #6: generated map identity and geometry checks; exactly one owner per TF e
 Local acceptance: all 24 unit tests pass, including six map cases covering reference obstacles/free space, pixel/world coordinates, PGM vertical orientation, inflated reachability to the three goals, narrow-corridor rejection and explicit rejection of unsupported rotated/non-box static geometry. Two generations produced identical metadata and map bytes. Current grid: 210 × 170 cells at 0.05 m; PGM SHA-256 `d08588af2b1186992411e32dbf1d703e47ea45d183666de13c04a84cbe9c5000`.
 
 This only prepares part of issue #6. AMCL, measured TF geometry/timestamps, initial-pose/reset acceptance and all live navigation tests remain outstanding. The prototype does not bypass the Phase 1 viewer gate.
+
+## Frame regression and live check
+
+The initial world published planar odometry directly as `base_link`, placing the body and all sensors 0.22 m too low in the ROS tree. The corrected tree separates `base_footprint` from `base_link`. Cross-model tests compare URDF cumulative mount positions with SDF body/sensor/wheel positions. The initial SDF model spawn at z=0.02 is clearance for settling, not a fixed transform.
+
+On Thor, source `scripts/ros-env.sh` and run `/usr/bin/python3 scripts/check-frames.py`. It reads TF/odometry only, checks expected body/sensor/wheel positions, advancing fresh odometry, planar dynamic TF, observed parents and publisher-node counts, and exits nonzero on mismatch. It does not move the robot or prove AMCL accuracy. Per-message publisher ownership still requires stronger evidence than node counts; the installed subscription metadata does not expose a publisher GID. Current deployment status and required post-change tests are in [STATUS.md](STATUS.md).
+
+The planar source behavior is also visible in the [Gazebo DiffDrive implementation](https://github.com/gazebosim/gz-sim/blob/gz-sim8/src/systems/diff_drive/DiffDrive.cc): its wheel odometry populates XY/yaw and uses the configured child frame name; it does not add the body's SDF height. Live measurements above establish the behavior of this installed runtime independently of that moving source branch.

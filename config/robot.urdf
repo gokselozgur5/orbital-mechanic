@@ -1,4 +1,6 @@
 <?xml version="1.0"?><robot name="maintenance_robot">
+<link name="base_footprint"/>
+<joint name="body_height" type="fixed"><parent link="base_footprint"/><child link="base_link"/><origin xyz="0 0 .22"/></joint>
 <link name="base_link"><visual><geometry><box size=".55 .4 .16"/></geometry><material name="orange"><color rgba=".8 .3 .15 1"/></material></visual></link>
 <link name="lidar_link"/><joint name="lidar_mount" type="fixed"><parent link="base_link"/><child link="lidar_link"/><origin xyz="0 0 .16"/></joint>
 <link name="camera_link"/><joint name="camera_mount" type="fixed"><parent link="base_link"/><child link="camera_link"/><origin xyz=".28 0 .12"/></joint>

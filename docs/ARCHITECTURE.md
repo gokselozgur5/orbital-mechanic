@@ -71,7 +71,7 @@ States: IDLE → OBSERVING → DIAGNOSING → NAVIGATING → INTERVENING → VER
 
 Use simulation time for sensor stamps, dynamics and evaluation. Use monotonic wall time for provider deadlines and process watchdogs so a paused simulator cannot leave a live action waiting indefinitely. Pausing stops actuation; resetting the world invalidates pending actions and starts a new run_id.
 
-Define map → odom → base_link → sensor frames with exactly one publisher per transform. Reject stale, future or wrong-run observations; expose age and validity to the planner. Sensor data uses bounded queues; action results and machine commands use reliable delivery. Choose concrete ROS QoS profiles during integration and test publisher/subscriber compatibility.
+Define map → odom → base_footprint → base_link → sensor frames with exactly one publisher per transform. Reject stale, future or wrong-run observations; expose age and validity to the planner. Sensor data uses bounded queues; action results and machine commands use reliable delivery. Choose concrete ROS QoS profiles during integration and test publisher/subscriber compatibility.
 
 Initial tuning targets, subject to host measurement: wheel control 50 Hz, lidar 10 Hz, RGB 5 Hz, machine telemetry 2 Hz. LLM calls are event-driven, never part of a control deadline. Sensor fidelity and real-time factor must be measured before increasing visual detail.
 
