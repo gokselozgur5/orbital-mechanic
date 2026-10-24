@@ -8,9 +8,14 @@ __pycache__/
 build/
 install/
 log/
+logs/
+runtime/
+setup/
 artifacts/
 recordings/
 models/
 *.bag
 *.db3
 *.mcap
+compat_ws/
+*.pid

@@ -1,6 +1,6 @@
 # Architecture — design v0.1
 
-Status: proposed implementation design, not deployed capabilities. Updated 2026-10-24.
+Status: target architecture with an implemented passive sensor slice; see STATUS.md for measured coverage. Updated 2026-10-24.
 
 ## Product boundary
 
@@ -35,9 +35,9 @@ The planner is outside the ROS graph and has access only to the tool gateway. Hi
 
 ## Proposed stack and portability
 
-Baseline target: Ubuntu 24.04 amd64, ROS 2 Jazzy, Gazebo Harmonic, ros_gz and gz_ros2_control. Use Nav2 for navigation with a supplied map and AMCL localization; exploration/SLAM is a later feature. Python is the default for mission logic, telemetry and evaluation; use C++ only where simulator integration or measured performance requires it. Standard ROS packages own wheel control and navigation.
+Selected target: existing ARM64 Thor on Ubuntu 24.04.3, ROS 2 Jazzy, Gazebo Harmonic, ros_gz and gz_ros2_control. The initial amd64 proposal was superseded by the user-selected host. Ogre1/llvmpipe is the measured rendering path; Ogre2 crashed during startup. Use Nav2 for navigation with a supplied map and AMCL localization; exploration/SLAM is a later feature. Python is the default for mission logic, telemetry and evaluation; use C++ only where simulator integration or measured performance requires it. Standard ROS packages own wheel control and navigation.
 
-This is a compatible baseline, not a claim that it is the newest stack. Exact package versions and container digest must be recorded after the host smoke test. Mac is an editing/operator host; Linux simulation may run in a VM or on an existing Linux machine only after camera rendering and sensor performance are measured. No GPU purchase, cloud rental or Thor workload is authorized by this design.
+This is a compatible baseline, not a claim that it is the newest stack. Exact package versions and container digest must be recorded after the host smoke test. Mac is an editing/operator host; Linux simulation may run in a VM or on an existing Linux machine only after camera rendering and sensor performance are measured. The user subsequently authorized this Thor simulation setup. No GPU purchase or cloud rental is part of the implementation.
 
 The simulated onboard computer initially exposes latency, memory/budget and failure constraints. It does not emulate an AI chip electrically. LLM inference can be local or through a provider adapter; hosted inference is an explicit configuration choice with data and spending limits.
 
