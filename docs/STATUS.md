@@ -96,6 +96,12 @@ The health lease now validates schema/run/epoch/sequence, expires after 0.25 s w
 
 See [HEALTH_INTERLOCK.md](HEALTH_INTERLOCK.md). The component is not installed in the shared demo and is not sufficient as a standalone safety boundary: the final supervisor must own command publication, stop on its own process loss and await exact Nav2 cancellation. Shared-world ownership coordination and full route/failure acceptance remain pending.
 
+## Nav2 action session — isolated protocol acceptance
+
+`NavigationActionSession` now reserves exact target identities, requires policy arm, dispatches named poses, enforces a bounded wall deadline and retains ownership until the matching Nav2 result is terminal. Cancel acknowledgment alone cannot release a task; delayed acceptance is immediately cancelled after invalidation. New targets also wait for measured stationary feedback and an engaged stop latch. A successful Nav2 result remains explicitly unverified arrival.
+
+Thor `navigation-action-synthetic-3` exited 0 with 11 real action-transport cases against a dedicated fake server, including delayed timer/acceptance, rejected cancellation, late success after cancellation and server SIGKILL. No controller or velocity publisher was launched. See [NAVIGATION_ACTION.md](NAVIGATION_ACTION.md). This does not complete the composed supervisor, real routes, physical stop composition or arrival/collision acceptance.
+
 ## Runtime ownership and boundaries
 
 Thor root: `/home/jensen/.goske/codex/orbital-mechanic`. Perform operational work inside `tmux orbital-work`; use `scripts/launch-thor.sh` and `scripts/stop-thor.sh` to manage transient user service `orbital-demo`. There is no boot-start configuration. Source `scripts/ros-env.sh` for ROS tools.
