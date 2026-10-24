@@ -49,3 +49,9 @@ The Thor tmux `motion-integration-2` job passed 18 unit tests and eight live mot
 Two final fault runs passed after fixing long teardown and a transient-unit restart race. Final measured timeout stopping: forward 0.0562 m / 0.3805 s, reverse 0.0551 m / 0.3677 s. Pausing/resuming and world reset did not restart motion; guard SIGKILL terminated all 14 sampled demo processes in 0.3227 s. Fresh restart was latched/stationary; duplicate launch was rejected. Full evidence, limits, earlier failures and source identity checks: [MOTION_EVIDENCE.md](MOTION_EVIDENCE.md).
 
 Final 20-second sensor probe passed functionally, but camera delivery fell to 14 frames (~0.7 Hz); do not claim stable 5 Hz or unchanged camera performance. Lidar/odom/IMU remained about 10/20/20 Hz. Phase 1 stays open pending operator controls/view (#5).
+
+## Operator CLI delivery
+
+Bounded arm/stop/status/jog CLI and real-process acceptance are implemented; see [OPERATOR.md](OPERATOR.md). Final CLI exercise passed four directions and SIGKILL disconnect stopping (0.4394 s / 0.0497 m). Issue #5 remains open for the composed motion/camera/lidar view and cancel variants.
+
+Camera investigation: Gazebo source measured ~4.98 Hz; an isolated 10-second ROS comparison received 1 best-effort versus 51 reliable frames. A subsequent multi-topic reliable probe received 36 frames but ended with old image timestamps, so changing QoS alone is not accepted as a complete fix. Probe freshness checks and continued transport/executor diagnosis are next; earlier functional sensor passes did not assert end-of-run image freshness.
