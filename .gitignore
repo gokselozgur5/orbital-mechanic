@@ -1,0 +1,16 @@
+.env
+.env.*
+!.env.example
+.DS_Store
+__pycache__/
+*.pyc
+.venv/
+build/
+install/
+log/
+artifacts/
+recordings/
+models/
+*.bag
+*.db3
+*.mcap
