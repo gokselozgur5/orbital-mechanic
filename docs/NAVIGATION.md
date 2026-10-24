@@ -1,12 +1,12 @@
 # Known-map navigation contract — preparation
 
-This is the Phase 2 design contract for issues #6/#7. It is not a claim that localization or navigation is running. Phase 1's rendered operator-view acceptance is complete for the tested baseline; the subsequent frame correction still needs live regression checks. No live navigation deployment is performed by this document.
+This is the Phase 2 contract for issues #6/#7. Known-map AMCL has passed initial commissioning on the corrected physical model. Named-pose navigation, action cancellation and route/collision acceptance remain incomplete. The health observer and guard-stop connection have separate isolated ROS evidence; they are not yet integrated into the shared simulator.
 
 ## Map and coordinates
 
 The versioned source of geometry is `worlds/maintenance.sdf`: one 10 × 8 m floor centered at world (0, 0), walls centered at x=±5 and y=±4 with 0.15 m thickness, and three 0.8 × 0.8 m machine footprints centered at (3,1.8), (3,0), (3,−1.8). Coordinates are metres, right-handed, Z up; yaw 0 faces +X and positive yaw rotates toward +Y.
 
-Generate the occupancy grid deterministically from the static collision geometry, not visual meshes. Planned resolution 0.05 m; origin(−5.25,−4.25), size 210 × 170 cells. Store occupied cells as 0, free as 254 and unknown as 128 in a generated PGM, with negate 0, occupied threshold 0.65 and free threshold 0.25. PGM rows run from highest Y to lowest Y; the YAML origin is the lower-left world coordinate. Mark the interior floor free, collision footprints occupied and space outside the room unknown. Refuse unsupported poses/geometry rather than silently producing a misleading map.
+Generate the occupancy grid deterministically from the static collision geometry, not visual meshes. Resolution 0.05 m; origin(−5.25,−4.25), size 210 × 170 cells. Store occupied cells as 0, free as 254 and unknown as 128 in a generated PGM, with negate 0, occupied threshold 0.65 and free threshold 0.25. PGM rows run from highest Y to lowest Y; the YAML origin is the lower-left world coordinate. Mark the interior floor free, collision footprints occupied and space outside the room unknown. Refuse unsupported poses/geometry rather than silently producing a misleading map.
 
 Version source geometry, generator and generation parameters in Git. Generated map files and a source/config SHA-256 manifest belong in ignored `runtime/maps`; a clean checkout must regenerate identical map bytes. Verify obstacle centers, clear origin, wall coverage, pixel/world round trips and an inflated free-space path to each inspection pose before live use.
 
@@ -47,7 +47,7 @@ Issue #6: generated map identity and geometry checks; exactly one owner per TF e
 
 Local acceptance: all 24 unit tests pass, including six map cases covering reference obstacles/free space, pixel/world coordinates, PGM vertical orientation, inflated reachability to the three goals, narrow-corridor rejection and explicit rejection of unsupported rotated/non-box static geometry. Two generations produced identical metadata and map bytes. Current grid: 210 × 170 cells at 0.05 m; PGM SHA-256 `d08588af2b1186992411e32dbf1d703e47ea45d183666de13c04a84cbe9c5000`.
 
-This only prepares part of issue #6. AMCL, measured TF geometry/timestamps, initial-pose/reset acceptance and all live navigation tests remain outstanding. Offline reachability is not live navigation acceptance.
+Offline reachability is not live navigation acceptance. Subsequent frame and AMCL commissioning evidence is described below; integrated target reset/loss and route acceptance remain outstanding.
 
 ## Frame regression and live check
 
@@ -56,3 +56,19 @@ The initial world published planar odometry directly as `base_link`, placing the
 On Thor, source `scripts/ros-env.sh` and run `/usr/bin/python3 scripts/check-frames.py`. It reads TF/odometry only, checks expected body/sensor/wheel positions, advancing fresh odometry, planar dynamic TF, observed parents and publisher-node counts, and exits nonzero on mismatch. It does not move the robot or prove AMCL accuracy. Per-message publisher ownership still requires stronger evidence than node counts; the installed subscription metadata does not expose a publisher GID. Current deployment status and required post-change tests are in [STATUS.md](STATUS.md).
 
 The planar source behavior is also visible in the [Gazebo DiffDrive implementation](https://github.com/gazebosim/gz-sim/blob/gz-sim8/src/systems/diff_drive/DiffDrive.cc): its wheel odometry populates XY/yaw and uses the configured child frame name; it does not add the body's SDF height. Live measurements above establish the behavior of this installed runtime independently of that moving source branch.
+
+## Map-server and AMCL commissioning
+
+`config/localization.yaml` and `scripts/{launch,start}-localization.sh` target the installed Nav2 1.3.13 packages. They launch the official map-server/AMCL lifecycle group only, using the generated map, simulation time and `base_footprint`. There is no controller, velocity publisher or automatic pose seed. The transient `orbital-localization` service requires an already-active demo; it does not start the world or enable boot startup. Explicit demo stop propagates through `PartOf`, and a monitor handles unexpected demo termination. Its cgroup owns all localization descendants.
+
+Two reproduced startup issues are fixed: the installed launch PythonExpression requires capitalized `False` for composition/respawn, and an empty YAML `yaml_filename` masked the launch map override. The map filename is now supplied only by the official launch argument.
+
+`seed-localization.py --fresh-world-origin` latches stop, requires fresh stationary corrected odometry near the origin, refuses a running navigation controller and publishes an uncertain explicit pose. It reports processing only, not accuracy. Optional bounded seed offsets support commissioning. `check-localization.py --compare-gazebo` checks exact map cells, fresh scan/odometry/IMU, body level, current-time TF, finite bounded covariance and expected publisher nodes. Ground truth is evaluator-only and is never supplied to AMCL or the planner.
+
+With the corrected physical model, Thor job `body-max-localization` exited 0. A deliberately wrong seed (0.20 m, −0.15 m, 0.15 rad), followed by bounded forward/turn movement, converged to independent error 0.073151 m / 0.006311 rad, within unchanged 0.10 m / 0.10 rad commissioning limits. This is one commissioning case, not a guaranteed route accuracy bound. A fresh-origin restart measured 0.008088 m / 0.011434 rad.
+
+The same run verified service lifecycle: stopping the demo removed all seven sampled localization processes in 1.402 s; starting localization with the demo off was refused; restarting the demo did not implicitly restart localization. The new world was latched before localization was explicitly started and seeded again. Reports and source manifest remain in Thor `runtime/localization-acceptance-20261024T141639Z` and private review artifacts.
+
+The current source adds `--expect-unseeded` to the probe and invokes it before seed in the commissioning/lifecycle runners. This extra negative gate is syntax-checked but has not been run against the live AMCL service yet. The earlier live lifecycle acceptance did not include that check. `check-localization-commissioning.sh` restarts the shared world and moves the robot; do not run it concurrently with another operator/session. Shared-world ownership is currently awaiting coordination, so these preserved scripts have not been redeployed from this branch.
+
+Issue #6 remains open: commission the new negative gate and integrate source/epoch health with actual target cancellation/reset. Issue #7 remains open: own the Nav2 velocity path, verify all three arrivals, blockage/change/cancel/timeout behavior and collision evidence.
