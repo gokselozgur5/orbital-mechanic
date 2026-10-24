@@ -26,4 +26,4 @@ Feed every health result into `NavigationPolicy.observe` and run its steady-cloc
 
 Thirteen new deterministic cases cover missing inputs, duplicate and independently stale streams, delayed fresh-message bursts, invalid-then-valid bursts, covariance asymmetry/non-PSD/nonfinite values, physical tilt, wrong frames, missing/future TF, backward wall time, simulation reset and pre-seed pose rejection. The tilt case integrates the health result with the existing target policy and proves the old target cannot be re-armed after recovery.
 
-A real ROS adapter, action cancellation races, continuous motion-stop enforcement and live reset/loss tests are still required. No runtime interlock or autonomous navigation acceptance is claimed by this offline component.
+A read-only ROS observation adapter is now available and exercised with isolated synthetic DDS/TF; see [ROS_LOCALIZATION_MONITOR.md](ROS_LOCALIZATION_MONITOR.md). A real navigation supervisor, action cancellation races, continuous motion-stop enforcement and shared-world reset/loss tests are still required. No runtime interlock or autonomous navigation acceptance is claimed by this offline component.

@@ -100,6 +100,14 @@ class LocalizationHealth:
         self.awaiting_seed = True
         self.seed_stamp = stamp if math.isfinite(stamp) and stamp >= 0 else None
 
+    def clock_reset(self, sim_time):
+        """Discard the old epoch immediately when the ROS clock callback regresses."""
+        self.reset()
+        self.last_sim = sim_time
+        self.awaiting_seed = True
+        self.seed_stamp = None
+        return Health(False, False, 'simulation_reset', sim_time)
+
     def _record(self, name, stamp, now, valid):
         old = self.samples.get(name)
         valid = bool(valid and math.isfinite(stamp) and stamp >= 0 and math.isfinite(now)
@@ -161,11 +169,7 @@ class LocalizationHealth:
             self.reset()
             return result('simulation_clock_invalid')
         if self.last_sim is not None and sim_time < self.last_sim:
-            self.last_sim = sim_time
-            self.reset()
-            self.awaiting_seed = True
-            self.seed_stamp = None
-            return result('simulation_reset')
+            return self.clock_reset(sim_time)
         self.last_sim = sim_time
         if self.awaiting_seed:
             return result('initial_pose_required')
