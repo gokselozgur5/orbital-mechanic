@@ -4,6 +4,7 @@ import importlib.util
 import json
 import math
 from pathlib import Path
+import signal
 import subprocess
 import sys
 import time
@@ -51,28 +52,29 @@ def main():
                 assert .1<abs(delta)<.3,(direction,delta)
                 assert (delta>0)==(direction=='left'),(direction,delta)
             report.append({'case':direction,'displacement_m':distance,'result':json.loads(result)})
-        finish(p,launch('arm'));child=launch('jog','forward','--duration','2')
-        end=time.monotonic()+10
-        while time.monotonic()<end:
-            p.spin(.05)
-            if child.poll() is not None:
-                out,err=child.communicate();raise AssertionError(('jog exited before disconnect',child.returncode,out,err))
-            if p.odom.twist.twist.linear.x>.05: break
-        else:
-            child.kill();out,err=child.communicate();raise AssertionError(('no movement before disconnect',out,err,p.state))
-        start=time.monotonic();before=p.position();child.kill()
-        # Keep servicing ROS while the killed client is being reaped. Waiting on
-        # its pipes here can consume the observation window without callbacks.
-        while time.monotonic()-start<1.2:
-            p.spin(.03)
-            if p.state['latched'] and p.stationary():break
-        assert p.state['latched'] and p.stationary(),('disconnect left movement',p.state,
-            p.odom.twist.twist.linear.x,p.odom.twist.twist.angular.z,child.returncode,
-            list(p.states)[-15:])
-        observed_stop=time.monotonic()-start
-        child.communicate(timeout=5)
-        report.append({'case':'operator_sigkill','observed_stop_s':observed_stop,
-                       'stop_distance_m':math.dist(before,p.position()),'reason':p.state['reason']})
+        for sig in (signal.SIGKILL,signal.SIGINT,signal.SIGTERM,signal.SIGHUP):
+            finish(p,launch('arm'));child=launch('jog','forward','--duration','2')
+            end=time.monotonic()+10
+            while time.monotonic()<end:
+                p.spin(.05)
+                if child.poll() is not None:
+                    out,err=child.communicate();raise AssertionError(('jog exited before disconnect',child.returncode,out,err))
+                if p.odom.twist.twist.linear.x>.05: break
+            else:
+                child.kill();out,err=child.communicate();raise AssertionError(('no movement before disconnect',out,err,p.state))
+            start=time.monotonic();before=p.position();child.send_signal(sig)
+            # Keep servicing ROS while the killed client is being reaped. Waiting on
+            # its pipes here can consume the observation window without callbacks.
+            while time.monotonic()-start<1.2:
+                p.spin(.03)
+                if p.state['latched'] and p.stationary():break
+            assert p.state['latched'] and p.stationary(),('disconnect left movement',p.state,
+                p.odom.twist.twist.linear.x,p.odom.twist.twist.angular.z,child.returncode,
+                list(p.states)[-15:])
+            observed_stop=time.monotonic()-start
+            child.communicate(timeout=5)
+            report.append({'case':'operator_'+sig.name.lower(),'observed_stop_s':observed_stop,
+                           'stop_distance_m':math.dist(before,p.position()),'reason':p.state['reason']})
         print(json.dumps({'passed':True,'checks':report},indent=2))
     finally:
         try:p.call(p.stop_client)
