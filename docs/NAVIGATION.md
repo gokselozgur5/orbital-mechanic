@@ -40,3 +40,11 @@ Initial bounds to verify: scan receive age ≤ 0.5 wall seconds, current map/odo
 ## Acceptance evidence still required
 
 Issue #6: generated map identity and geometry checks; exactly one owner per TF edge; initial-pose convergence and timing; reset/loss invalidates old target identity. Issue #7: measured arrival at all three inspection poses; obstacle/blockage, timeout and cancel tests; safe stopping through `/motion/request` only; no observed collision. Installed Nav2 packages and this contract are not acceptance evidence.
+
+## Offline map prototype
+
+`python3 scripts/generate-known-map.py` now generates PGM/YAML/manifest files under ignored `runtime/maps/<input-and-generator-digest>/`. Source geometry, `config/known-map.json` and generator code all contribute to the identity. Existing different artifacts are refused, not overwritten. The robot/world is not started or changed by generation.
+
+Local acceptance: all 24 unit tests pass, including six map cases covering reference obstacles/free space, pixel/world coordinates, PGM vertical orientation, inflated reachability to the three goals, narrow-corridor rejection and explicit rejection of unsupported rotated/non-box static geometry. Two generations produced identical metadata and map bytes. Current grid: 210 × 170 cells at 0.05 m; PGM SHA-256 `d08588af2b1186992411e32dbf1d703e47ea45d183666de13c04a84cbe9c5000`.
+
+This only prepares part of issue #6. AMCL, measured TF geometry/timestamps, initial-pose/reset acceptance and all live navigation tests remain outstanding. The prototype does not bypass the Phase 1 viewer gate.
