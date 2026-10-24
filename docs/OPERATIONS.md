@@ -13,9 +13,8 @@ Run `bash scripts/launch-thor.sh` from the project root. It creates a transient 
 To probe sensor delivery in a second shell:
 
 ```bash
-source /opt/ros/jazzy/setup.bash
-export ROS_DOMAIN_ID=42 ROS_AUTOMATIC_DISCOVERY_RANGE=LOCALHOST
-python3 scripts/probe-sensors.py
+source scripts/ros-env.sh
+/usr/bin/python3 scripts/probe-sensors.py
 ```
 
 Logs and runtime data are excluded from Git. The probe reports metadata and counts, not image contents.
@@ -47,3 +46,11 @@ Gazebo 8 uses `~/.gz` for some caches regardless of XDG settings. On this host, 
 The installed Studio1.84 app also failed during Mac startup, independently of bridge compatibility. Current Foxglove3.4.2 is installed separately in the workspace; `open-mac.sh` prefers it (override with `FOXGLOVE_APP`). The user completed sign-in; live image/calibration and TF subscriptions are verified. Detailed panel layout remains a follow-up. Do not create an account, activate a subscription or upload data on the user’s behalf.
 
 Stop only the Mac browser proxy with `tmux kill-session -t orbital-viewer`; this does not stop Thor. Keep Thor operations in its persistent `orbital-work` tmux session; the demo remains owned by the orbital-demo user-service cgroup.
+
+## Local DDS image transport
+
+Source `scripts/ros-env.sh` for every Thor project shell. The demo launcher sources it automatically. It selects domain42, local discovery, the Gazebo partition and `config/fastdds-local.xml`. The profile uses shared-memory transport with a 16 MiB segment per participant and disables builtin transports. It changes only these project processes; no global kernel buffer settings are changed. All ROS participants for this demo must run as the same local user and source this environment. Remote viewing continues through the loopback Foxglove bridge and authenticated SSH tunnel.
+
+The source camera produces 640×480 RGB8 frames (~0.92 MB each). Default transport measurements showed heavy loss/stale images; a QoS-only change did not pass freshness. The project profile delivered100frames/20s with final image age~14ms in the first before/after trial. The sensor probe now rejects any live topic not received in the last second and images more than one simulation second behind `/clock`; static transforms are exempt from receive freshness.
+
+Transport rationale: [Fast DDS shared-memory descriptor and segment-size warning](https://fast-dds.docs.eprosima.com/en/2.x/fastdds/transport/shared_memory/shared_memory.html). The measured result establishes the project configuration's behavior; cumulative host UDP error counters alone do not identify the root cause of every lost frame.

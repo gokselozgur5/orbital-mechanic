@@ -14,10 +14,8 @@ fi
 export TMPDIR="$ROOT/runtime/tmp"
 export ROS_LOG_DIR="$ROOT/runtime/ros"
 export XDG_CONFIG_HOME="$ROOT/runtime/config" XDG_CACHE_HOME="$ROOT/runtime/cache" XDG_DATA_HOME="$ROOT/runtime/data"
-source /opt/ros/jazzy/setup.bash
+source "$ROOT/scripts/ros-env.sh"
 if [[ -f "$ROOT/compat_ws/install/setup.bash" ]]; then source "$ROOT/compat_ws/install/setup.bash"; fi
-export GZ_PARTITION=orbital-maintenance
-export ROS_DOMAIN_ID=42 ROS_AUTOMATIC_DISCOVERY_RANGE=LOCALHOST
 export DISPLAY=:42 LIBGL_ALWAYS_SOFTWARE=1 QT_X11_NO_MITSHM=1 QT_QPA_PLATFORM=xcb
 children=()
 cleanup() {
