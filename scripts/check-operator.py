@@ -15,7 +15,7 @@ module=importlib.util.module_from_spec(spec);spec.loader.exec_module(module)
 
 
 def launch(*args):
-    return subprocess.Popen([sys.executable,str(ROOT/'scripts/operator.py'),*args],
+    return subprocess.Popen([sys.executable,str(ROOT/'scripts/orbital-operator.py'),*args],
                             stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True)
 
 
