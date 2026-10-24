@@ -26,7 +26,7 @@ Run `scripts/open-mac.sh user@verified-host` on the Mac. If host keys live outsi
 
 It forwards local ports `15942` to Thor `5942`, and `18765` to Thor `8765` using an authenticated SSH tunnel with verified host keys. No credential is included in this repository.
 
-Open `vnc://localhost:15942` using macOS Screen Sharing. In Foxglove Studio, open a Foxglove WebSocket connection to `ws://localhost:18765`. Add a 3D panel with fixed frame `odom`, `/scan`, and transforms; an Image panel for `/camera/image_raw`; and plot `/odom` or `/imu` as needed.
+Run `scripts/setup-gazebo-viewer.sh` once on Mac, then `scripts/open-gazebo-web.sh`. The default viewer is now `http://127.0.0.1:15943/vnc.html?autoconnect=true&resize=scale`. The Mac-local `orbital-viewer` tmux session runs websockify0.13.0 and serves pinned noVNC1.7.0, forwarding only through the existing SSH tunnel. Native macOS Screen Sharing failed despite a healthy RFB connection; the browser path was confirmed visible by the user. No additional VNC password is needed. In Foxglove Studio, open a Foxglove WebSocket connection to `ws://localhost:18765`. Add a 3D panel with fixed frame `odom`, `/scan`, and transforms; an Image panel for `/camera/image_raw`; and plot `/odom` or `/imu` as needed.
 
 No Foxglove cloud relay or upload is required for this LAN workflow. The application's own account requirements are separate from local bridge connectivity.
 
@@ -45,3 +45,5 @@ The existing Mac app is Foxglove Studio 1.84.0. The APT bridge 3.6.0 uses the ne
 Gazebo 8 uses `~/.gz` for some caches regardless of XDG settings. On this host, the directory created by our first test was moved into `runtime/gazebo-home`, with `~/.gz` retained only as a symlink. The launcher refuses to silently move an unrelated pre-existing cache. ROS logs, Qt/XDG cache and launch temporary files also live under `runtime/`.
 
 The installed Studio1.84 app also failed during Mac startup, independently of bridge compatibility. Current Foxglove3.4.2 is installed separately in the workspace; `open-mac.sh` prefers it (override with `FOXGLOVE_APP`). The user completed sign-in; live image/calibration and TF subscriptions are verified. Detailed panel layout remains a follow-up. Do not create an account, activate a subscription or upload data on the user’s behalf.
+
+Stop only the Mac browser proxy with `tmux kill-session -t orbital-viewer`; this does not stop Thor. Keep Thor operations in its persistent `orbital-work` tmux session; the demo remains owned by the orbital-demo user-service cgroup.
