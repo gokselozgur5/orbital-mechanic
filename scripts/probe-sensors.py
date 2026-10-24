@@ -59,8 +59,8 @@ valid = (not missing and all(row['count'] > 1 for topic, row in results.items() 
          and scan.get('stamp_s', 0) > scan.get('first_stamp_s', 0)
          and image.get('frame_id') == 'camera_optical_frame'
          and scan.get('frame_id') == 'lidar_link'
-         and 'base_link' in results.get('/tf', {}).get('frames', [])
-         and {'camera_optical_frame','lidar_link'}.issubset(results.get('/tf_static', {}).get('frames', [])))
+         and 'base_footprint' in results.get('/tf', {}).get('frames', [])
+         and {'base_link','camera_optical_frame','lidar_link'}.issubset(results.get('/tf_static', {}).get('frames', [])))
 print(json.dumps({'wall_seconds': time.monotonic()-start, 'topics': results, 'missing': missing, 'passed': valid}, indent=2))
 node.destroy_node(); rclpy.shutdown()
 raise SystemExit(0 if valid else 1)

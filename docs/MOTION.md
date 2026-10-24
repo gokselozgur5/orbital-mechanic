@@ -20,7 +20,7 @@ Policy review for issue #2 reproduced a late-command deadline bypass when the pe
 
 ## ROS integration
 
-`scripts/motion-guard.py` uses a 20 Hz steady-clock timer, independent of `/clock`. It consumes odometry with `odom` / `base_link` frames and computes the magnitudes of all measured velocity axes before allowing reset. Invalid frame feedback clears the freshness credit; valid advancing feedback is required again.
+`scripts/motion-guard.py` uses a 20 Hz steady-clock timer, independent of `/clock`. It consumes odometry with `odom` / `base_footprint` frames and computes the magnitudes of all measured velocity axes before allowing reset. Invalid frame feedback clears the freshness credit; valid advancing feedback is required again.
 
 Input is `geometry_msgs/TwistStamped` on `/motion/request`, with frame `base_link`, linear X and angular Z only. Unsupported axes, wrong frames, nonfinite values, stale stamps and speed violations latch the stop. `/motion/stop` and `/motion/reset_stop` are `std_srvs/Trigger` services; `/motion/state` reports the latched state and reason as JSON. Reset alone produces zero velocity.
 
