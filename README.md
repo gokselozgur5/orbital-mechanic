@@ -45,6 +45,12 @@ Include a healthy scenario and an unrecoverable fault so success cannot mean bli
 - [ ] Add the LLM tool interface and compare against that baseline.
 - [ ] Extend to manipulation, battery constraints and multiple robots.
 
+## Design documents
+
+- [Architecture and component ownership](docs/ARCHITECTURE.md)
+- [Tool and scenario contracts](docs/CONTRACTS.md)
+- [Delivery strategy, milestones and evaluation](docs/PLAN.md)
+
 ## Continue development
 
 Read [AGENTS.md](AGENTS.md) and [docs/STATUS.md](docs/STATUS.md). This repository currently has documentation only; there are no installation commands, runnable demos or passing simulation tests to claim.

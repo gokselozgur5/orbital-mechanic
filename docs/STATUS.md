@@ -4,16 +4,20 @@ Updated: 2026-10-24
 
 ## Confirmed direction
 
-The user selected a fully virtual robot maintenance project: investigate a space-station power fault, diagnose it using sensor evidence, intervene and verify the result. Create the GitHub repository now; implementation is future work.
+Fully virtual ROS 2 maintenance robot in an artificial-gravity space-station room. The user authorized architecture and planning work after repository creation.
 
-## Current state
+## Completed
 
-Documentation scaffold only. No dependencies installed, simulator selected, cloud resources provisioned or paid services activated.
+Documentation design v0.1: component ownership, planner/tool boundary, fault scenarios, safety behavior, evaluation gates and milestone backlog. These are proposed implementation decisions; no runnable robot exists.
 
-## Next step
+## Proposed baseline
 
-Establish the available development hardware and choose a compatible ROS 2 and simulation stack. Then implement a small manually controllable robot in one room before adding autonomous diagnosis.
+Ubuntu 24.04 amd64, ROS 2 Jazzy, Gazebo Harmonic, Nav2, ros2_control, Python mission/evaluation logic. One wheeled robot, three machines, a known map and proximity-gated maintenance controls. Scripted baseline precedes the LLM. No arm or electrical chip emulation in MVP.
 
-## Open decisions
+## Next action
 
-Development host, simulator, ROS 2 distribution, LLM provider and deployment model. A physical robot and exact AI-chip emulation are outside the initial scope.
+M0: select an existing development host and verify simulator camera/lidar output and performance before dependency pinning. See PLAN.md for exit gates.
+
+## Open decisions and limitations
+
+Host, exact package pins and LLM provider remain unresolved. No dependencies installed, simulator smoke test performed, paid resources provisioned or runtime tests passed. Documentation checks do not establish simulator compatibility on the eventual host.
