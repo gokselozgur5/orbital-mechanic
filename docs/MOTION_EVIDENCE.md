@@ -30,3 +30,9 @@ Thor job `motion-failures-4` passed forward/reverse timeout stopping, pause/resu
 Raw evidence remains outside Git under the local reviews directory and Thor runtime jobs. Final repeat job `motion-final-acceptance` exited 0: forward stop 0.0562 m / 0.3805 s; reverse 0.0551 m / 0.3677 s; pause/resume displacement 0.0034 m; reset 50.2 → 1.0 s; 14 processes terminated in 0.3227 s; clean restart latched. All six source hashes were compared with the local commit candidates and matched exactly.
 
 The same job rejected a second launch, passed all eight basic motion cases, and passed the 20-second sensor probe with no missing topics or timestamp regressions. One server and one GUI remained. RGB delivered only 14 frames (~0.7 Hz) in this run, below earlier 2–3 Hz observations and the configured 5 Hz; the functional sensor pass is not a throughput guarantee. Lidar delivered 200 messages and odometry/IMU/joints 399 each. Operator-view performance remains follow-up work.
+
+## Transient-unit collection race — 2026-10-24
+
+The packaged frame regression run passed its first frame/motion checks but failed when restarting: systemd collected the failed transient unit between reading `ActiveState=failed` and `reset-failed`. The launcher previously treated the resulting missing-unit response as fatal. It now tolerates that failure only after a new read confirms `LoadState=not-found`; an existing unit with a real reset error still fails closed, and an active world is still refused.
+
+A shell-level regression reproduced the old failure and passed after the change; a second case verifies active worlds are not replaced. Thor job `frame-runtime-acceptance-2` then completed the full runner with exit 0, including repeated restarts, 36 unit tests, frame geometry, motion/operator/fault checks and fresh sensors. Its guard-kill case removed 14 processes in 1.238 s, below the 5 s test limit; this run does not preserve the earlier 0.223 s measurement as a universal guarantee.

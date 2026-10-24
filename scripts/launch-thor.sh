@@ -12,7 +12,14 @@ for attempt in {1..50}; do
     echo 'Demo is already running; stop it explicitly before starting another world.' >&2
     exit 1
   fi
-  if [[ $active == failed ]]; then systemctl --user reset-failed orbital-demo.service; fi
+  if [[ $active == failed ]]; then
+    # --collect can unload a failed transient unit after the state read.
+    if ! systemctl --user reset-failed orbital-demo.service 2>/dev/null; then
+      [[ $(systemctl --user show orbital-demo.service --property=LoadState --value) == not-found ]] || {
+        echo 'Could not reset the previous failed demo unit.' >&2; exit 1;
+      }
+    fi
+  fi
   sleep .1
 done
 [[ $(systemctl --user show orbital-demo.service --property=LoadState --value) == not-found ]] || {
