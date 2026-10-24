@@ -74,7 +74,13 @@ This is not connected to ROS/Nav2 and emits no commands. Actual health validatio
 
 `orbital/localization.py` now validates independently fresh/advancing scan, odometry and IMU, finite planar pose/TF, normalized orientation and symmetric positive-semidefinite planar covariance. It retains a pending fault when a bad or late sample is followed by a good one before evaluation, so a callback burst cannot hide a broken lease. World reset requires an explicit seed and post-seed pose; old target identities remain cancelled through the existing navigation policy.
 
-Thirteen new cases and all 50 local unit tests pass. A discriminating test first reproduced acceptance of a non-planar ground transform, then passed after enforcing height/tilt bounds. See [LOCALIZATION_HEALTH.md](LOCALIZATION_HEALTH.md) for the exact room-specific contract and adapter obligations. This work is isolated on `codex/localization-health`; it is not deployed, does not move the robot and does not complete live reset/loss/Nav2 acceptance.
+Thirteen new cases and all 50 local unit tests pass. A discriminating test first reproduced acceptance of a non-planar ground transform, then passed after enforcing height/tilt bounds. See [LOCALIZATION_HEALTH.md](LOCALIZATION_HEALTH.md) for the exact room-specific contract and adapter obligations. This work is isolated on `codex/localization-health`; it is not integrated with the shared simulator and does not complete live reset/loss/Nav2 acceptance.
+
+## ROS observation adapter — isolated synthetic acceptance
+
+The read-only `localization-monitor.py` now feeds the validator from actual ROS subscriptions and a time-specific tf2 lookup, publishing health with process identity, epoch and sequence. It preserves invalidation across recovery and refuses duplicate health authorities. It cannot publish velocity, TF or initial pose and does not call motion/navigation services.
+
+Thor `health-monitor-synthetic-2` exited 0 in a separate checkout and initially empty ROS domain 84: loss/replay, tilt, TF loss, pause/reset/reseed and duplicate-authority cases all passed. Measured invalidation intervals were about 0.042–0.535 s. Main domain 42 and the running demo/localizer were not restarted. See [ROS_LOCALIZATION_MONITOR.md](ROS_LOCALIZATION_MONITOR.md). Real guard enforcement, Nav2 action lifecycle and collision/arrival tests remain outstanding.
 
 ## Runtime ownership and boundaries
 
