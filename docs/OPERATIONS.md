@@ -34,7 +34,7 @@ No Foxglove cloud relay or upload is required for this LAN workflow. The applica
 
 Stop the demo with `bash scripts/stop-thor.sh`. Check `systemctl --user status orbital-demo.service` for status. The service stops the entire process cgroup; this matters because Gazebo's combined launcher creates independent server/GUI sessions. The internal `start-demo.sh` is not the recommended standalone entrypoint. Close the Mac SSH tunnel separately. Never use broad `pkill` commands or reboot Thor automatically after a graphics error.
 
-The current demo intentionally does not bridge `/cmd_vel`: autonomous drive needs the command guard milestone first.
+The demo bridges only `/motion/guarded_cmd_vel` to the simulated drive. Send bounded stamped requests through `/motion/request`; startup is latched stopped. See [MOTION.md](MOTION.md) for reset/stop services and the trusted-local-process boundary. Autonomous navigation remains a later phase.
 
 ## Rendering and client compatibility
 

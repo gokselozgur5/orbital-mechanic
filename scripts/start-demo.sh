@@ -38,7 +38,8 @@ fi
 setsid gz sim -r --render-engine ogre "$ROOT/worlds/maintenance.sdf" > "$ROOT/logs/gazebo.log" 2>&1 & children+=("$!")
 setsid ros2 run ros_gz_bridge parameter_bridge --ros-args -p config_file:="$ROOT/config/bridge.yaml" > "$ROOT/logs/bridge.log" 2>&1 & children+=("$!")
 setsid ros2 run robot_state_publisher robot_state_publisher "$ROOT/config/robot.urdf" --ros-args -p use_sim_time:=true > "$ROOT/logs/robot-state.log" 2>&1 & children+=("$!")
-setsid python3 "$ROOT/scripts/machine-telemetry.py" --ros-args -p use_sim_time:=true > "$ROOT/logs/machines.log" 2>&1 & children+=("$!")
+setsid /usr/bin/python3 "$ROOT/scripts/motion-guard.py" --ros-args -p use_sim_time:=true > "$ROOT/logs/motion.log" 2>&1 & children+=("$!")
+setsid /usr/bin/python3 "$ROOT/scripts/machine-telemetry.py" --ros-args -p use_sim_time:=true > "$ROOT/logs/machines.log" 2>&1 & children+=("$!")
 setsid ros2 launch foxglove_bridge foxglove_bridge_launch.xml address:=127.0.0.1 port:=8765 > "$ROOT/logs/foxglove.log" 2>&1 & children+=("$!")
 printf 'Demo running; VNC localhost:5942, Foxglove localhost:8765\n'
 # Any component failure tears down this demonstration instead of leaving a partial stack.

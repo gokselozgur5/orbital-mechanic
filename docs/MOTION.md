@@ -1,6 +1,6 @@
 # Guarded motion
 
-## Policy (implemented, ROS integration pending)
+## Policy
 
 `orbital/motion.py` owns the fail-closed state machine. It starts with a latched stop. An explicit reset requires fresh, stationary odometry. Reset clears old commands; it never resumes a previous velocity.
 
@@ -17,3 +17,15 @@ The policy is independent of ROS and tested deterministically. A ROS adapter mus
 This is not collision avoidance, a hardware emergency-stop circuit or a certified safety controller. Autonomous navigation and obstacle stopping are separate work. Do not expose raw motor inputs to an LLM.
 
 Policy review for issue #2 reproduced a late-command deadline bypass when the periodic tick was delayed. The regression fails before the fix and passes after it; the policy now checks its existing deadline before accepting another command. This review does not claim ROS or physical stop acceptance.
+
+## ROS integration
+
+`scripts/motion-guard.py` uses a 20 Hz steady-clock timer, independent of `/clock`. It consumes odometry with `odom` / `base_link` frames and computes the magnitudes of all measured velocity axes before allowing reset. Invalid frame feedback clears the freshness credit; valid advancing feedback is required again.
+
+Input is `geometry_msgs/TwistStamped` on `/motion/request`, with frame `base_link`, linear X and angular Z only. Unsupported axes, wrong frames, nonfinite values, stale stamps and speed violations latch the stop. `/motion/stop` and `/motion/reset_stop` are `std_srvs/Trigger` services; `/motion/state` reports the latched state and reason as JSON. Reset alone produces zero velocity.
+
+Only `/motion/guarded_cmd_vel` is bridged to Gazebo `/demo/private/cmd_vel`. This is a trusted-local-process boundary, not authentication: another process with local ROS/Gazebo access can bypass topic conventions. Do not grant a planner arbitrary ROS publishing or shell access. Both command transport and the simulator remain local to Thor.
+
+The guard runs inside the existing `orbital-demo` user-service cgroup. The supervisor waits for any component to exit, then tears down the demonstration; systemd owns all descendants. Fault-injection proof of guard death, pause/resume and simulation reset is tracked separately by issue #4.
+
+Run `scripts/check-motion.py` with the ROS environment and domain 42, using system Python, from tmux. It moves only the simulated rover near the clear startup origin and leaves it latched stopped. It rejects a starting position outside a 0.25 m radius. The harness checks forward/reverse motion, timeout, blocked late commands, explicit stop, rotation, overspeed, wrong frame, unsupported axis and stale timestamps. Do not use it for physical hardware.

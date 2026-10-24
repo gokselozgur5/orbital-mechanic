@@ -28,14 +28,18 @@ All project artifacts and caches are under this root. The ~/.gz path is a compat
 
 Anthropic is the selected future planner provider based on user-reported USD200 credit. No API key loaded or credits spent. Select and price the exact model when connecting the credential, with explicit per-mission and experiment caps.
 
-Use standard ROS control/navigation for motion, a restricted planner gateway, and independent evaluation. The current passive demo uses Gazebo's differential-drive plugin; the installed ros2_control/Nav2 packages are not yet integrated into autonomous motion.
+Use standard ROS control/navigation for motion, a restricted planner gateway, and independent evaluation. The current demo uses Gazebo's differential-drive plugin; the installed ros2_control/Nav2 packages are not yet integrated into autonomous motion.
 
 ## Phase status and next work
 
 Phase 0 design/setup is accepted: the user approved the baseline and phase-tracking proposal, sensor/lifecycle evidence is recorded, and Mac Gazebo/Foxglove opening is confirmed. The six milestones and 15 dependency-ordered issues are indexed in [TRACKING.md](TRACKING.md). [PHASES.md](PHASES.md) supersedes the earlier exploratory M-numbered ordering.
 
-Next: Phase 1 issue #2 reviews the tested motion policy, #3 integrates ROS control, #4 verifies failure behavior and #5 provides operator controls. Early policy code exists; the ROS motion adapter/bridge/harness remain uncommitted and undeployed drafts. No navigation, integrated repair, robot arm, visual diagnosis, SLAM or LLM-controlled mission is claimed.
+Next: Phase 1 issue #4 verifies failure behavior, then #5 provides operator controls. Policy review #2 is complete. The guarded ROS adapter/bridge is deployed and its eight live acceptance cases pass; see MOTION.md. Failure injection and operator controls remain pending. No navigation, integrated repair, robot arm, visual diagnosis, SLAM or LLM-controlled mission is claimed.
 
 ## Mac Gazebo viewer fix
 
 User reported native Screen Sharing could not communicate with localhost. Verified SSH master alive and RFB3.8/no-auth handshake reachable; native client closed before requesting frames. Added a Mac-local noVNC/WebSocket proxy in tmux orbital-viewer. The user confirmed the Gazebo display appeared in the browser. Default Mac opener now uses localhost15943 through the existing15942 SSH tunnel. No Thor runtime or motion code changed in this fix.
+
+## Guarded motion integration
+
+The Thor tmux `motion-integration-2` job passed 18 unit tests and eight live motion checks. Forward travel was 0.2233 m; the observed timeout latch arrived 0.3233 s after the drive loop returned (not a precise last-publish latency measurement). Reverse, rotation, explicit stop, blocked late commands and invalid input rejection passed. One server and one GUI remained. The robot was left latched stopped. See [MOTION.md](MOTION.md); process death, pause/reset and measured braking distances remain issue #4, not completed claims.
