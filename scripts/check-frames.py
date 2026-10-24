@@ -58,6 +58,8 @@ def main():
         stamp = msg.header.stamp.sec + msg.header.stamp.nanosec/1e9
         if stamp < feedback.get('stamp_s', stamp):
             regressions += 1
+        feedback.setdefault('first_stamp_s', stamp)
+        feedback['count'] = feedback.get('count', 0)+1
         feedback.update(parent=msg.header.frame_id, child=msg.child_frame_id,
                         stamp_s=stamp, received_at=time.monotonic(),
                         z_m=msg.pose.pose.position.z)
@@ -101,7 +103,8 @@ def main():
         checks['odometry_fresh'] = (bool(feedback) and now > 0 and
                                   time.monotonic()-feedback['received_at'] < .5 and
                                   0 <= now-feedback['stamp_s'] < .5)
-        checks['odometry_no_regressions'] = regressions == 0 and bool(feedback)
+        checks['odometry_advances_without_regression'] = (regressions == 0 and feedback.get('count', 0) > 1
+                                                        and feedback['stamp_s'] > feedback['first_stamp_s'])
         graph = {topic: sorted(p.node_name for p in node.get_publishers_info_by_topic(topic))
                  for topic in ('/tf', '/tf_static', '/odom')}
         checks['expected_publisher_graph'] = (graph['/tf'] == ['robot_state_publisher', 'ros_gz_bridge'] and
