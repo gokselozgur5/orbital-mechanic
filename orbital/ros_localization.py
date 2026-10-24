@@ -70,7 +70,7 @@ class LocalizationMonitor(Node):
             self.epoch += 1
         self.last_health = health
         self.sequence += 1
-        self.health_pub.publish(String(data=json.dumps({**asdict(health), 'run_id': self.run_id, 'epoch': self.epoch, 'sequence': self.sequence})))
+        self.health_pub.publish(String(data=json.dumps({**asdict(health), 'schema_version': 1, 'run_id': self.run_id, 'epoch': self.epoch, 'sequence': self.sequence})))
 
     def on_clock(self, msg):
         value = msg.clock.sec + msg.clock.nanosec*1e-9

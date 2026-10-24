@@ -80,7 +80,15 @@ Thirteen new cases and all 50 local unit tests pass. A discriminating test first
 
 The read-only `localization-monitor.py` now feeds the validator from actual ROS subscriptions and a time-specific tf2 lookup, publishing health with process identity, epoch and sequence. It preserves invalidation across recovery and refuses duplicate health authorities. It cannot publish velocity, TF or initial pose and does not call motion/navigation services.
 
-Thor `health-monitor-synthetic-2` exited 0 in a separate checkout and initially empty ROS domain 84: loss/replay, tilt, TF loss, pause/reset/reseed and duplicate-authority cases all passed. Measured invalidation intervals were about 0.042–0.535 s. Main domain 42 and the running demo/localizer were not restarted. See [ROS_LOCALIZATION_MONITOR.md](ROS_LOCALIZATION_MONITOR.md). Real guard enforcement, Nav2 action lifecycle and collision/arrival tests remain outstanding.
+Thor `health-monitor-synthetic-2` exited 0 in a separate checkout and initially empty ROS domain 84: loss/replay, tilt, TF loss, pause/reset/reseed and duplicate-authority cases all passed. Measured invalidation intervals were about 0.042–0.535 s. Main domain 42 and the running demo/localizer were not restarted. See [ROS_LOCALIZATION_MONITOR.md](ROS_LOCALIZATION_MONITOR.md). The actual guard-service connection is exercised below; ownership of the Nav2 velocity path, action lifecycle and collision/arrival tests remain outstanding.
+
+## Health-to-stop adapter — isolated actual guard acceptance
+
+The health lease now validates schema/run/epoch/sequence, expires after 0.25 s without advancing health and preserves stop obligations through recovery. Generation-tagged acknowledgments prevent an old stop reply from clearing a newer fault. Seven new lease cases and all 57 local unit tests pass.
+
+`health-interlock-synthetic-2` exited 0 using the actual ROS motion guard and stop service in domain 84. Valid velocity requests continued during injected faults; guarded output reached zero with `operator_stop` in 0.559 s (scan loss), 0.062 s (tilt), 0.156 s (TF loss), 0.307 s (clock pause) and 0.247 s (health silence). Recovery did not re-arm. All 13 stop requests were acknowledged. No Gazebo or actuator bridge existed in that domain, so this does not measure physical braking.
+
+See [HEALTH_INTERLOCK.md](HEALTH_INTERLOCK.md). The component is not installed in the shared demo and is not sufficient as a standalone safety boundary: the final supervisor must own command publication, stop on its own process loss and await exact Nav2 cancellation. Shared-world ownership coordination and full route/failure acceptance remain pending.
 
 ## Runtime ownership and boundaries
 
