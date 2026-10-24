@@ -42,7 +42,7 @@ The final combined run received 97 images in 20 seconds with approximately 50 ms
 
 All 24 unit tests pass on Mac and Thor, including six map cases. Repeated local generation is identical; Thor generated the same PGM SHA-256 `d08588af2b1186992411e32dbf1d703e47ea45d183666de13c04a84cbe9c5000`. The offline job exited 0 with the existing demo still active; it did not restart the world. Map and navigation-contract commits passed GitHub CI.
 
-See [NAVIGATION.md](NAVIGATION.md). AMCL convergence from a deliberately offset seed, stronger TF ownership evidence, localization loss/reset behavior, obstacle-aware routes and actual arrival at machines remain unverified. The frame-height correction itself is live-accepted below. No autonomous navigation is claimed.
+See [NAVIGATION.md](NAVIGATION.md). Offset-seed AMCL commissioning is described below. Stronger TF ownership evidence, complete live localization loss/reset behavior, obstacle-aware routes and actual arrival at machines remain unverified. The frame-height correction itself is live-accepted below. No autonomous navigation is claimed.
 
 ## Frame geometry correction — live acceptance passed
 
@@ -74,7 +74,7 @@ The current source also adds an unseeded negative gate to the probe/runners; tha
 
 `orbital/navigation.py` now provides run/epoch/sequence target identity, named-target allowlisting, explicit stationary arm, 0.5-second advancing-health freshness and cancellation-terminal interlocks. Seven new unit cases cover reset/loss/replay and stale-result behavior; all 34 local unit tests pass. See [NAVIGATION_POLICY.md](NAVIGATION_POLICY.md).
 
-This is not connected to ROS/Nav2 and emits no commands. Actual health validation, action/cancel races, target deadlines, measured arrivals and live failure acceptance remain required. It does not change the current simulation.
+The policy itself emits no commands. The isolated ROS adapters described below now exercise health validation, action/cancel races, deadlines and estimated arrival. Shared-world deployment and live route/failure acceptance remain required.
 
 ## Offline localization health validator
 
@@ -100,7 +100,15 @@ See [HEALTH_INTERLOCK.md](HEALTH_INTERLOCK.md). The component is not installed i
 
 `NavigationActionSession` now reserves exact target identities, requires policy arm, dispatches named poses, enforces a bounded wall deadline and retains ownership until the matching Nav2 result is terminal. Cancel acknowledgment alone cannot release a task; delayed acceptance is immediately cancelled after invalidation. New targets also wait for measured stationary feedback and an engaged stop latch. A successful Nav2 result remains explicitly unverified arrival.
 
-Thor `navigation-action-synthetic-3` exited 0 with 11 real action-transport cases against a dedicated fake server, including delayed timer/acceptance, rejected cancellation, late success after cancellation and server SIGKILL. No controller or velocity publisher was launched. See [NAVIGATION_ACTION.md](NAVIGATION_ACTION.md). This does not complete the composed supervisor, real routes, physical stop composition or arrival/collision acceptance.
+Thor `navigation-action-synthetic-3` exited 0 with 11 real action-transport cases against a dedicated fake server, including delayed timer/acceptance, rejected cancellation, late success after cancellation and server SIGKILL. No controller or velocity publisher was launched. See [NAVIGATION_ACTION.md](NAVIGATION_ACTION.md). The composed synthetic acceptance below extends this evidence; real routes, physical stop composition and independent arrival/collision acceptance remain outstanding.
+
+## Composed supervisor — isolated ROS acceptance
+
+The supervisor now owns navigation command publication, joins health and action lifecycle, and requires run-bound sequenced operator commands with exact target tokens. It waits for asynchronous guard arm acknowledgment plus fresh unlatched feedback, rejects invalid/stale controller output, and checks measured TF before reporting arrival. Unresolved arm/action calls prevent premature task release.
+
+`navigation-supervisor-synthetic-1` exited 0 with eight cases using synthetic sensors/fake Nav2 and the actual ROS guard: unarmed blocking, health-loss stop/old-target rejection, stale output, stop-service failure, false arrival, measured arrival, explicit cancellation and supervisor SIGKILL. Scan-loss stop took 0.499 s; unavailable stop service reached watchdog stop in 0.928 s; supervisor death reached watchdog stop in 0.377 s while the fake controller kept publishing. These are zero-output times, not physical braking measurements. All 59 local unit tests pass.
+
+See [NAVIGATION_SUPERVISOR.md](NAVIGATION_SUPERVISOR.md) for the protocol, reproduction and deployment gates. This branch remains separate from shared `main`, pending coordination with the other ROS session. No actual Nav2 route, collision test, production supervisor service or LLM mission is claimed. Next: integrate the actual Nav2 lifecycle and exclusive velocity path, then run independent Gazebo route and failure acceptance.
 
 ## Runtime ownership and boundaries
 

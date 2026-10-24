@@ -45,6 +45,8 @@ class Fixture(Node):
         self.events=[]
         self.health_sub=self.create_subscription(String,'/navigation/health',self.on_health,100)
         self.sim=1.
+        self.map_x=0.
+        self.map_y=0.
         self.publish_scan=True
         self.publish_tf=True
         self.freeze_clock=False
@@ -57,6 +59,7 @@ class Fixture(Node):
 
     def pose_message(self):
         m=PoseWithCovarianceStamped();m.header.frame_id='map';m.header.stamp=stamp(self.sim)
+        m.pose.pose.position.x=self.map_x;m.pose.pose.position.y=self.map_y
         m.pose.pose.orientation.w=1.
         m.pose.covariance[0]=m.pose.covariance[7]=.01;m.pose.covariance[35]=.02
         return m
@@ -79,6 +82,7 @@ class Fixture(Node):
             transforms=[]
             for parent,child in [('map','odom'),('odom','base_footprint')]:
                 t=TransformStamped();t.header.frame_id=parent;t.child_frame_id=child;t.header.stamp=stamp(self.sim)
+                if parent=='map':t.transform.translation.x=self.map_x;t.transform.translation.y=self.map_y
                 t.transform.rotation.w=1.;transforms.append(t)
             self.tf.sendTransform(transforms)
 
