@@ -6,9 +6,9 @@ The standalone command refuses an existing health publisher before starting. The
 
 ## Wire contract
 
-Each report includes `healthy`, `stationary`, `reason`, `sim_time`, `run_id`, `epoch` and `sequence`. A process restart changes `run_id`. A healthy-to-unhealthy transition, clock reset or initial-pose event advances `epoch`; later recovery preserves that new epoch. This retains evidence of invalidation even if a consumer misses the single unhealthy report.
+Each report uses `schema_version: 1` and includes `healthy`, `stationary`, `reason`, `sim_time`, `run_id`, `epoch` and `sequence`. A process restart changes `run_id`. A healthy-to-unhealthy transition, clock reset or initial-pose event advances `epoch`; later recovery preserves that new epoch. This retains evidence of invalidation even if a consumer misses the single unhealthy report.
 
-A future navigation supervisor must bind a target to the health run/epoch, reject old or non-increasing report sequences, and invalidate its target on run/epoch changes. It must also expire health by its own monotonic receive deadline. Silence, reconnection or a later healthy report cannot authorize an old target. This observer alone never stops a robot: the supervisor still must enforce real guard stop and exact Nav2 cancellation.
+A future navigation supervisor must bind a target to the health run/epoch, reject old or non-increasing report sequences, and invalidate its target on run/epoch changes. It must also expire health by its own monotonic receive deadline. Silence, reconnection or a later healthy report cannot authorize an old target. This observer alone never stops a robot. The separate [health-to-stop adapter](HEALTH_INTERLOCK.md) exercises the real guard service in isolation; a supervisor still must own the velocity path and enforce exact Nav2 cancellation.
 
 ROS callbacks read actual `/scan`, `/odom`, `/imu`, `/amcl_pose`, `/initialpose` and `/clock`. Sensor subscriptions use sensor QoS; AMCL pose uses reliable transient-local delivery. Scan angle geometry is checked against the commissioned 360-ray full circle, and an IMU marking orientation unavailable is rejected. The steady timer runs every 50 ms, including during a paused simulation clock.
 
