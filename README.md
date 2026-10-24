@@ -77,4 +77,4 @@ Include a healthy scenario and an unrecoverable fault so success cannot mean bli
 
 ## Continue development
 
-Read [AGENTS.md](AGENTS.md) and [docs/STATUS.md](docs/STATUS.md). The status file distinguishes measured capabilities, prototype-only behavior and remaining work. Foxglove server connectivity is verified; the current Mac client still requires user account sign-in before GUI acceptance.
+Read [AGENTS.md](AGENTS.md) and [docs/STATUS.md](docs/STATUS.md). The status file distinguishes measured capabilities, prototype-only behavior and remaining work. Foxglove client opening is user-confirmed and its camera/TF subscriptions are visible in the server logs.
