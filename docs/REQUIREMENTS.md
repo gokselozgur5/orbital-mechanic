@@ -8,7 +8,7 @@ Baseline: 2026-10-24. Requirements are targets unless linked to measured evidenc
 - Thor project root: `/home/jensen/.goske/codex/orbital-mechanic`. Scripts, logs, generated artifacts and runtime configuration belong here. APT packages use normal system paths.
 - Operator host: existing Mac, with Foxglove Studio already installed.
 - Robotics: ROS 2 Jazzy, Gazebo Harmonic, ros_gz, Nav2 and gz_ros2_control from ROS Ubuntu packages.
-- Initial visualization: loopback-only TigerVNC display plus SSH tunnel to macOS Screen Sharing; Foxglove Bridge on loopback through a separate forwarded port.
+- Visualization: loopback-only TigerVNC display, verified SSH tunnel and Mac-local noVNC browser viewer (native Screen Sharing failed); Foxglove Bridge on loopback through a separate forwarded port.
 - Runtime LLM: Anthropic provider selected based on user-reported USD 200 credit. Credit is unverified; no credential is loaded and no API calls are authorized by a dollar balance alone. Initial experiment cap proposal: USD 5, to be configured before paid tests.
 - Claude Code: development assistant. Production task planner uses an explicit provider adapter and a restricted tool schema, not unrestricted coding-agent shell access.
 

@@ -13,11 +13,11 @@ if ! ssh "${options[@]}" -S "$socket" -O check "$target" >/dev/null 2>&1; then
     -L 127.0.0.1:15942:127.0.0.1:5942 \
     -L 127.0.0.1:18765:127.0.0.1:8765 "$target"
 fi
-open 'vnc://localhost:15942'
+bash "$ROOT/scripts/open-gazebo-web.sh"
 app=${FOXGLOVE_APP:-"$ROOT/../.local/apps/foxglove/Foxglove.app"}
 if [[ -d "$app" ]]; then
   open -a "$app" --args "--user-data-dir=$ROOT/runtime/foxglove-current" 'foxglove://open?ds=foxglove-websocket&ds.url=ws://localhost:18765'
 else
   open 'foxglove://open?ds=foxglove-websocket&ds.url=ws://localhost:18765'
 fi
-printf 'Gazebo: VNC localhost:15942\nFoxglove: ws://localhost:18765\n'
+printf 'Gazebo: http://127.0.0.1:15943/vnc.html?autoconnect=true&resize=scale\nFoxglove: ws://localhost:18765\n'

@@ -39,3 +39,7 @@ Use standard ROS control/navigation for motion, a restricted planner gateway, an
 5. Complete scripted missions before enabling Anthropic tool planning.
 
 No robot arm, physical repair, visual diagnosis, SLAM or LLM-controlled mission is claimed. M0 installation, simulation/transport and client opening are evidenced; detailed panel layout remains a usability follow-up. M1 control and M2 integration remain open.
+
+## Mac Gazebo viewer fix
+
+User reported native Screen Sharing could not communicate with localhost. Verified SSH master alive and RFB3.8/no-auth handshake reachable; native client closed before requesting frames. Added a Mac-local noVNC/WebSocket proxy in tmux orbital-viewer. The user confirmed the Gazebo display appeared in the browser. Default Mac opener now uses localhost15943 through the existing15942 SSH tunnel. No Thor runtime or motion code changed in this fix.
