@@ -67,14 +67,22 @@ class NavigationSupervisor(HealthInterlock):
 
     def on_health(self,msg):
         super().on_health(msg)
-        if hasattr(self,'session') and self.lease.stop_required and self.session.current is not None:
-            self.session.cancel(self.session.current,'localization_invalid')
+        if hasattr(self,'session'):
+            # Preserve a moving observation even if stationarity recovers before
+            # the next timer. A pending guard RPC cannot authorize the old target.
+            if self.arm_future is not None and not self.lease.stationary:
+                self.lease.invalidate('arm_stationarity_lost')
+            if self.lease.stop_required and self.session.current is not None:
+                self.session.cancel(self.session.current,'localization_invalid')
 
     def on_command(self,msg):
         try:
             if not self.command_authority_clear():raise ValueError('Competing command authority')
             command=self.commands.decode(msg.data)
             op=command['op'];accepted=False
+            if op!='cancel' and not self.lease.tick(time.monotonic()):
+                self.last_reply={'sequence':command['sequence'],'accepted':False,'op':op}
+                return
             if op=='request':
                 accepted=self.session.request(command['waypoint']) is not None
             else:
@@ -145,7 +153,8 @@ class NavigationSupervisor(HealthInterlock):
                 try:success=self.arm_future.result().success
                 except Exception:success=False
                 valid=(success and target==self.session.current and self.session.state=='waiting_for_arm'
-                       and self.policy.armed and not self.lease.stop_required and now-self.arm_at<.5)
+                       and self.policy.armed and self.lease.healthy and self.lease.stationary
+                       and not self.lease.stop_required and now-self.arm_at<.5)
                 if valid and self.guard_fresh() and not self.guard_state['latched'] and self.guard_at>=self.arm_at:
                     self.arm_future=None
                     self.dispatch_stamp=self.get_clock().now().nanoseconds*1e-9

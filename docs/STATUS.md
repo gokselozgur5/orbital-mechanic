@@ -11,6 +11,23 @@ original localization branch; six migrated commits do not count as new deliverie
 [Draft PR #16](https://github.com/gokselozgur5/orbital-mechanic/pull/16) links #6/#7,
 which remain open until full live localization/navigation acceptance and review.
 
+**OM-018: arm callback races are fixed locally; native commissioning is pending.**
+The command callback now expires the health lease before admitting a request or
+arm. If moving feedback arrives while a guard-arm response is pending, that
+target is invalidated even when stationary feedback returns before the next tick.
+Dispatch also rechecks health and stationarity when the response arrives.
+
+Seven transport-controlled tests execute the production supervisor, health
+interlock and action session. Four fail on `b712384` and all seven pass with the
+fix; the full local suite passes 107 tests. Positive controls retain dispatch
+after a fresh acknowledgment and ownership while an arm response is unresolved.
+`scripts/check-navigation-arm.py` provides seven corresponding native ROS cases,
+but has not run: SSH to the configured Thor timed out from the current network.
+Local tests use ROS transport doubles and do not establish DDS or physical-motion
+acceptance. The live deployment remains last verified at OM-017. Next: run the
+native negative/positive controls, inspect current service ownership, deploy the
+reviewed fix and finish stationary-arm commissioning before physical-loss trials.
+
 **OM-017: map revision binding is deployed and accepted.**
 Startup validates the loaded map-server revision and artifacts; readiness also
 checks every published/GetMap cell, AMCL/planner map settings and subscriptions,

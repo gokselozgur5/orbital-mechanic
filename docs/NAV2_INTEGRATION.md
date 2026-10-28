@@ -624,3 +624,22 @@ Raw artifacts and pre-deployment backups are in private
 No route goal was requested; independent arrival and physical failure stopping
 remain required. The prior startup-manifest mismatch is resolved by this explicit
 deployment, while earlier manifests remain historical evidence.
+## OM-018 arm callback regression: native acceptance pending
+
+The supervisor must validate health on command admission, even if its periodic
+timer is delayed. A guard response must not dispatch a target after an intervening
+moving observation, including a move/recovery pair processed before the timer.
+
+`python3 -m unittest discover -s tests -p test_supervisor_arm.py -v` executes seven
+cases against the production supervisor, health interlock and action session with
+controlled ROS transport and monotonic time. On `b712384`, four cases fail:
+expired-health request, expired-health arm, moving-feedback acknowledgment and
+move/recovery-before-tick. The fixed source passes all seven and the full
+107-test local suite. The same test file was used on both source variants.
+
+The native counterpart is `scripts/check-navigation-arm.py`, restricted to empty
+localhost ROS domain 84 with the production guard/supervisor, synthetic health
+and a Nav2 stand-in that records and rejects goals. Its seven cases are prepared,
+not accepted: the configured Thor SSH connection timed out on 2026-10-28. No
+runtime deployment or physical-arm acceptance follows from the local result.
+Run the native regression and positive controls before deploying this change.
