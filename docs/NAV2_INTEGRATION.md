@@ -312,3 +312,41 @@ A seeded negative control failed on the unexpected AMCL pose, as intended. An ea
 startup failed closed because the graph gate retained incomplete discovery samples,
 even though its final graph was correct; the successful explicit rerun does not
 remove that startup usability limitation. Both reports are retained privately.
+
+
+## Offset-seed convergence into native navigation (OM-012)
+
+This commissioning **restarts the world and moves the robot**. Coordinate before
+running it inside `tmux orbital-work` on Thor:
+
+```bash
+source scripts/ros-env.sh
+python3 scripts/check-navigation-convergence.py --restart-world-and-jog
+```
+
+The runner stops navigation, explicitly stops the guard and starts a new known-origin
+world/localizer. Active unseeded AMCL must first pass the no-pose/no-map-TF gate.
+The operator then supplies a deliberate `(0.20, -0.15, 0.15)` x/y/yaw seed with
+uncertainty. Evaluator ground truth is never used to generate that seed. Existing
+bounded controls command forward for 1 s at 0.12 m/s, then left for 0.7 s at
+0.3 rad/s, with explicit arm and acknowledged stop for each jog. Navigation is
+absent during these manual commissioning movements.
+
+Independent Gazebo comparison must satisfy the unchanged 0.10 m XY / 0.10 rad yaw
+localization limits, with fresh sensors, map agreement and a level stationary body.
+Native navigation then configures/activates behind the latched guard, must observe
+healthy localization, and must emit zero supervisor velocity requests. A second
+independent comparison must still pass, with no startup pose change above 1 mm /
+0.001 rad. Source/config/installed Nav2 identities must match before and after.
+Failures stop navigation and the guard, falling back to stopping the owned world
+if the stop command cannot be acknowledged.
+
+Thor `navigation-convergence-20261028T114740Z` passed: XY error **0.0752675 m**,
+yaw error **0.00673083 rad**, unchanged after native activation. Gazebo endpoint
+translation/yaw change during startup was zero at reported precision. All three
+Nav2 servers reached state 3, localization was healthy, and the guard stayed latched
+with zero supervisor velocity requests. Source identity:
+`3e31a0f418d6ce62ae7633b9e96704cbdce4ee0064c3c2bf4991eea961889788`.
+All 79 captured source files match the delivered tree. This is one measured
+convergence run into native readiness, not statistical localization accuracy,
+continuous tilt/collision monitoring, autonomous arrival or recovery during a goal.

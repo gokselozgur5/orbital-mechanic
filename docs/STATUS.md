@@ -11,13 +11,29 @@ original localization branch; six migrated commits do not count as new deliverie
 [Draft PR #16](https://github.com/gokselozgur5/orbital-mechanic/pull/16) links #6/#7,
 which remain open until full live localization/navigation acceptance and review.
 
-**OM-011: live unseeded admission refusal passed. Current runtime is unseeded.**
+**OM-012: offset-seed convergence into native navigation passed.**
+Thor `navigation-convergence-20261028T114740Z` restarted the known-origin world,
+proved unseeded AMCL, supplied a deliberate (0.20 m, -0.15 m, 0.15 rad) seed, and
+ran acknowledged bounded forward/left commissioning jogs. Independent Gazebo
+comparison measured 0.0752675 m XY / 0.00673083 rad yaw error, inside the unchanged
+0.10 m / 0.10 rad bounds. Native Nav2 then reached active state 3 with healthy
+localization, guard latched and zero supervisor velocity requests. Accuracy was
+unchanged after activation; measured startup displacement/yaw change was zero.
+
+Current runtime is **seeded, Nav2 active, guard latched**, awaiting a new explicit
+target. No autonomous goal has been executed. All 79 source hashes match identity
+`3e31a0f418d6ce62ae7633b9e96704cbdce4ee0064c3c2bf4991eea961889788`.
+All 92 local tests pass. Next: localization freshness/reset/loss and TF gates,
+then the measured tour. Reproduction and evidence limits are in
+[NAV2_INTEGRATION.md](NAV2_INTEGRATION.md).
+
+**OM-011 historical acceptance: live unseeded admission refusal passed.**
 The packaged Thor run `unseeded-20261028T114225Z` restarted only localization and
 navigation. Active AMCL produced no pose/map transform while real sensors advanced.
 All six supervisor commands (request/arm for each machine) were explicitly rejected;
 no target was allocated, no velocity request emitted and the guard stayed latched.
-Gazebo endpoint pose change was zero at output precision. Native Nav2 servers are
-now configured/inactive (state 2), deliberately awaiting explicit localization.
+Gazebo endpoint pose change was zero at output precision. At the end of that run, native Nav2 servers were
+configured/inactive (state 2), deliberately awaiting explicit localization.
 The simulator InvocationID stayed unchanged. Source identity:
 `145b33f33caa9b155cc4019592a16f99ecf8d4b4e83afb5b1888c97b034a4cbe`.
 
