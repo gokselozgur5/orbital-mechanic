@@ -2,7 +2,7 @@
 
 A simulated maintenance robot that investigates and repairs faults in a space station using ROS 2 and an LLM task planner.
 
-**Status: guarded simulated motion and fresh sensor delivery are verified on ARM64 Thor. Operator CLI safety tests, the rendered Foxglove view and the frame-height correction are accepted; the complete runtime regression runner passes. Known-map generation and a machine model are tested offline. The native Nav2 stack passed guarded active standby, unseeded admission refusal and measured offset-seed convergence. Autonomous routes, integrated maintenance and LLM missions remain unverified.**
+**Status: guarded simulated motion and fresh sensor delivery are verified on ARM64 Thor. Operator CLI safety tests, the rendered Foxglove view and the frame-height correction are accepted; the complete runtime regression runner passes. Known-map generation and a machine model are tested offline. The native Nav2 stack passed guarded active standby, unseeded admission refusal, measured offset-seed convergence and cancellation after reseeding a moving native goal. Autonomous routes, integrated maintenance and LLM missions remain unverified.**
 
 ## Run the current prototype
 

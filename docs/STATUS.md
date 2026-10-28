@@ -11,6 +11,24 @@ original localization branch; six migrated commits do not count as new deliverie
 [Draft PR #16](https://github.com/gokselozgur5/orbital-mechanic/pull/16) links #6/#7,
 which remain open until full live localization/navigation acceptance and review.
 
+**OM-015: the first native Nav2 goal moved and was cancelled by reseeding.**
+The bounded `navigation-reseed-1` trial requested/armed pump, observed running Nav2
+and 0.0766208 rad/s odometry rotation, then published an uncertain origin seed. The
+exact target ended `cancelled`, stationary and latched in 0.224119 s; its old arm was
+rejected and the command stream stayed stopped. A fresh cooler target was accepted
+then cancelled without arming. Current supervisor is healthy/idle/latched with no
+target and 4 historical forwarded commands; it has not reached a machine yet.
+
+A separately pinned pidfd trial guardian passed five native failure/ownership
+cases before the motion trial. It disarmed after verified safe completion, leaving
+all actual services on their existing invocations. Post-trial independent Gazebo
+pose was (0.000386, 0.000002, 0.012884); localization error 0.0109483 m / 0.0208018 rad passed.
+No independent physical braking distance or continuous collision proof is claimed.
+All 85 sources match `413b13a500013aebec1017ee671720a93475258359efa56787d3ba7025f6fd14`;
+92 local tests pass. Reproduction: [NAV2_INTEGRATION.md](NAV2_INTEGRATION.md).
+Next: per-message TF authority, map binding, stationary arm and physical loss-stop
+acceptance, then the measured tour.
+
 **OM-014: live world reset invalidated the old unarmed target.**
 Native `navigation-reset-1` reserved a pump target, reset actual Gazebo simulation
 time to zero, and observed `initial_pose_required` plus terminal old-target state.
@@ -51,7 +69,7 @@ localization, guard latched and zero supervisor velocity requests. Accuracy was
 unchanged after activation; measured startup displacement/yaw change was zero.
 
 Current runtime is **seeded, Nav2 active, guard latched**, awaiting a new explicit
-target. No autonomous goal has been executed. All 79 source hashes match identity
+target. No goal was executed during OM-012; OM-015 above covers the first dispatched native goal. All 79 source hashes match identity
 `3e31a0f418d6ce62ae7633b9e96704cbdce4ee0064c3c2bf4991eea961889788`.
 All 92 local tests pass. Next: localization freshness/reset/loss and TF gates,
 then the measured tour. Reproduction and evidence limits are in

@@ -441,3 +441,54 @@ It does not prove cancellation or braking of a moving goal; the moving-goal rese
 and reseed fault gates remain required. The direct test seed is restricted to the
 acknowledged known-origin reset and a terminal, latched target; it is not a general
 operator authorization to reseed arbitrary active motion.
+
+
+## Dispatched-goal reseed and bounded trial ownership (OM-015)
+
+This is a short **native motion** trial near the freshly reset origin. Coordinate
+first, verify the disposable guardian proof, then run in Thor `tmux orbital-work`:
+
+```bash
+python3 scripts/check-navigation-trial-guard.py
+source scripts/ros-env.sh
+python3 scripts/check-navigation-reseed.py
+```
+
+`navigation-trial-guard.py` pins the navigation service's exact MainPID using a
+Linux pidfd after checking InvocationID, cgroup membership and KillMode. It stops
+that owner on deadline or parent-pipe loss, escalating to SIGKILL after one second
+if necessary. A replacement invocation cannot be signalled through the old pidfd.
+Only an exact `safe` acknowledgment disarms it; the trial sends that after verified
+latched, stationary, idle completion. Existing systemd containment and the drive
+guard remain responsible for descendants and physical braking. This guardian is
+an operational trial bound, not a hard real-time or hardware safety certification.
+
+Five native disposable-service cases passed: wrong-generation refusal, explicit
+disarm, parent-pipe loss, deadline, and replacement-owner isolation. The failure
+fixtures deliberately ignore SIGTERM in both owner and child; both processes were
+gone after cgroup cleanup. No actual simulation service was stopped by those tests.
+
+The motion trial pins a 12-second independent deadline, requests/arms the real pump
+goal, and requires running Nav2 plus measured odometry motion before publishing a
+new uncertain origin seed. It stays within 0.15 m / 0.3 rad at seeding; continuous
+odometry-region and IMU-tilt bounds abort the trial. The exact dispatched target
+must reach cancelled/aborted terminal state, measured stationarity and the stop
+latch. The old token must fail re-arm and its command count must stay unchanged
+through a recovery observation. A fresh cooler request is accepted, then cancelled
+without arming. Failure closes the guardian pipe as well as requesting guard stop.
+
+Native `navigation-reseed-1` passed. Four supervisor requests produced initial
+rotation; measured angular speed before reseeding was 0.0766208 rad/s. The exact
+pump target (epoch 16 / sequence 8) ended **cancelled** 0.224119 s after the seed, with
+stationary odometry and a latched guard. This is not independently measured physical
+braking time/distance. Old-token arm was rejected; the fresh epoch 17 / sequence 9
+request/cancel succeeded and the guardian disarmed after 1.690 s. No service restart
+was needed. A separate post-trial Gazebo check measured pose
+`(0.000386, 0.000002, 0.012884)` and localization error 0.0109483 m / 0.0208018 rad.
+That endpoint check confirms the small rotation, not continuous collision clearance.
+
+All 85 captured sources match identity
+`413b13a500013aebec1017ee671720a93475258359efa56787d3ba7025f6fd14` before/after
+native execution; all 92 local tests pass. This is the first dispatched actual Nav2
+goal and its reseed cancellation. Arrival at the three machines, blocked/changed
+obstacles and independent physical stopping/collision evaluation remain open.
