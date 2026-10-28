@@ -186,6 +186,40 @@ To repeat the read-only live check, load the Orbital ROS environment and run
 use `check-navigation-graph-fixtures.py` only on empty localhost domain84; the script
 refuses another domain or an already populated graph.
 
+## Deployment source identity (OM-009)
+
+`navigation-manifest.py` records all navigation Python/shell sources, required
+world/map/robot/bridge/controller/planner/navigator settings, installed compatibility
+artifacts and Nav2 shared libraries (including BT/costmap/checker plugins). Its
+content identity excludes absolute checkout paths and generated runtime files.
+Missing required files, escaping source symlinks, failed compatibility and artifacts
+that change during capture fail. This is a content record, not a signed release or
+complete operating-system dependency lockfile.
+
+Service startup now captures `source-manifest.json` before the graph gate, then
+re-hashes source/installation and writes `source-verification.json`, binding the
+successful graph report's SHA-256 to the unchanged manifest identity. A failed gate
+cannot receive a successful binding. This detects observed before/after changes;
+it does not freeze a mutable checkout, prove in-memory loaded code or detect a
+change that was reverted between observations. Versioned deployment and live
+process identity still need their own acceptance.
+
+On 2026-10-28, the disposable native proof captured **74 source files and 107
+installed artifacts** and bound a fresh read-only domain42 graph result. Changing
+controller speed from 0.15 to 0.19 in that copy invalidated verification. Restoring
+the original bytes recovered the same identity; a deliberately failed gate was
+refused. All captured source hashes match this worktree. Seven new regressions
+cover changed source/binaries, extra BT libraries, missing files, escaping symlinks,
+manifest tampering and runtime-output exclusion; all 91 local tests pass.
+
+The native acceptance identity was
+`b746ccb4c4f280f0ba1f3be92eeb325428516a965fa89290c6daecfa6057afdd`.
+It will intentionally change with later source/config/plugin deliveries. Full
+source/artifact tables and the gate binding remain in private review artifacts.
+`check-navigation-manifest.py` is a mutation test restricted to disposable copies
+under Thor's Orbital runtime directory. It restores the changed configuration in
+`finally`; it never edits the live checkout or starts navigation.
+
 ## Next gates
 
 1. Controller/local-costmap inactive configuration is verified above; validate actual motion after full composition.
