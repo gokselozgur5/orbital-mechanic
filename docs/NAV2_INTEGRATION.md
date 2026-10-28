@@ -118,12 +118,44 @@ The action server, sensors and guard feedback in this trial are fixtures. This
 proves ROS integration behavior, not physical stopping distance, real Nav2
 tracking or localization accuracy. No live domain42 service was started.
 
+## Owned native launch (OM-006)
+
+`scripts/navigation.launch.py` owns controller_server, planner_server, bt_navigator
+and their lifecycle manager. Localization, the motion guard and supervisor remain
+separate owners. The launch remaps velocity to `/navigation/raw_cmd_vel`, starts
+unconfigured by default and never respawns a child. Any owned child exit shuts
+down the remaining launch. Production service ownership is the next gate; do not
+use this low-level launch as an accepted live deployment procedure yet.
+
+`config/navigate-guarded.xml` contains only periodic ComputePathToPose and FollowPath.
+No behavior server, spin/back-up recovery, smoother or waypoint follower is started.
+The supervisor retains cancellation/recovery decisions. Default simulation time
+can be overridden only for the isolated native trial.
+
+On 2026-10-28, `scripts/check-navigation-launch.py` passed twice on empty domain84:
+normal shutdown and `--kill-controller`. In both cases, all three servers began
+unconfigured and activated through an explicit lifecycle-manager STARTUP request.
+The actual BT loaded and a goal at the stationary fixture pose succeeded with only
+zero velocity output. DDS showed the controller as the sole stamped raw-command
+publisher, with no writer on the three checked bypass topics. Both normal SIGINT
+and controller SIGKILL ended the launch and its four native child processes.
+
+The initial acceptance probe incorrectly assumed the kernel exposed
+`/proc/PID/task/TID/children`. Thor does not expose it. The final probe discovers
+only launch descendants using the `/proc/*/stat` parent relation and records PID
+start identities before any teardown. It never kills by executable name. Final
+source-bound results are `launch-result.json` and `launch-kill-result.json` in the
+private review directory; both match the committed launch/config/probe sources.
+
+This is native composition and process ownership evidence with synthetic static TF,
+scan and odometry. It is not a moving-world route, supervisor-to-guard integration
+or physical collision/stopping acceptance.
+
 ## Next gates
 
 1. Controller/local-costmap inactive configuration is verified above; validate actual motion after full composition.
-2. Known-map planning is verified above; compose the navigation behavior tree.
-3. Configure actual lifecycle nodes in an empty private domain, inspect their
-   graph and parameters, and verify the real stamped publisher type.
+2. Known-map planning and native behavior-tree composition are verified above.
+3. Native lifecycle and output type are verified; add complete deployment preflight and source binding.
 4. Deploy the owned navigation service with shared-world preflight and a latched
    guard. Confirm that no command bypass or competing controller exists.
 5. Run announced bounded motion, independent arrival/collision evaluation and
