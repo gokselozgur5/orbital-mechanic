@@ -27,6 +27,7 @@ class Harness:
         self.changed_epoch = self.drop_health = self.clock_mode_changed = False
         self.lookup_hook = None
         self.lookups = []
+        self.pose = (2.,1.8,0.)
         owner = self
         parameters = {
             '/map_server':{'yaml_filename':str(self.map_path),'frame_id':'map','topic_name':'map','use_sim_time':True},
@@ -90,7 +91,7 @@ class Harness:
                 owner.lookups.append(stamp.nanoseconds)
                 if owner.no_tf: raise LookupError('controlled missing transform')
                 if owner.lookup_hook: owner.lookup_hook()
-                return transform(stamp.nanoseconds+int(owner.wrong_tf))
+                return transform(stamp.nanoseconds+int(owner.wrong_tf),*owner.pose)
         def spin(node,timeout_sec):
             owner.wall += timeout_sec
             if not owner.paused: owner.sim += round(timeout_sec*1e9)
@@ -115,11 +116,13 @@ class Harness:
             self.modules[name] = ModuleType(name)
             self.modules[name].__dict__.update(values)
 
-    def run(self,timeout=2.):
+    def run(self,timeout=2.,invoke=None):
         with patch.dict(sys.modules,self.modules):
             spec = importlib.util.spec_from_file_location('orbital.ros_map_binding',ROOT/'orbital/ros_map_binding.py')
             mapping = importlib.util.module_from_spec(spec)
             spec.loader.exec_module(mapping)
             mapping.time = NS(monotonic=lambda:self.wall)
             with patch.dict(sys.modules,{'orbital.ros_map_binding':mapping}):
+                if invoke is not None:
+                    return invoke()
                 return ros_proximity.run(self.root,'pump',timeout=timeout,now=lambda:self.wall)

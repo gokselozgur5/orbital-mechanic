@@ -35,7 +35,9 @@ mutation cannot rebind the immutable registry.
 The loader reuses the existing machine IDs, waypoint parser and supported SDF
 scene parser. It requires exactly the three configured machine identities, one
 static axis-aligned collision box per machine and a control point matching that
-box's west face. Missing/duplicate models, extra dynamic models, unsupported or
+box's west face. The nominal inspection goal must approach from west and its
+heading must point at that control, using the same check as map validation.
+Missing/duplicate models, extra dynamic models, unsupported or
 ambiguous source geometry, wrong frames and invalid control points are rejected.
 Sources must be regular files under the checkout without symlinks; each read is
 bounded to 32 KiB. Startup and each measurement recheck source hashes. A source
@@ -113,8 +115,8 @@ named process or start another world to update it. Compare all three native mode
 and control bindings and retain exact source/registry identities. This turn made
 no native deployment, movement, world change or maintenance intervention.
 
-The [measured proximity query](PROXIMITY.md) now passes local core/adapter tests;
-native commissioning remains open. Next: orientation and stationary interlocks,
+The [measured proximity and inspection pose query](PROXIMITY.md) now passes local
+core/adapter tests; native commissioning remains open. Next: stationary interlocks,
 observation freshness/validity, then inspection and maintenance endpoints. Keep
 the independent collision evaluator and hidden scenario state outside planner
 inputs throughout that integration.

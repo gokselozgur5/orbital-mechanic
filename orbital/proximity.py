@@ -6,6 +6,7 @@ pose. A valid distance measurement alone does not authorize inspection/actions.
 import math
 
 from orbital.health_lease import HealthLease
+from orbital.inspection_geometry import ARRIVAL_XY_TOLERANCE_M, ARRIVAL_YAW_TOLERANCE_RAD
 from orbital.localization import planar_pose_valid
 from orbital.machines import MAX_CONTROL_DISTANCE_M
 from orbital.navigation_client import _json
@@ -94,12 +95,30 @@ class ProximityEvidence:
                 for v in (*position,*orientation)) or not planar_pose_valid(position,orientation)):
             raise Unavailable('invalid_planar_transform')
         distance = math.dist(position[:2], self.machine.control)
-        return {'schema_version':1, 'valid':True, 'machine_id':self.machine.machine_id,
+        goal = self.machine.inspection
+        # Homogeneous quaternion form avoids heading drift from the small norm
+        # error permitted by the existing planar-pose validator; q and -q agree.
+        x,y,z,w = orientation
+        yaw = math.atan2(2*(w*z+x*y),w*w+x*x-y*y-z*z)
+        xy_error = math.dist(position[:2],goal[:2])
+        yaw_error = abs(math.remainder(yaw-goal[2],2*math.pi))
+        within_distance = distance <= MAX_CONTROL_DISTANCE_M
+        within_xy = xy_error <= ARRIVAL_XY_TOLERANCE_M
+        within_yaw = yaw_error <= ARRIVAL_YAW_TOLERANCE_RAD
+        pose_reason = ('outside_control_distance' if not within_distance else
+                       'outside_inspection_position' if not within_xy else
+                       'outside_inspection_heading' if not within_yaw else 'within_pose_bounds')
+        return {'schema_version':2, 'valid':True, 'machine_id':self.machine.machine_id,
                 'registry_identity':self.registry.identity, 'frame':'map',
                 'control_xy_m':list(self.machine.control), 'robot_pose_xyz_xyzw':[*position,*orientation],
                 'pose_stamp_ns':requested, 'observed_sim_stamp_ns':sim_ns,
                 'health':{'run_id':self.lease.run_id, 'epoch':self.lease.epoch,
                           'sequence':self.lease.sequence, 'received_age_s':now-self.lease.received_at},
                 'distance_m':distance, 'distance_limit_m':MAX_CONTROL_DISTANCE_M,
-                'within_distance':distance <= MAX_CONTROL_DISTANCE_M,
-                'scope':'localized planar distance to configured control; not inspection or maintenance authorization'}
+                'within_distance':within_distance,
+                'within_inspection_pose':within_distance and within_xy and within_yaw,
+                'inspection_pose':{'target_xy_yaw':list(goal), 'robot_yaw_rad':yaw,
+                                   'xy_error_m':xy_error, 'xy_limit_m':ARRIVAL_XY_TOLERANCE_M,
+                                   'yaw_error_rad':yaw_error, 'yaw_limit_rad':ARRIVAL_YAW_TOLERANCE_RAD,
+                                   'reason':pose_reason},
+                'scope':'localized distance and inspection pose bounds; not inspection or maintenance authorization'}

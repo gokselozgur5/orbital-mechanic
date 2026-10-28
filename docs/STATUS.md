@@ -11,7 +11,29 @@ original localization branch; six migrated commits do not count as new deliverie
 [Draft PR #16](https://github.com/gokselozgur5/orbital-mechanic/pull/16) links #6/#7,
 which remain open until full live localization/navigation acceptance and review.
 
-**OM-042: measured proximity passes locally; native inspection remains pending.**
+**OM-043: measured inspection pose passes locally; native inspection remains pending.**
+The map validator and public registry now require each nominal inspection heading
+to face its actual west-face control. The same fresh TF used for distance reports
+measured XY/yaw errors against the existing 0.10 m / 0.15 rad arrival bounds.
+Schema 2 distinguishes distance from `within_inspection_pose`; the CLI's
+`--require-inspection-pose` option rejects a nearby robot with the wrong position
+or heading. A valid pose still does not authorize inspection or maintenance.
+
+All 307 local tests pass, including eleven new tests through nominal configuration, production evidence and the
+actual CLI/map/TF adapters with controlled transport. The same regression rejects
+opposite/misaligned configured headings only after the change; a valid diagonal
+goal passes before and after. Boundary and quaternion sign/norm/wrap controls
+pass. The causal model baseline and shell/AST/XML checks also pass.
+
+Two map generations agree at revision `f02e11a9cb0e4f2f`; occupancy is unchanged
+from `1c58f56cf5246735`, which current source now rejects. Native use requires an
+explicit map regeneration/localization reload, seed and readiness check. Thor
+SSH again closed the connection (exit 255); no native state changed. PR #19 and
+issue #8 remain open/In Progress. Next: stationary inspection interlock and fresh
+public observations, alongside the pending native commissioning gates. Contract:
+[PROXIMITY.md](PROXIMITY.md).
+
+**OM-042: measured proximity passes locally; native commissioning remains pending.**
 The read-only `machine-proximity.py` query uses the registry, actual map-binding
 gate, localization health and an exact-time `map` to `base_footprint` transform.
 It pins publisher/run/epoch identity, checks current source and timing, and
@@ -29,8 +51,8 @@ could not establish an SSH session (exit 255). No native source, process or worl
 
 This remains stacked on navigation through draft PR #19 / issue #8. A valid
 distance is not inspection eligibility: native pose/source commissioning,
-orientation, stationarity, telemetry freshness and action ownership remain open.
-Next local work: measured orientation and stationary inspection interlocks;
+stationarity, telemetry freshness and action ownership remain open; OM-043 adds
+local pose checks above. Next local work: stationary inspection interlocks;
 native navigation/map/telemetry gates remain required before live integration.
 
 **OM-041: machine registry and telemetry binding pass locally; native commissioning remains pending.**

@@ -14,10 +14,10 @@ def health(sequence=1, sim_time=1., **changes):
                        'sequence':sequence,'sim_time':sim_time,**changes})
 
 
-def transform(stamp, x=2., y=1.8):
+def transform(stamp, x=2., y=1.8, yaw=0.):
     return NS(header=NS(frame_id='map',stamp=NS(sec=stamp//10**9,nanosec=stamp%10**9)),
               child_frame_id='base_footprint',transform=NS(translation=NS(x=x,y=y,z=0.),
-                                                       rotation=NS(x=0.,y=0.,z=0.,w=1.)))
+                                                       rotation=NS(x=0.,y=0.,z=math.sin(yaw/2),w=math.cos(yaw/2))))
 
 
 class ProximityTests(RegistryFixture):

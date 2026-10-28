@@ -11,6 +11,7 @@ from pathlib import Path
 import xml.etree.ElementTree as ET
 
 from orbital.collision_geometry import Scene, Transform, IDENTITY, same_transform, sdf_pose
+from orbital.inspection_geometry import validate_control_heading
 from orbital.machines import MACHINE_IDS
 from orbital.navigation_configuration import parse_waypoint_contract
 
@@ -88,6 +89,7 @@ class MachineRegistry:
                     or any(type(v) not in (int, float) or not math.isfinite(v) for v in control)
                     or math.dist(control, expected) > 1e-8):
                 raise ValueError('Registry control does not match the machine west face: '+name)
+            validate_control_heading(poses[name],control,name)
             bindings.append(MachineBinding(name, sdf_pose(world.find("model[@name='"+name+"']")),
                                            transform.center, part.size, tuple(control), poses[name]))
         registry = cls(root, config['world'], digest(config_raw), digest(world_raw), tuple(bindings))

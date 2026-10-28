@@ -24,12 +24,15 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('machine_id',choices=MACHINE_IDS)
     parser.add_argument('--timeout',type=duration,default=10.)
+    parser.add_argument('--require-inspection-pose',action='store_true',
+                        help='require measured inspection position and heading for exit 0; no action permission')
     args = parser.parse_args(argv)
     if os.environ.get('ROS_DOMAIN_ID') not in ('42','84') or os.environ.get('ROS_AUTOMATIC_DISCOVERY_RANGE') != 'LOCALHOST':
         parser.error('requires Orbital localhost domain42 or an empty isolated domain84')
     try:
         result = run(ROOT,args.machine_id,timeout=args.timeout)
-        code = 0 if result['within_distance'] else 1
+        accepted = result['within_inspection_pose'] if args.require_inspection_pose else result['within_distance']
+        code = 0 if accepted else 1
     except KeyboardInterrupt:
         result,code = {'valid':False,'within_distance':False,'error':'interrupted'},130
     except (ValueError,RuntimeError,OSError,KeyError,TypeError,AttributeError,ImportError) as error:

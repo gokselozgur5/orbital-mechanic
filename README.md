@@ -100,7 +100,8 @@ does not establish continuous collision freedom or native route acceptance.
 measurement to configured scene identities, source revisions and simulation time.
 Local integration tests pass; native commissioning remains pending.
 
-[Measured machine proximity](docs/PROXIMITY.md) combines registered control
-geometry, verified map binding, localization health and exact-time robot TF.
-Local core/adapter tests pass. Native measurement, orientation, stationarity and
-inspection/action acceptance remain open; distance alone grants no permission.
+[Measured machine proximity and inspection pose](docs/PROXIMITY.md) combine
+registered control geometry, verified map binding, localization health and
+exact-time robot TF. The query can require the measured inspection position and
+heading. Local core/adapter tests pass. Native measurement, stationarity and
+inspection/action acceptance remain open; pose evidence alone grants no permission.

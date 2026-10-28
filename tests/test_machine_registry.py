@@ -2,6 +2,7 @@ import copy
 from dataclasses import FrozenInstanceError
 import hashlib
 import json
+import math
 from pathlib import Path
 import subprocess
 import sys
@@ -32,6 +33,12 @@ class RegistryFixture(unittest.TestCase):
 
 
 class MachineRegistryTests(RegistryFixture):
+    def test_opposite_nominal_heading_is_refused_by_the_registry(self):
+        self.config['inspection_poses']['pump']['goal_xy_yaw'][2] = math.pi
+        self.save_config()
+        with self.assertRaisesRegex(ValueError,'heading'):
+            MachineRegistry.load(self.root)
+
     def test_actual_scene_models_controls_and_source_identity(self):
         registry = MachineRegistry.load(self.root)
         catalog = registry.public()
