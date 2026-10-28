@@ -37,11 +37,27 @@ def authority(node, expected=None):
     return sorted(snapshot)
 
 
-def _observe(root, machine_id, *, timeout, now, require_settled, inspection, with_camera=False):
+def _observe(root, machine_id, *, timeout, now, require_settled, inspection, with_camera=False,
+             action_context=None, cancelled=None):
     if type(timeout) not in (int,float) or not math.isfinite(timeout) or not .1 <= timeout <= 10.:
         raise ValueError('timeout_must_be_between_0.1_and_10_seconds')
     deadline = now()+timeout
+    if action_context is not None:
+        from orbital.inspection_protocol import context
+        action_context = context(action_context)
+        if not with_camera:
+            raise ValueError('owned_inspection_requires_camera')
+    def remaining():
+        if cancelled is not None and cancelled():
+            raise Unavailable('inspection_cancelled')
+        left = deadline-now()
+        if left <= 0:
+            raise Unavailable('proximity_deadline_exceeded')
+        return left
+    remaining()
     registry = MachineRegistry.load(root)
+    if action_context is not None and action_context['registry_identity'] != registry.identity:
+        raise Unavailable('inspection_registry_changed')
     capture = InspectionEvidence(registry,machine_id) if inspection else None
     evidence = capture.robot if capture else ProximityEvidence(registry,machine_id)
     if type(require_settled) is not bool:
@@ -52,8 +68,7 @@ def _observe(root, machine_id, *, timeout, now, require_settled, inspection, wit
         from orbital.inspection_artifacts import CaptureStore
         camera = CameraEvidence(CameraContract.load(registry))
     prepared = MapSnapshot.prepare(registry)
-    if now()>=deadline:
-        raise Unavailable('proximity_deadline_exceeded')
+    remaining()
     import rclpy
     from nav_msgs.msg import Odometry
     from rclpy.clock import ClockType
@@ -81,12 +96,6 @@ def _observe(root, machine_id, *, timeout, now, require_settled, inspection, wit
                                  lambda msg:evidence.health(msg.data,now()),10)
         node.create_subscription(Odometry,'/odom',
             lambda msg:evidence.odometry(msg,now(),node.get_clock().now().nanoseconds),qos_profile_sensor_data)
-
-        def remaining():
-            left = deadline-now()
-            if left <= 0:
-                raise Unavailable('proximity_deadline_exceeded')
-            return left
 
         initial = None
         while initial is None:
@@ -177,6 +186,8 @@ def _observe(root, machine_id, *, timeout, now, require_settled, inspection, wit
                 continue
             identity = {'observation_id':uuid.uuid4().hex,
                 'authority_identity':hashlib.sha256(json.dumps(initial,separators=(',',':')).encode()).hexdigest()}
+            if action_context is not None and identity['authority_identity'] != action_context['authority_identity']:
+                raise Unavailable('inspection_authority_changed')
             registry.verify_current()
             if camera:
                 camera.contract.verify_current()
@@ -208,6 +219,8 @@ def _observe(root, machine_id, *, timeout, now, require_settled, inspection, wit
                 if not result['within_settled_inspection_pose']:
                     raise Unavailable('settled_inspection_pose_required')
             result.update(**identity,map_binding=mapping['binding'],map_observed_age_s=observed_at-bound_at)
+            if action_context is not None:
+                result.update(inspection_action=dict(action_context), observed_monotonic_s=observed_at)
             remaining()
             if camera:
                 def storage_guard():
@@ -248,6 +261,8 @@ def read_machine_observation(root, machine_id, *, timeout=10., now=time.monotoni
     return _observe(root,machine_id,timeout=timeout,now=now,require_settled=True,inspection=True)
 
 
-def capture_machine_observation(root, machine_id, *, timeout=10., now=time.monotonic):
+def capture_machine_observation(root, machine_id, *, timeout=10., now=time.monotonic,
+                                action_context=None, cancelled=None):
     """Acquire a joint observation with a bounded, verified local camera bundle."""
-    return _observe(root,machine_id,timeout=timeout,now=now,require_settled=True,inspection=True,with_camera=True)
+    return _observe(root,machine_id,timeout=timeout,now=now,require_settled=True,inspection=True,with_camera=True,
+                    action_context=action_context,cancelled=cancelled)

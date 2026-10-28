@@ -1,13 +1,16 @@
 # Tool and scenario contracts — draft v0.1
 
-These are design contracts, not implemented endpoints. The same tools serve scripted and LLM planners.
+These are design contracts with an implemented inspection subset. The same tools
+are intended for scripted and LLM planners; a complete planner gateway is not yet implemented.
 
 The read-only [station observation CLI](STATION_OBSERVATION.md) now implements
 fresh public telemetry consumption. The [machine observation CLI](INSPECTION_OBSERVATION.md)
 combines a selected public sample with exact same-time settled robot state. These
-readers do not yet expose this common mission envelope or provide maintenance
-endpoints. Optional [camera capture](CAMERA_OBSERVATIONS.md) now adds bounded
-local RGB evidence with its own acquisition timestamp and robot pose.
+readers do not provide maintenance endpoints. Optional [camera capture](CAMERA_OBSERVATIONS.md)
+adds bounded local RGB evidence with its own acquisition timestamp and robot pose.
+The [inspection endpoint](INSPECTION_ENDPOINT.md) now wraps that reader with a
+run/mission/action envelope, cancellation, terminal ownership and exact replay.
+It uses typed bounded JSON on String topics, not a generated ROSIDL action type.
 
 ## Common envelope
 
@@ -59,4 +62,4 @@ A successful repair requires the correct machine and intervention, a sustained h
 
 Reset requires isolation, temperature at most 40 °C and an unused reset attempt. Only a latched controller fault clears on reset. Recovery requires all machines powered at normal load and bus voltage at least 27 V continuously for 10 seconds. These constants are illustrative and uncalibrated.
 
-The pure model receives distance/speed/timestamps from its caller. In future ROS integration these must come from trusted robot state, never planner arguments. This library is not an independently secured gateway. Telemetry run IDs and fresh public reading now exist; mission/action run ownership, sensor noise, unknown faults and integrated navigation/camera diagnosis remain unimplemented. A persistent jam may be re-energized by the model to demonstrate continued failure; the scripted policy instead escalates upon its vibration evidence.
+The pure model receives distance/speed/timestamps from its caller. In future ROS integration these must come from trusted robot state, never planner arguments. This library is not an independently secured gateway. Telemetry run IDs, fresh public reading and inspection mission/action ownership now exist locally; native inspection acceptance, cross-action mission ownership, sensor noise, unknown faults and integrated navigation/camera diagnosis remain open. A persistent jam may be re-energized by the model to demonstrate continued failure; the scripted policy instead escalates upon its vibration evidence.

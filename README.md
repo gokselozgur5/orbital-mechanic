@@ -122,3 +122,9 @@ native acceptance remain pending.
 times, validates image-time pose and calibration, and retains a bounded local
 RGB/manifest bundle with digest verification. Local software tests pass; native
 rendered evidence and complete inspection-action acceptance remain pending.
+
+[Owned inspection requests](docs/INSPECTION_ENDPOINT.md) connect actual capture to
+typed request/cancel/query commands, exact worker ownership, deadline and replay
+handling, verified artifact references and distinct terminal results. Local
+controlled-transport/process checks run the complete endpoint; native inspection
+and three-machine acceptance remain open.

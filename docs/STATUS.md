@@ -1,6 +1,6 @@
 # Project status
 
-Updated: 2026-10-28
+Updated: 2026-10-29
 
 ## Active delivery goal
 
@@ -10,6 +10,35 @@ isolated `codex/nav2-integration` branch preserves the dirty main checkout and
 original localization branch; six migrated commits do not count as new deliveries.
 [Draft PR #16](https://github.com/gokselozgur5/orbital-mechanic/pull/16) links #6/#7,
 which remain open until full live localization/navigation acceptance and review.
+
+**OM-049: cancellable inspection ownership passes local integration checks; native acceptance pending.**
+The typed String command endpoint owns one run/mission/action at a time, invokes
+the actual camera capture in a separate ROS process, and returns an ACK separately
+from a terminal result. Exact replay returns cached state; conflicting reuse,
+wrong runs and history overflow are rejected. Cancellation/deadline intent stays
+sticky until the exact child is reaped. A bounded lifeline and inherited owner
+lock preserve ownership across loss of the parent; the user-service launcher
+contains descendants and pins existing prerequisites.
+
+The parent independently checks live settled pose, source/publisher/map identity
+and both clocks, verifies the actual manifest/image and owned request context,
+then rechecks after I/O. Slow completion never renews capture freshness. The CLI
+distinguishes acknowledged, terminal, rejected, not_sent and uncertain outcomes;
+same-run query recovers a cached result, while restart never adopts orphan files.
+This is a versioned JSON endpoint, not a generated ROSIDL action or a motion hold.
+
+All 460 local tests pass (45 new), along with the causal baseline, shell syntax,
+Python AST and XML checks. Two deliberate mutation controls fail the same tests
+when final freshness or cancellation-before-commit handling is removed; the
+candidate passes both. These are test-sensitivity controls, not historical bugs.
+Tests cover process reap/escalation, idempotency/capacity, cancellation
+races and full server → subprocess → actual capture → artifact → terminal flow
+with controlled ROS transport. The initial late-read fixture failed earlier at
+sample expiry; the corrected provider supplies post-settling telemetry before
+testing the intended 250 ms final-read delay. No production gate was relaxed.
+Thor SSH timed out (exit 255); no native state changed. Native endpoint, camera,
+map/navigation and three-machine acceptance remain open under #8 / draft #19.
+Contract and operator commands: [INSPECTION_ENDPOINT.md](INSPECTION_ENDPOINT.md).
 
 **OM-048: camera evidence passes local integration checks; native capture remains pending.**
 `machine-observation.py --with-camera` and `capture_machine_observation` acquire
