@@ -9,9 +9,12 @@ import sys
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 from orbital.maintenance_client import run_ros
-from orbital.inspection_protocol import identifier
+from orbital.inspection_protocol import identifier, finite
 from orbital.machines import MACHINE_IDS
-from orbital.navigation_client import command_timeout
+
+
+def maintenance_timeout(value):
+    return finite(float(value), .1, 30.)
 
 
 def main(argv=None):
@@ -21,7 +24,7 @@ def main(argv=None):
     parser.add_argument('--run-id', type=identifier)
     parser.add_argument('--mission-id', type=identifier)
     parser.add_argument('--action-id', type=identifier)
-    parser.add_argument('--timeout', type=command_timeout, default=10.)
+    parser.add_argument('--timeout', type=maintenance_timeout, default=10.)
     parser.add_argument('--no-wait', action='store_true')
     args = parser.parse_args(argv)
     if args.op == 'isolate' and args.machine_id is None:
@@ -30,8 +33,6 @@ def main(argv=None):
         parser.error('only isolate accepts a machine ID')
     if args.op in ('cancel', 'query') and not all((args.run_id, args.mission_id, args.action_id)):
         parser.error('cancel/query require exact --run-id, --mission-id and --action-id')
-    if args.timeout > 30.:
-        parser.error('maintenance timeout must be at most 30 seconds')
     if os.environ.get('ROS_DOMAIN_ID') not in ('42', '84') or os.environ.get('ROS_AUTOMATIC_DISCOVERY_RANGE') != 'LOCALHOST':
         parser.error('requires Orbital localhost domain 42 or an empty isolated domain 84')
     try:

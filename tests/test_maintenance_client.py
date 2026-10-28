@@ -152,3 +152,18 @@ class MaintenanceClientTests(unittest.TestCase):
         self.assertEqual(outcome['transport'], 'uncertain')
         self.assertTrue(outcome['client_cleanup_failed'])
         self.assertEqual(calls, ['shutdown'])
+
+    def test_cli_accepts_the_full_maintenance_deadline_range(self):
+        spec = importlib.util.spec_from_file_location('maintenance_cli_deadline', ROOT/'scripts/maintain-machine.py')
+        cli = importlib.util.module_from_spec(spec); spec.loader.exec_module(cli)
+        env = {'ROS_DOMAIN_ID': '84', 'ROS_AUTOMATIC_DISCOVERY_RANGE': 'LOCALHOST'}
+        with patch.dict(os.environ, env), patch.object(cli, 'run_ros', return_value={
+                'transport': 'acknowledged', 'result': None}) as invoke:
+            for value in ('.1', '15', '30'):
+                with self.subTest(timeout=value), contextlib.redirect_stdout(io.StringIO()):
+                    self.assertEqual(cli.main(['isolate', 'pump', '--timeout', value]), 0)
+                    self.assertEqual(invoke.call_args.kwargs['timeout_s'], float(value))
+            for value in ('0', '.09', '30.01', 'nan', 'inf'):
+                with self.subTest(timeout=value), contextlib.redirect_stderr(io.StringIO()), self.assertRaises(SystemExit):
+                    cli.main(['isolate', 'pump', '--timeout', value])
+        self.assertEqual(invoke.call_count, 3)

@@ -45,6 +45,11 @@ An earlier candidate falsely classified its own acknowledged release as hold
 loss; the retained failing test passes after tracking the release request.
 Evidence: `reviews/orbital-delivery-20261028/om052` in the operator workspace.
 
+The OM-052 deadline follow-up accepts the documented 0.1–30 second CLI range.
+The former reused navigation parser rejected 15 and 30 seconds before sending;
+the same actual-CLI regression fails before the correction and passes after it.
+All 11 maintenance client tests pass. This is a correction, not another delivery.
+
 **OM-051: maintenance contract and public recovery postcondition implemented locally (preceding delivery).**
 The [maintenance action contract](MAINTENANCE_ACTIONS.md) defines allowed
 isolate/reset/restore transitions, drive-hold and fresh-observation requirements,
