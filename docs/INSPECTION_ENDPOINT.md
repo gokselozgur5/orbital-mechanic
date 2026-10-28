@@ -159,7 +159,7 @@ python3 scripts/inspect-machine.py cancel --run-id RUN --mission-id MISSION --ac
 
 ## Evidence and limits
 
-All 460 local tests pass, including 45 new endpoint/protocol/owner/client/guard
+All 461 local tests pass, including 46 new endpoint/protocol/owner/client/guard
 and process tests. The causal baseline, shell syntax, Python AST and XML checks
 pass. Deliberately removing final freshness or cancellation-before-commit handling
 makes the same relevant tests fail; the candidate passes both sensitivity controls.
@@ -167,10 +167,11 @@ makes the same relevant tests fail; the candidate passes both sensitivity contro
 Local tests cover strict input, replay/conflict/capacity, cancellation/result
 races, deadlines, post-I/O expiry, generation/pose/source loss, client ACK versus
 terminal/uncertain handling, bounded pipes, descriptor setup failures, signal
-escalation, inherited lock lifetime and process reap. A real-clock controlled ROS
-transport runs the production server, actual subprocess worker entry, actual
+escalation, inherited lock lifetime and process reap. Controlled ROS transport
+and a shared test clock run the production server, actual subprocess worker entry, actual
 camera reader and real artifact I/O through success, cancellation, lifeline loss,
-wrong-action evidence and a 250 ms parent-side read delay. Synthetic RGB and
+wrong-action evidence and a 250 ms parent-side read delay. That delay advances
+both test clocks after real artifact I/O. Synthetic RGB and
 controlled TF/map/health messages are test inputs; these are not native DDS,
 rendered camera, stopping, three-machine tour or service-cgroup acceptance.
 
@@ -179,5 +180,21 @@ the selected telemetry sample expired before a suitable post-settling camera
 pair arrived. That failure log is retained. The fixture now schedules its first
 telemetry pair after settling so the injected read delay actually exercises final
 acceptance. Production timing, sample-selection rules and freshness limits are
-unchanged. The complete acceptance receipts live outside Git under
+unchanged.
+
+The first published revision passed local tests and push CI, but PR CI rejected
+one positive capture during final validation with `observation_unavailable`.
+That log does not establish which inner condition failed. Eight instrumented
+real-monotonic-clock local controls subsequently passed; they do not explain
+the historical CI failure or prove native timing. The CI integration fixture
+now freezes its shared test clock after capture while the real child finishes
+exiting, separating ownership correctness from a host scheduling/teardown speed
+requirement. A delayed-exit case emits success bytes, keeps the child alive for
+350 ms of host time, and checks that no terminal result is published before reap.
+Source code still uses real monotonic time by default; no planner/CLI argument
+can replace it. Explicit clock advances exercise expiry, cancellation and
+deadlines. Native wall-time completion remains an open acceptance gate.
+
+This correction receives no additional OM-049 delivery credit. The complete
+acceptance receipts live outside Git under
 `reviews/orbital-delivery-20261028/om049` in the operator workspace.

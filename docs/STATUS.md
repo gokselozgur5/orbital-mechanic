@@ -27,15 +27,21 @@ distinguishes acknowledged, terminal, rejected, not_sent and uncertain outcomes;
 same-run query recovers a cached result, while restart never adopts orphan files.
 This is a versioned JSON endpoint, not a generated ROSIDL action or a motion hold.
 
-All 460 local tests pass (45 new), along with the causal baseline, shell syntax,
+All 461 local tests pass (46 new), along with the causal baseline, shell syntax,
 Python AST and XML checks. Two deliberate mutation controls fail the same tests
 when final freshness or cancellation-before-commit handling is removed; the
 candidate passes both. These are test-sensitivity controls, not historical bugs.
 Tests cover process reap/escalation, idempotency/capacity, cancellation
 races and full server → subprocess → actual capture → artifact → terminal flow
-with controlled ROS transport. The initial late-read fixture failed earlier at
+with controlled ROS transport and a shared test clock. The initial late-read fixture failed earlier at
 sample expiry; the corrected provider supplies post-settling telemetry before
-testing the intended 250 ms final-read delay. No production gate was relaxed.
+testing the intended 250 ms final-read delay. The first published PR CI rejected
+a positive capture at final validation; its specific inner cause was not logged.
+Eight later real-clock local controls passed. CI ownership tests now freeze their
+shared clock after capture during actual worker exit, and a 350 ms delayed-exit
+case proves terminal publication waits for reap. Production still uses real
+monotonic time and unchanged freshness bounds; native timing remains open.
+The fixture correction adds no separate OM-049 delivery credit.
 Thor SSH timed out (exit 255); no native state changed. Native endpoint, camera,
 map/navigation and three-machine acceptance remain open under #8 / draft #19.
 Contract and operator commands: [INSPECTION_ENDPOINT.md](INSPECTION_ENDPOINT.md).

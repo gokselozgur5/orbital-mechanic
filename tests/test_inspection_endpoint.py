@@ -18,7 +18,7 @@ from orbital import ros_proximity
 from orbital.inspection_artifacts import CaptureStore
 from orbital.machine_registry import MachineRegistry
 from proximity_fixture import Harness
-from inspection_transport_fixture import transport
+from inspection_transport_fixture import SharedClock, transport
 from test_inspection_owner import request
 import test_map_binding as map_fixture
 
@@ -31,9 +31,13 @@ class EndpointTests(unittest.TestCase):
         for name in ('config/robot.urdf', 'config/bridge.yaml'):
             shutil.copyfile(ROOT/name, self.root/name)
 
-    def run_endpoint(self, mode='success'):
-        origin = time.monotonic()
-        h = transport(self.root, origin)
+    def run_endpoint(self, mode='success', real_clock=False):
+        host_started = time.monotonic()
+        clock = None if real_clock else SharedClock(self.root, create=True)
+        if clock is not None: self.addCleanup(clock.close)
+        now = time.monotonic if clock is None else clock.now
+        origin = now()
+        h = transport(self.root, origin, clock, writer=True)
         original_node = h.modules['rclpy'].create_node
         original_spin = h.modules['rclpy'].spin_once
         outputs = {topic: [] for topic in ros_inspection.TOPICS}
@@ -59,7 +63,11 @@ class EndpointTests(unittest.TestCase):
             def publish(kind, topic, qos):
                 self.assertIn(topic, outputs)
                 created.add(topic)
-                return NS(publish=lambda message: outputs[topic].append(json.loads(message.data)))
+                def emitted(message):
+                    if topic == '/inspection/result':
+                        self.assertTrue(all(child.poll() is not None for child in workers), 'terminal published before exact reap')
+                    outputs[topic].append(json.loads(message.data))
+                return NS(publish=emitted)
             def publishers(topic):
                 if topic in ros_inspection.TOPICS:
                     return [NS(node_name=ros_inspection.OWNER, node_namespace='/', topic_type='std_msgs/msg/String',
@@ -80,26 +88,46 @@ class EndpointTests(unittest.TestCase):
                 if mode == 'cancel' and latest['active'] is not None and latest['active']['phase'] == 'running' and not cancelled:
                     callbacks['/inspection/command'](NS(data=canonical(request('cancel', run_id=latest['run_id']))))
                     cancelled = True
-            if time.monotonic()-origin > 13.:
+            if time.monotonic()-host_started > 20.:
                 raise AssertionError('endpoint fixture exceeded its owned deadline')
 
         def launch(args, **kwargs):
             self.assertEqual(Path(args[1]).name, 'inspection-worker.py')
             kwargs['env']['ORBITAL_TEST_ORIGIN'] = str(origin)
+            kwargs['env']['ORBITAL_TEST_SHARED_CLOCK'] = '0' if clock is None else '1'
+            kwargs['env']['ORBITAL_TEST_EXIT_DELAY'] = '.35' if mode == 'delayed_exit' else '0'
             child = real_popen([args[0], str(ROOT/'tests/inspection_transport_fixture.py'), *args[2:]], **kwargs)
             workers.append(child)
             return child
 
         real_read = inspection_owner.read_capture
+        self.endpoint_diagnostic = {}
         def read(*args):
             value = real_read(*args)
-            if mode == 'late': time.sleep(.25)
+            self.endpoint_diagnostic['artifact'] = {
+                'observed_monotonic_s': value[0]['observed_monotonic_s'],
+                'observed_sim_stamp_ns': value[0]['observed_sim_stamp_ns'],
+                'sample_stamp_ns': value[0]['sample_stamp_ns'],
+                'camera_stamp_ns': value[0]['camera']['stamp_ns']}
+            if mode == 'late':
+                time.sleep(.25)
+                if clock is not None: clock.advance(.25, force=True)
             if mode == 'wrong_identity': value[0]['inspection_action']['action_id'] = 'f'*32
             return value
+        real_fresh = inspection_owner.fresh
+        def fresh(record, now, sim, current):
+            self.endpoint_diagnostic['final'] = {'now': now, 'sim_ns': sim,
+                'elapsed_s': now-record['observed_monotonic_s'],
+                'image_age_at_capture_s': record['camera']['received_age_s'],
+                'info_age_at_capture_s': record['camera']['info_received_age_s']}
+            try: return real_fresh(record, now, sim, current)
+            except ValueError as error:
+                self.endpoint_diagnostic['error'] = str(error)
+                raise
         h.modules['rclpy'].create_node, h.modules['rclpy'].spin_once = create, spin
         try:
-            with patch.dict(sys.modules, h.modules), patch('orbital.inspection_worker.subprocess.Popen', side_effect=launch), patch.object(inspection_owner, 'read_capture', side_effect=read), patch.object(ros_inspection, 'CaptureProcess', side_effect=process):
-                ros_inspection.serve(self.root, stop_requested=lambda: bool(outputs['/inspection/result']))
+            with patch.dict(sys.modules, h.modules), patch('orbital.inspection_worker.subprocess.Popen', side_effect=launch), patch.object(inspection_owner, 'read_capture', side_effect=read), patch.object(inspection_owner, 'fresh', side_effect=fresh), patch.object(ros_inspection, 'CaptureProcess', side_effect=process):
+                ros_inspection.serve(self.root, stop_requested=lambda: bool(outputs['/inspection/result']), now=now)
         finally:
             for child in workers:
                 if child.poll() is None:
@@ -120,7 +148,7 @@ class EndpointTests(unittest.TestCase):
 
     def test_server_process_actual_capture_and_manifest_reach_one_terminal_success(self):
         terminal = self.run_endpoint()
-        self.assertEqual(terminal['status'], 'succeeded', terminal)
+        self.assertEqual(terminal['status'], 'succeeded', (terminal, self.endpoint_diagnostic))
         reference = terminal['observation']
         record, image = read_capture(self.root, reference['observation_id'], reference['manifest_sha256'])
         self.assertEqual(record['inspection_action']['action_id'], terminal['action_id'])
@@ -149,6 +177,10 @@ class EndpointTests(unittest.TestCase):
         terminal = self.run_endpoint('orphan')
         self.assertEqual(terminal['status'], 'failed', terminal)
         self.assertIsNone(terminal['observation'])
+
+    def test_success_bytes_do_not_publish_a_terminal_while_the_child_is_alive(self):
+        terminal = self.run_endpoint('delayed_exit')
+        self.assertEqual(terminal['status'], 'succeeded', (terminal, self.endpoint_diagnostic))
 
     def test_cooperative_cancel_during_storage_removes_acceptance_marker(self):
         h = Harness(self)

@@ -102,7 +102,7 @@ class LiveGuard:
             return None
 
 
-def serve(root, *, stop_requested=lambda: False):
+def serve(root, *, stop_requested=lambda: False, now=time.monotonic):
     import rclpy
     from nav_msgs.msg import Odometry
     from rclpy.clock import ClockType
@@ -119,22 +119,22 @@ def serve(root, *, stop_requested=lambda: False):
         # Keep the context alive while the owner cancels and reaps its worker.
         rclpy.init(args=[], signal_handler_options=SignalHandlerOptions.NO)
         node = rclpy.create_node(OWNER, parameter_overrides=[Parameter('use_sim_time', value=True)])
-        end = time.monotonic() + 2.
-        while time.monotonic() < end:
+        end = now() + 2.
+        while now() < end:
             rclpy.spin_once(node, timeout_sec=.02)
         if any(node.get_publishers_info_by_topic(topic) for topic in TOPICS):
             raise RuntimeError('inspection_owner_already_present')
         publishers = {topic: node.create_publisher(String, topic, QoSProfile(depth=10)) for topic in TOPICS}
         buffer = Buffer(node=node)
         listener = TransformListener(buffer, node)
-        guard = LiveGuard(root, node, buffer, lock,
+        guard = LiveGuard(root, node, buffer, lock, now=now,
             time_type=lambda stamp: Time(nanoseconds=stamp, clock_type=ClockType.ROS_TIME), tf_error=TransformException)
 
         def publish(topic, value):
             publishers[topic].publish(String(data=canonical(value)))
 
         owner = InspectionOwner(root, guard,
-            lambda payload: CaptureProcess(root, lock.fd, payload, time.monotonic()),
+            lambda payload: CaptureProcess(root, lock.fd, payload, now()), now=now,
             sim_ns=lambda: node.get_clock().now().nanoseconds,
             on_result=lambda result: publish('/inspection/result', result))
         queue = deque()
@@ -155,9 +155,9 @@ def serve(root, *, stop_requested=lambda: False):
             for _ in range(min(4, len(queue))):
                 publish('/inspection/reply', owner.handle(queue.popleft()))
             owner.tick()
-            if time.monotonic() >= next_state:
+            if now() >= next_state:
                 publish('/inspection/state', owner.state())
-                next_state = time.monotonic() + .1
+                next_state = now() + .1
     finally:
         try:
             if owner is not None:
