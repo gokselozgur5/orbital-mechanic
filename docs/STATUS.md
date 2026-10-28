@@ -4,7 +4,7 @@ Updated: 2026-10-28
 
 ## Active delivery goal
 
-The user resumed Orbital work and requested at least 100 substantive atomic commits. [GOAL_100.md](GOAL_100.md) defines the product, evidence gates and counting rules. The isolated branch `codex/nav2-integration` is based on the corrected Gmail-attributed main; its six migrated navigation commits preserve the original source tree and do not count toward the new goal. Original branch and dirty main drafts are untouched. Next: inspect installed Nav2 compatibility and implement the guarded production navigation composition, then prove the first real route. No new autonomous-motion acceptance has occurred yet.
+The user resumed Orbital work and requested at least 100 substantive atomic commits. [GOAL_100.md](GOAL_100.md) defines the product, evidence gates and counting rules. The isolated branch `codex/nav2-integration` is based on the corrected Gmail-attributed main; its six migrated navigation commits preserve the original source tree and do not count toward the new goal. Original branch and dirty main drafts are untouched. OM-002 now provides a read-only installed-artifact compatibility gate. Thor reports Nav2 1.3.13 consistently across nine required packages; server/plugin artifacts, stamped-publisher support and the action contract pass. Seven rejection/control tests bring the local suite to 66 passing tests. This does not prove plugin runtime loading or lifecycle compatibility. Next: configure the controller/local costmap and exercise actual lifecycle configuration plus stamped publisher discovery in an empty private domain, then integrate guarded production navigation. No new autonomous-motion acceptance has occurred yet.
 
 ## Current phase and next action
 
