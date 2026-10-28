@@ -402,3 +402,42 @@ cannot make localization healthy. A replacement seed/reset separately requires
 post-seed pose evidence. This freshness acceptance does not prove pose accuracy
 or stopping during an active moving goal; OM-012 covers sampled accuracy and the
 remaining reset/reseed/physical-stop gates cover those transitions.
+
+
+## Live reset and old-target invalidation (OM-014)
+
+This test resets the live Gazebo world to its known origin. Coordinate first,
+then run inside Thor `tmux orbital-work`:
+
+```bash
+source scripts/ros-env.sh
+python3 scripts/check-navigation-reset.py
+```
+
+With seeded active Nav2 and the guard latched, it reserves an **unarmed** pump
+target and calls `/world/maintenance/control` with `reset { all: true }`. It must
+observe an actual ROS-clock regression, a higher health epoch, terminal ownership
+of the old target and persistent `initial_pose_required`. Both an arm of the old
+token and a new request are rejected. One second of fresh post-reset input must
+not bypass the explicit seed requirement.
+
+The test supplies the reset world's known origin with uncertainty, without using
+evaluator truth. It waits for a post-seed AMCL pose and healthy idle navigation,
+then checks the old target's exact `not_dispatched` terminal record. The old arm
+must still be rejected. A new cooler request must have a higher target epoch;
+that target is cancelled without arming. Native service and supervisor invocation
+identities must stay unchanged, so restarting ownership cannot satisfy the test.
+Any velocity request, action dispatch, odometry movement or guard release fails it.
+
+Native `navigation-reset-1` passed: simulation time regressed from 1340.630 s to
+zero, the pump token at target epoch 14 was invalidated, and the new cooler token
+used epoch 15. Both old-token arm attempts were rejected; the unseeded new request
+was rejected, and the post-seed new request/cancel pair succeeded. The final state
+was healthy/idle/latched with zero forwarded commands. Source identity
+`4742ab14f1354ab63ecef3a2494e57b3f7a0d81aad85c05a0fe21575c7d97dfb` matches all 81 delivered source files before and after the run.
+
+This proves reset of an allocated unarmed target in the actual native stack.
+It does not prove cancellation or braking of a moving goal; the moving-goal reset
+and reseed fault gates remain required. The direct test seed is restricted to the
+acknowledged known-origin reset and a terminal, latched target; it is not a general
+operator authorization to reseed arbitrary active motion.

@@ -11,6 +11,18 @@ original localization branch; six migrated commits do not count as new deliverie
 [Draft PR #16](https://github.com/gokselozgur5/orbital-mechanic/pull/16) links #6/#7,
 which remain open until full live localization/navigation acceptance and review.
 
+**OM-014: live world reset invalidated the old unarmed target.**
+Native `navigation-reset-1` reserved a pump target, reset actual Gazebo simulation
+time to zero, and observed `initial_pose_required` plus terminal old-target state.
+The old token's arm was rejected before and after explicit known-origin reseeding;
+a new request was blocked before the seed and accepted afterward with a higher
+epoch, then cancelled. All service/supervisor invocations stayed unchanged. Final
+state: healthy/idle/latched, zero forwarded velocity commands, world reset to origin.
+
+All 81 source hashes match identity `4742ab14f1354ab63ecef3a2494e57b3f7a0d81aad85c05a0fe21575c7d97dfb`; all 92 local tests pass.
+This is unarmed target reset acceptance. Next: reseed during a dispatched goal,
+then TF authority/stationary-arm/physical-stop gates and measured routes.
+
 **OM-013: real lidar and AMCL freshness fault admission checks passed.**
 Native `freshness-3` temporarily lowered only lidar to 0.1 Hz and separately
 suspended the pinned AMCL process. With unaffected inputs advancing, the supervisor
