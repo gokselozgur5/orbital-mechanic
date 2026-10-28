@@ -9,7 +9,7 @@ import time
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
-from orbital.navigation_configuration import bounded_timeout, load_waypoints
+from orbital.navigation_configuration import bounded_timeout, load_waypoint_contract
 
 
 def main():
@@ -17,7 +17,7 @@ def main():
     parser.add_argument('--map-config', type=Path, default=ROOT/'config/known-map.json')
     parser.add_argument('--goal-timeout', type=bounded_timeout, default=120.)
     args = parser.parse_args()
-    waypoints = load_waypoints(args.map_config)
+    waypoints, config_sha256 = load_waypoint_contract(args.map_config)
     domain = os.environ.get('ROS_DOMAIN_ID')
     if domain not in ('42', '84') or os.environ.get('ROS_AUTOMATIC_DISCOVERY_RANGE') != 'LOCALHOST':
         raise RuntimeError('Requires localhost-only Orbital domain 42 or isolated test domain 84')
@@ -27,10 +27,10 @@ def main():
             fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
         except BlockingIOError:
             raise RuntimeError('Navigation supervisor is already running in this checkout/domain') from None
-        return run(waypoints, args.goal_timeout)
+        return run(waypoints, args.goal_timeout, config_sha256)
 
 
-def run(waypoints, timeout):
+def run(waypoints, timeout, config_sha256):
     import rclpy
     from rclpy.executors import ExternalShutdownException, SingleThreadedExecutor
     from orbital.ros_navigation_supervisor import NavigationSupervisor
@@ -50,7 +50,7 @@ def run(waypoints, timeout):
             raise RuntimeError('Competing or incompatible controller publisher')
         probe.destroy_node()
         probe = None
-        node = NavigationSupervisor(waypoints, goal_timeout=timeout)
+        node = NavigationSupervisor(waypoints, goal_timeout=timeout, map_config_sha256=config_sha256)
         # All action responses, commands and timers share serialized ownership.
         executor = SingleThreadedExecutor()
         executor.add_node(node)

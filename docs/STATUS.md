@@ -11,6 +11,27 @@ original localization branch; six migrated commits do not count as new deliverie
 [Draft PR #16](https://github.com/gokselozgur5/orbital-mechanic/pull/16) links #6/#7,
 which remain open until full live localization/navigation acceptance and review.
 
+**OM-017: map revision binding is deployed and accepted.**
+Startup validates the loaded map-server revision and artifacts; readiness also
+checks every published/GetMap cell, AMCL/planner map settings and subscriptions,
+and the supervisor's read-only identity of its loaded waypoint configuration.
+Seven isolated map cases and seven native Nav2 readiness stages passed, including
+a runtime-only wrong map topic that triggered acknowledged stop/pause. Explicit
+recovery passed. All 100 local tests pass; failed trials and their limits are in
+[NAV2_INTEGRATION.md](NAV2_INTEGRATION.md).
+
+Only navigation was restarted for deployment. Live activation, map binding,
+per-message TF audit, idle/latched checks and independent pose comparison passed.
+Gazebo and localization invocations stayed unchanged. Physical endpoint pose
+remained `(0.000386, 0.000002, 0.012884)`; the new supervisor has zero commands and
+no target. All 94 source hashes match native/live identity
+`b7310e23ee1bb43dab9c7d90ed48e142b4442ceb9b976134fd5a31659531e646`.
+The navigation startup manifest now records this deployed revision.
+
+This is startup/readiness map binding, not continuous map-change enforcement or
+proof of consumers' private memory. Next: stationary-arm commissioning (OM-018),
+physical localization-loss stopping and the measured three-machine tour.
+
 **OM-016: native per-message TF publisher attribution passed.**
 A read-only C++ auditor maps each received DDS publisher GID to ROS endpoint
 metadata in the same process. Seven isolated real-DDS controls pass, including a

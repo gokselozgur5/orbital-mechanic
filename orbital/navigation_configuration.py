@@ -1,5 +1,6 @@
 """Validate named navigation inputs before constructing a ROS command owner."""
 import json
+import hashlib
 import math
 from pathlib import Path
 import re
@@ -15,7 +16,12 @@ def _unique_pairs(pairs):
 
 
 def load_waypoints(path):
-    data = json.loads(Path(path).read_text(), object_pairs_hook=_unique_pairs)
+    return load_waypoint_contract(path)[0]
+
+
+def load_waypoint_contract(path):
+    raw = Path(path).read_bytes()
+    data = json.loads(raw, object_pairs_hook=_unique_pairs)
     if not isinstance(data, dict) or data.get('frame') != 'map':
         raise ValueError('Navigation poses must use the map frame')
     entries = data.get('inspection_poses')
@@ -32,7 +38,7 @@ def load_waypoints(path):
         if abs(values[2]) > math.pi:
             raise ValueError('Waypoint yaw must be in [-pi, pi]')
         poses[name] = tuple(float(v) for v in values)
-    return poses
+    return poses, hashlib.sha256(raw).hexdigest()
 
 
 def bounded_timeout(value):

@@ -11,6 +11,7 @@ import signal
 import subprocess
 import sys
 import time
+import uuid
 
 ROOT=Path(__file__).resolve().parents[1]
 
@@ -39,10 +40,17 @@ def main():
         return data
     source=ROOT/'config/nav2-controller.yaml';original=source.read_bytes()
     try:
-        fixture=spawn([sys.executable,str(ROOT/'scripts/check-navigation-graph-fixtures.py'),'--hold'],'base')
+        token=str(uuid.uuid4())
+        fixture=spawn([sys.executable,str(ROOT/'scripts/check-navigation-graph-fixtures.py'),
+                       '--hold','--ready-token',token],'base')
         end=time.monotonic()+12
-        while not (ROOT/'runtime/graph-fixture-ready').exists():
+        while True:
             assert fixture.poll() is None, 'Base fixture exited'
+            try:
+                marker=json.loads((ROOT/'runtime/graph-fixture-ready').read_text())
+            except (FileNotFoundError,ValueError):
+                marker={}
+            if marker=={'pid':fixture.pid,'token':token}:break
             if time.monotonic()>end:raise RuntimeError('Base fixture did not initialize')
             time.sleep(.05)
         spawn([sys.executable,str(ROOT/'scripts/localization-monitor.py')],'monitor')
@@ -56,6 +64,19 @@ def main():
         assert set(configured['final_states'].values())=={2}
         active=run([*command,'--activate'],'activate')
         assert set(active['final_states'].values())=={3} and active['supervisor_velocity_requests']==0
+        # Change only a running consumer parameter. Source bytes still match,
+        # so refusal and stop/pause must come from the new map gate itself.
+        def map_topic(value):
+            changed=subprocess.run(['/opt/ros/jazzy/bin/ros2','param','set','/amcl','map_topic',value],
+                                   capture_output=True,text=True,timeout=10,check=True)
+            assert 'Set parameter successful' in changed.stdout, changed.stdout
+        map_topic('wrong_map')
+        rejected=run([*command,'--activate'],'wrong_map_consumer',success=False)
+        assert 'Map consumer configuration mismatch: /amcl' in rejected['error']
+        assert rejected['guard_stop_ack'] and rejected['lifecycle_pause_ack']
+        map_topic('map')
+        recovered=run([*command,'--activate'],'map_consumer_recovery')
+        assert set(recovered['initial_states'].values())=={2} and set(recovered['final_states'].values())=={3}
         observed=run(command,'repeat_readonly')
         assert not observed['lifecycle_commands'] and observed['supervisor_velocity_requests']==0
         source.write_bytes(original.replace(b'desired_linear_vel: 0.15',b'desired_linear_vel: 0.19'))

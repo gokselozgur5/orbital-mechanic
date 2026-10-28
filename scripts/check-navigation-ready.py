@@ -31,6 +31,7 @@ def main():
     from std_srvs.srv import Trigger
     from std_msgs.msg import String
     from geometry_msgs.msg import TwistStamped
+    from orbital.ros_map_binding import collect as collect_map_binding
     spec=importlib.util.spec_from_file_location('navigation_graph_probe',ROOT/'scripts/check-navigation-graph.py')
     graph_module=importlib.util.module_from_spec(spec);spec.loader.exec_module(graph_module)
     rclpy.init(args=[])
@@ -39,7 +40,11 @@ def main():
     nav={};runs=set();violations=set();requests=[]
     report={'passed':False,'lifecycle_commands':[],'graph_checks':[],
             'scope':'native lifecycle/graph with guard latched; not physical navigation acceptance'}
-    clients={'/motion/stop':node.create_client(Trigger,'/motion/stop')}
+    # Establish lifecycle and stop RPC endpoints while source/graph checks run;
+    # do not first create the lifecycle client at the activation boundary.
+    clients={'/motion/stop':node.create_client(Trigger,'/motion/stop'),
+             '/lifecycle_manager_navigation/manage_nodes':node.create_client(
+                 ManageLifecycleNodes,'/lifecycle_manager_navigation/manage_nodes')}
 
     def on_state(message):
         try:
@@ -100,6 +105,7 @@ def main():
         elif set(before.values()) not in ({2},{3}):
             raise RuntimeError('Mixed or invalid lifecycle states require explicit service recovery')
         graph('configured')
+        report['map_binding']=collect_map_binding(node,ROOT)
         if args.activate and set(states().values())=={2}:
             if source_identity()!=report['manifest_identity']:raise RuntimeError('Source identity changed before activation')
             # Drain state callbacks after hashing and re-establish a fresh gate.

@@ -553,3 +553,74 @@ The native executable SHA is
 Independent Gazebo comparison still reports 0.0109483 m / 0.0208018 rad localization
 error. All 94 local tests pass. A passing bounded sample is not a continuous TF
 interlock, localization accuracy proof or machine-arrival/collision acceptance.
+
+## Map revision binding (OM-017)
+
+Navigation startup now runs `check-map-binding.py --localization-only` before
+creating its children. Readiness runs the full map gate before activation, and
+its existing failure path requests guard stop and lifecycle PAUSE. The gate sends
+no motion command, seed or map update.
+
+The gate binds these observations:
+
+- The map server's `yaml_filename` names the revision derived from the current
+  world, map configuration and generator bytes. PGM, YAML and manifest must match
+  the independently regenerated expected bytes; escaping/symlinked paths fail.
+- Both the retained `/map` message and the map server's GetMap response have the
+  expected frame, dimensions, resolution, origin and every occupancy cell.
+- Map server ownership and AMCL/global-costmap subscriptions have the expected
+  names, types and retained/reliable QoS. Consumer frame/topic settings agree.
+- The supervisor reports the SHA-256 of the exact configuration bytes from which
+  its waypoints were parsed. This parameter is read-only and ignores overrides;
+  changing a file does not relabel already-loaded waypoints as the new revision.
+
+The map gate waits for incomplete DDS endpoint-name discovery, but rejects a
+complete wrong/duplicate publisher. It rechecks artifact bytes before returning.
+This is a bounded startup/readiness contract. It does not expose private AMCL or
+costmap memory, prove Gazebo's loaded geometry, freeze files or continuously block
+later map updates. Localization freshness, per-message TF auditing and independent
+route/collision acceptance remain separate gates.
+
+Read-only checks on configured Thor:
+
+```bash
+source scripts/ros-env.sh
+python3 scripts/check-map-binding.py --localization-only
+python3 scripts/check-map-binding.py
+```
+
+Private negative cases use `check-map-binding-fixtures.py --output NEW_DIRECTORY`
+in empty localhost domain84. The native readiness fixture additionally changes
+only AMCL's running `map_topic` parameter: source bytes remain unchanged, so the
+map gate itself must reject activation and acknowledge stop/pause. Restore the
+parameter and request explicit activation to recover. No drive exists in that
+fixture. Its base-process readiness marker carries PID plus a per-run UUID;
+stale marker files cannot start the next generation early.
+
+Seven isolated map-gate cases passed: valid, wrong loaded revision, changed cells,
+wrong AMCL topic, wrong planner topic, wrong supervisor configuration and restored
+valid state. Seven actual Nav2 readiness stages also passed: configure, activate,
+wrong runtime map consumer with stop/pause, explicit map recovery, read-only
+repeat, changed-source refusal and explicit source recovery. That run used source
+identity `b7310e23ee1bb43dab9c7d90ed48e142b4442ceb9b976134fd5a31659531e646`.
+
+Retained failed trials exposed incomplete endpoint-name discovery and a stale
+fixture-ready marker. Both are handled explicitly above. Another activation RPC
+timed out; the manager log did not show RESUME, while the subsequent PAUSE was
+acknowledged. The readiness client now creates its lifecycle RPC endpoint at
+startup, alongside the stop client, so graph/source checks allow discovery before
+activation. The final native run passed without increasing deadlines or adding
+retries; the exact cause of that earlier transport failure remains unproven.
+
+Live deployment then passed activation, map binding, the separate per-message TF
+check, idle/latched observation and independent pose comparison. Only navigation
+was restarted; demo/localization InvocationIDs stayed unchanged. Before/after
+Gazebo pose was `(0.000386, 0.000002, 0.012884)` at reported precision. New supervisor
+`20828d54-02c0-40ce-9f7b-a37bb06454c0` is healthy/idle/latched with no target and zero
+forwarded commands. Navigation InvocationID is `5eed299576fe47009e74de5cb28eb30a`.
+All 94 source hashes match the native identity above; 100 local tests pass.
+Raw artifacts and pre-deployment backups are in private
+`reviews/orbital-nav2-20261028/om017` and Thor `runtime/map-binding-proof`.
+No route goal was requested; independent arrival and physical failure stopping
+remain required. The prior startup-manifest mismatch is resolved by this explicit
+deployment, while earlier manifests remain historical evidence.

@@ -9,6 +9,7 @@ import math
 import time
 from rclpy.clock import ClockType
 from rclpy.time import Time
+from rcl_interfaces.msg import ParameterDescriptor
 from geometry_msgs.msg import TwistStamped
 from std_msgs.msg import String
 from std_srvs.srv import Trigger
@@ -21,8 +22,10 @@ from orbital.ros_navigation_action import NavigationActionSession
 
 
 class NavigationSupervisor(HealthInterlock):
-    def __init__(self, waypoints, *, goal_timeout=120.):
+    def __init__(self, waypoints, *, goal_timeout=120., map_config_sha256=''):
         super().__init__(name='orbital_navigation_supervisor',use_sim_time=True)
+        self.declare_parameter('map_config_sha256', map_config_sha256,
+                               ParameterDescriptor(read_only=True), ignore_override=True)
         self.policy=NavigationPolicy(waypoints)
         self.commands=CommandGate(self.policy.run_id,waypoints)
         self.session=NavigationActionSession(self,self.policy,waypoints,lambda:self.lease.invalidate('navigation_stop'))

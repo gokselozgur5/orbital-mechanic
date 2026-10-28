@@ -17,11 +17,13 @@ from orbital.navigation_graph import BASE_TOPICS,NAV_TOPICS,NAV_NODES,PARENTS
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--hold',action='store_true',help='Keep base fixtures alive for native readiness tests')
+    parser.add_argument('--ready-token',default='',help='Caller token for this fixture generation')
     args=parser.parse_args()
     if os.environ.get('ROS_DOMAIN_ID')!='84' or os.environ.get('ROS_AUTOMATIC_DISCOVERY_RANGE')!='LOCALHOST':
         raise RuntimeError('Requires empty localhost domain84')
     import rclpy
     from rclpy.node import Node
+    from rclpy.parameter import Parameter
     from rclpy.executors import SingleThreadedExecutor
     from rclpy.action import ActionServer
     from rclpy.qos import QoSProfile,DurabilityPolicy,ReliabilityPolicy
@@ -61,6 +63,7 @@ def main():
         for name,kind in owners:
             pubs[(topic,name)]=node(name).create_publisher(get_message(kind),topic,retained if topic in ('/tf_static','/map','/amcl_pose') else 10)
     if args.hold:
+        from nav_msgs.srv import GetMap
         from orbital.mapping import build_grid,FREE,OCCUPIED
         config=json.loads((ROOT/'config/known-map.json').read_text())
         grid=build_grid(ROOT/config['world'],config)
@@ -70,6 +73,24 @@ def main():
         message.info.origin.orientation.w=1.
         message.data=[0 if c==FREE else 100 if c==OCCUPIED else -1 for c in grid.cells]
         pubs[('/map','map_server')].publish(message)
+        generated=json.loads(subprocess.check_output([sys.executable,str(ROOT/'scripts/generate-known-map.py')],text=True))
+        for name,value in {'yaml_filename':generated['directory']+'/map.yaml',
+                           'frame_id':'map','topic_name':'map','use_sim_time':True}.items():
+            if node('map_server').has_parameter(name):
+                node('map_server').set_parameters([Parameter(name,value=value)])
+            else:
+                node('map_server').declare_parameter(name,value)
+        for name,value in {'global_frame_id':'map','base_frame_id':'base_footprint',
+                           'odom_frame_id':'odom','map_topic':'map','first_map_only':False,'use_sim_time':True}.items():
+            if node('amcl').has_parameter(name):
+                node('amcl').set_parameters([Parameter(name,value=value)])
+            else:
+                node('amcl').declare_parameter(name,value)
+        resources.append(node('amcl').create_subscription(OccupancyGrid,'/map',lambda m:None,retained))
+        def serve_map(request,response):
+            response.map=message
+            return response
+        resources.append(node('map_server').create_service(GetMap,'/map_server/map',serve_map))
     def service(request,response):
         response.success=True;return response
     services=[node('motion_guard').create_service(Trigger,p,service) for p in ('/motion/stop','/motion/reset_stop')]
@@ -107,7 +128,7 @@ def main():
     (ROOT/'runtime').mkdir(exist_ok=True)
     try:
         if args.hold:
-            (ROOT/'runtime/graph-fixture-ready').write_text('ready')
+            (ROOT/'runtime/graph-fixture-ready').write_text(json.dumps({'pid':os.getpid(),'token':args.ready_token}))
             executor.spin()
             return 0
         for case in ('before','configured','duplicate_tf','duplicate_action','bypass','stale_guard'):
