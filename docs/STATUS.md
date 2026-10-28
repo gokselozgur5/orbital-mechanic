@@ -26,11 +26,19 @@ incomplete evidence. A full trace proves a sampled model state, not continuous
 health, independent camera/pose/hold-release acceptance or electrical isolation.
 The composed real capture-child flow and the production observer over controlled
 transport pass locally; native DDS/timing and three-machine acceptance remain open.
-All 560 local tests pass (36 new recorder controls plus one CLI correction),
+All 561 local tests pass (37 new recorder controls plus one CLI correction),
 with the causal baseline, 173 Python AST files, 17 shell scripts and two XML
 sources. Source bytes remain unchanged through validation. Two deliberate
 mutations fail the intended tests when source measurement or runtime binding
 checks are removed; these are sensitivity controls, not historical defects.
+The first PR CI returned failed statuses in two positive composed cases while
+same-head push CI passed; its inner cause was not logged. A controlled 350 ms
+child-write delay reproduces host scheduling advancing the test clock during
+I/O. The corrected fixture advances on child sensor-step requests and retains
+explicit expiry controls; production clocks and freshness bounds are unchanged.
+This controlled failure does not retrospectively prove the CI cause. Assertions
+now include inner inspection/worker diagnostics. This fixture correction earns
+no additional delivery credit.
 Evidence: `reviews/orbital-delivery-20261028/om053` in the operator workspace.
 
 **OM-052: owned isolation on the published station passes local controls.**

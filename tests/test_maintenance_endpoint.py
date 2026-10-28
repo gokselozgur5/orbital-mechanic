@@ -156,7 +156,8 @@ class MaintenanceEndpointTests(unittest.TestCase):
         def launch(args, **kwargs):
             self.assertEqual(Path(args[1]).name, 'inspection-worker.py')
             kwargs['env'].update(ORBITAL_TEST_ORIGIN=str(origin), ORBITAL_TEST_SHARED_CLOCK='1',
-                                 ORBITAL_TEST_STATION_PUBLICATIONS='1', ORBITAL_TEST_EXIT_DELAY='.05')
+                                 ORBITAL_TEST_STATION_PUBLICATIONS='1', ORBITAL_TEST_EXIT_DELAY='.05',
+                                 ORBITAL_TEST_STORAGE_DELAY='.35' if mode == 'slow_storage' else '0')
             child = real_popen([args[0], str(ROOT/'tests/inspection_transport_fixture.py'), *args[2:]], **kwargs)
             workers.append(child); return child
 
@@ -227,6 +228,12 @@ class MaintenanceEndpointTests(unittest.TestCase):
         for status in outputs['/maintenance/state']: state(canonical(status))
         self.assertEqual(len(outputs['/maintenance/result']), 1)
         terminal = result(outputs['/maintenance/result'][0])
+        action = station.owner.actions[request['action_id']]
+        diagnostic = self.root/'runtime/test-worker-error.txt'
+        self.endpoint_diagnostic = {'terminal': terminal,
+            'inspection': None if action.inspector is None else action.inspector.last_result,
+            'worker': diagnostic.read_text() if diagnostic.exists() else None,
+            'guard_failure': station.holds.failure}
         self.assertTrue(outputs['/maintenance/reply'][0]['accepted'])
         return terminal, outputs
 
@@ -267,7 +274,7 @@ class MaintenanceEndpointTests(unittest.TestCase):
     def test_independent_retention_of_actual_camera_hold_and_station_flow(self):
         terminal, outputs = self.run_endpoint(retained=True)
         value = verify_isolation(self.root, self.retained_path)['observation']
-        self.assertEqual(terminal['status'], 'succeeded')
+        self.assertEqual(terminal['status'], 'succeeded', self.endpoint_diagnostic)
         self.assertTrue(value['verified_isolation'])
         self.assertEqual(value['station_run_id'], outputs['/station/telemetry'][-1]['run_id'])
 
@@ -275,7 +282,7 @@ class MaintenanceEndpointTests(unittest.TestCase):
         terminal, _ = self.run_endpoint('cancel_after_effect', retained=True)
         value = verify_isolation(self.root, self.retained_path)['observation']
         self.assertEqual(value['server_status'], terminal['status'])
-        self.assertEqual(value['server_status'], 'cancelled')
+        self.assertEqual(value['server_status'], 'cancelled', self.endpoint_diagnostic)
         self.assertTrue(value['verified_isolation'])
 
     def test_independent_retention_of_cancellation_before_effect(self):
@@ -284,3 +291,8 @@ class MaintenanceEndpointTests(unittest.TestCase):
         self.assertEqual(value['server_status'], terminal['status'])
         self.assertFalse(value['verified_isolation'])
         self.assertTrue(value['sampled_unchanged'])
+
+    def test_capture_host_io_scheduling_does_not_advance_shared_test_time(self):
+        terminal, _ = self.run_endpoint('slow_storage', retained=True)
+        self.assertEqual(terminal['status'], 'succeeded', self.endpoint_diagnostic)
+        self.assertTrue(verify_isolation(self.root, self.retained_path)['observation']['verified_isolation'])

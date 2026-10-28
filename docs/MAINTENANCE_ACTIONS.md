@@ -195,8 +195,9 @@ Run `python3 -m unittest discover -s tests -v` and
 
 OM-052 implements the station-owner isolation endpoint, drive hold, versioned
 effect telemetry and local isolation verification/cancellation/replay controls.
-OM-053 must add independently retained/native isolation acceptance; it must not
-count the same verifier implementation again. Reset/restore, reconciliation and
+OM-053 adds [independently retained isolation observations](ISOLATION_EVIDENCE.md)
+and offline postcondition replay; native isolation acceptance remains pending.
+This does not count the same owner verifier again. Reset/restore, reconciliation and
 native sequence acceptance remain open through OM-060. Reuse this checker in
 that integration; do not count its implementation twice. The full mission needs
 independent evaluation of causality, collisions, unnecessary interventions and

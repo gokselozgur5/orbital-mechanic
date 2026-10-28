@@ -21,17 +21,25 @@ from proximity_fixture import Harness
 
 
 class SharedClock:
-    """Test-only clock: parent advances ticks; child freezes completion scheduling."""
+    """Test-only clock: child requests ticks while collecting, not during host I/O."""
     def __init__(self, root, create=False):
         file = root/'runtime/endpoint-test-clock'
-        if create: file.write_bytes(struct.pack('dB', 1000., 0))
+        if create: file.write_bytes(struct.pack('dBBB', 1000., 0, 0, 0))
         self.file = file.open('r+b')
-        self.memory = mmap.mmap(self.file.fileno(), 9)
+        self.memory = mmap.mmap(self.file.fileno(), 11)
     def now(self): return struct.unpack('d', self.memory[:8])[0]
     def advance(self, seconds, force=False):
-        if force or not self.memory[8]: self.memory[:8] = struct.pack('d', self.now()+seconds)
+        if force:
+            self.memory[:8] = struct.pack('d', self.now()+seconds)
+        elif not self.memory[8] and (not self.memory[9] or self.memory[10]):
+            self.memory[10] = 0
+            self.memory[:8] = struct.pack('d', self.now()+seconds)
+    def cooperate(self, enabled):
+        self.memory[9] = int(enabled)
+        self.memory[10] = 0
+    def request_tick(self): self.memory[10] = 1
     def freeze(self): self.memory[8] = 1
-    def unfreeze(self): self.memory[8] = 0
+    def unfreeze(self): self.cooperate(False); self.memory[8] = 0
     def close(self): self.memory.close(); self.file.close()
 
 
@@ -65,6 +73,7 @@ def transport(root, origin, clock=None, writer=False, external_telemetry=False):
             time.sleep(timeout_sec)
         else:
             if writer: clock.advance(timeout_sec)
+            else: clock.request_tick()
             time.sleep(.005)  # Yield CPU to the actual child, without advancing its clock.
         wall = now()
         # A 50 Hz simulated clock is independent of executor wakeup jitter.
@@ -113,6 +122,7 @@ if __name__ == '__main__':
     harness = transport(Path.cwd(), float(os.environ['ORBITAL_TEST_ORIGIN']), clock,
                         external_telemetry=os.environ.get('ORBITAL_TEST_STATION_PUBLICATIONS') == '1')
     from orbital import ros_proximity
+    from orbital.inspection_artifacts import CaptureStore
     trace = []
     def telemetry(packet):
         trace.append(['telemetry', harness.sim, packet['stamp_ns']])
@@ -121,16 +131,24 @@ if __name__ == '__main__':
         if kind == 'image': trace.append(['image', harness.sim, message.header.stamp.sec*10**9+message.header.stamp.nanosec])
     harness.telemetry_hook, harness.camera_hook = telemetry, camera
     actual = ros_proximity.capture_machine_observation
+    actual_write = CaptureStore.write
+    def write(store, name, chunks):
+        value = actual_write(store, name, chunks)
+        if name == 'image.ppm':
+            time.sleep(float(os.environ.get('ORBITAL_TEST_STORAGE_DELAY', '0')))
+        return value
     def capture(*args, **kwargs):
         try:
-            if clock is not None: kwargs['now'] = clock.now
+            if clock is not None:
+                kwargs['now'] = clock.now
+                clock.cooperate(True)
             result = actual(*args, **kwargs)
             if clock is not None: clock.freeze()
             return result
         except BaseException:
             (Path.cwd()/'runtime/test-worker-error.txt').write_text(traceback.format_exc()+'\n'+json.dumps(trace[-40:]))
             raise
-    with patch.dict(sys.modules, harness.modules), patch.object(ros_proximity, 'capture_machine_observation', capture):
+    with patch.dict(sys.modules, harness.modules), patch.object(ros_proximity, 'capture_machine_observation', capture), patch.object(CaptureStore, 'write', write):
         try:
             runpy.run_path(str(ROOT/'scripts/inspection-worker.py'), run_name='__main__')
         except SystemExit:
@@ -138,3 +156,5 @@ if __name__ == '__main__':
             # Logical time stays frozen so this tests reap ownership alone.
             time.sleep(float(os.environ.get('ORBITAL_TEST_EXIT_DELAY', '0')))
             raise
+        finally:
+            if clock is not None: clock.cooperate(False)

@@ -112,3 +112,14 @@ missing packets/commands, run/revision/request changes, frozen/expired clocks,
 graph/source changes, corruption, cancellation, bounds and cleanup. This is not
 native DDS/timing, three-machine or physical acceptance. OM-053 native fault and
 cancellation commissioning remains open.
+
+The ownership fixture advances its shared test clock when the capture child
+requests another sensor step and freezes it during actual child I/O/teardown.
+An injected 350 ms disk delay therefore tests real artifact/reap ownership without
+depending on host scheduling speed. Explicit clock advances still test expiry,
+including the existing 250 ms late-read refusal. Production keeps real monotonic
+time and unchanged freshness bounds. Initial PR CI returned unexpected failed
+statuses in two positive composed cases while the same-head push CI passed; the
+inner reason was not logged. A controlled slow-write failure is retained, but it
+does not establish that historical CI failure's cause. Fixtures now include the
+terminal, inner inspection and worker diagnostics in their assertions.
