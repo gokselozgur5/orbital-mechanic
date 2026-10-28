@@ -19,8 +19,8 @@ def load_waypoints(path):
     return load_waypoint_contract(path)[0]
 
 
-def load_waypoint_contract(path):
-    raw = Path(path).read_bytes()
+def parse_waypoint_contract(raw):
+    """Parse one byte snapshot without discarding geometry or duplicate keys."""
     data = json.loads(raw, object_pairs_hook=_unique_pairs)
     if not isinstance(data, dict) or data.get('frame') != 'map':
         raise ValueError('Navigation poses must use the map frame')
@@ -38,6 +38,16 @@ def load_waypoint_contract(path):
         if abs(values[2]) > math.pi:
             raise ValueError('Waypoint yaw must be in [-pi, pi]')
         poses[name] = tuple(float(v) for v in values)
+    return data, poses
+
+
+def load_waypoint_contract(path, *, root=None, require_geometry=False):
+    path = Path(path)
+    raw = path.read_bytes()
+    data, poses = parse_waypoint_contract(raw)
+    if require_geometry or 'world' in data:
+        from orbital.inspection_geometry import validate_inspection_map
+        validate_inspection_map(data, poses, root if root is not None else path.resolve().parents[1])
     return poses, hashlib.sha256(raw).hexdigest()
 
 

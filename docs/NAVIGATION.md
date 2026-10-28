@@ -22,6 +22,48 @@ These are proposed reachable goals, not measured arrivals. The station model's 0
 
 Use a conservative circular collision radius 0.37 m initially (body half-diagonal ≈ 0.34 m, wheels extend laterally to 0.27 m). Check it against the full collision geometry. Nav2 inflation adds a margin; do not shrink the footprint merely to force a route through. Camera/scan observations must show which labelled machine is being approached; fixed poses are public geometry and cannot encode hidden fault truth.
 
+### Enforced offline geometry — OM-021
+
+`orbital/inspection_geometry.py` validates the complete known-map contract before
+map generation and before the navigation CLI imports ROS or acquires ownership.
+The artifact binding check recomputes the same geometry. Minimal pose-only input
+remains available to isolated library fixtures; the production entry point always
+requires the world and geometry fields.
+
+- Exactly the station's three machine IDs must have goals. Each must resolve to
+  one static collision box, intersected by the configured map slice.
+- Each finite control point must be the matching box's west-face center. A point
+  inside a machine or on another machine cannot substitute for that control.
+- The reviewed radius 0.37 m and arrival tolerances 0.10 m / 0.15 rad are enforced;
+  the supervisor uses the shared arrival constants. JSON cannot weaken them.
+- The full arrival footprint, radius 0.47 m around the nominal goal, must avoid
+  occupied, unknown and outside cells. The existing continuous disc checker is
+  reused. A single four-connected flood fill checks inflated reachability from
+  the clear origin to every goal, without diagonal corner cutting.
+- Nominal control distance plus XY arrival tolerance must remain within the
+  station's shared 0.75 m maintenance bound. Current goals are 0.60 m from their
+  controls, leaving 0.05 m after the 0.10 m arrival tolerance.
+
+The manifest records these per-machine checks. Its revision binds the world,
+exact config bytes and geometry/parsing/generation dependencies. Two generations
+of revision `1c58f56cf5246735` match exactly; image SHA remains
+`d08588af2b1186992411e32dbf1d703e47ea45d183666de13c04a84cbe9c5000`.
+Changing the validator or config rejects an older loaded revision even when map
+pixels are unchanged. Regenerate and explicitly reload localization before the
+next native seed, map-binding and readiness checks; do not overwrite old evidence
+or pretend that an old running map has loaded the new contract.
+
+All 127 local tests pass. The same 14 geometry regression tests yield 21 failing
+subcases on `24df24d` and pass on this implementation. Positive cases include
+matching translated machine/control/goal geometry and the exact 0.75 m boundary.
+CLI refusal, dependency identity and tampered report checks also pass.
+
+This is static geometry acceptance. It neither measures localization error nor
+proves actual arrival, observation orientation or collision-free execution.
+Maintenance still requires fresh independently measured distance and stationary
+feedback; navigation success alone cannot authorize it. Native deployment and
+the three-machine tour remain pending.
+
 ## Transform and localization ownership
 
 - `map→odom`: AMCL only, using the generated known map and `/scan`. No parallel identity transform or ground-truth publisher masquerading as localization.

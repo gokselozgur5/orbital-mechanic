@@ -19,6 +19,7 @@ from orbital.localization import planar_pose_valid
 from orbital.navigation_command import CommandGate
 from orbital.ros_health_interlock import HealthInterlock
 from orbital.ros_navigation_action import NavigationActionSession
+from orbital.inspection_geometry import ARRIVAL_XY_TOLERANCE_M, ARRIVAL_YAW_TOLERANCE_RAD
 
 
 class NavigationSupervisor(HealthInterlock):
@@ -135,7 +136,8 @@ class NavigationSupervisor(HealthInterlock):
             yaw=math.atan2(2*(q.w*q.z+q.x*q.y),1-2*(q.y*q.y+q.z*q.z))
             x,y,goal_yaw=self.session.waypoints[target.waypoint]
             xy=math.hypot(p.x-x,p.y-y);angle=abs(math.remainder(yaw-goal_yaw,2*math.pi))
-            return {'xy_error_m':xy,'yaw_error_rad':angle,'within_tolerance':xy<=.1 and angle<=.15}
+            return {'xy_error_m':xy,'yaw_error_rad':angle,
+                    'within_tolerance':xy<=ARRIVAL_XY_TOLERANCE_M and angle<=ARRIVAL_YAW_TOLERANCE_RAD}
         except TransformException:return None
 
     def tick(self):

@@ -7,6 +7,9 @@ from dataclasses import dataclass
 from enum import Enum
 import math
 
+MACHINE_IDS = ('pump', 'cooler', 'power_unit')
+MAX_CONTROL_DISTANCE_M = .75
+
 
 class Fault(str, Enum):
     NONE = 'none'
@@ -38,7 +41,7 @@ class Machine:
 
 class Station:
     def __init__(self, fault=Fault.NONE):
-        self.machines = {name: Machine(name) for name in ('pump', 'cooler', 'power_unit')}
+        self.machines = {name: Machine(name) for name in MACHINE_IDS}
         self.machines['pump'].fault = fault
         self.time_s = 0.0
         self.healthy_s = 0.0
@@ -82,7 +85,7 @@ class Station:
             raise Rejected('unknown control or machine')
         if not all(math.isfinite(x) for x in (distance_m, speed_mps, observed_at_s)):
             raise Rejected('non-finite precondition')
-        if not 0 <= distance_m <= 0.75 or abs(speed_mps) > 0.01:
+        if not 0 <= distance_m <= MAX_CONTROL_DISTANCE_M or abs(speed_mps) > 0.01:
             raise Rejected('robot must be stationary and near control')
         if not 0 <= self.time_s - observed_at_s <= 2:
             raise Rejected('stale or future observation')

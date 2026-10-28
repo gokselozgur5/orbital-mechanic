@@ -17,7 +17,7 @@ def main():
     parser.add_argument('--map-config', type=Path, default=ROOT/'config/known-map.json')
     parser.add_argument('--goal-timeout', type=bounded_timeout, default=120.)
     args = parser.parse_args()
-    waypoints, config_sha256 = load_waypoint_contract(args.map_config)
+    waypoints, config_sha256 = load_waypoint_contract(args.map_config, root=ROOT, require_geometry=True)
     domain = os.environ.get('ROS_DOMAIN_ID')
     if domain not in ('42', '84') or os.environ.get('ROS_AUTOMATIC_DISCOVERY_RANGE') != 'LOCALHOST':
         raise RuntimeError('Requires localhost-only Orbital domain 42 or isolated test domain 84')

@@ -88,6 +88,10 @@ class Grid:
         return ('P2\n'+f'{self.width} {self.height}\n255\n'+'\n'.join(' '.join(map(str,row)) for row in rows)+'\n').encode()
 
     def reachable(self,start,goal,radius):
+        return self.reachable_all(start,[goal],radius)
+
+    def reachable_all(self,start,goals,radius):
+        """Check named destinations in one inflated flood fill, without corner cuts."""
         if not math.isfinite(radius) or radius<0:raise ValueError('Invalid footprint radius')
         bound=math.ceil(radius/self.resolution)+1
         offsets=[(dx,dy) for dx in range(-bound,bound+1) for dy in range(-bound,bound+1)
@@ -97,17 +101,19 @@ class Grid:
             if cell not in cache:
                 cache[cell]=all(self.at(cell[0]+dx,cell[1]+dy)==FREE for dx,dy in offsets)
             return cache[cell]
-        first,last=self.cell(*start),self.cell(*goal)
-        if not clear(first) or not clear(last):return False
+        first=self.cell(*start)
+        remaining={self.cell(*goal) for goal in goals}
+        if not clear(first) or not all(clear(last) for last in remaining):return False
+        remaining.discard(first)
         queue=deque([first]);visited={first}
-        while queue:
+        while queue and remaining:
             cell=queue.popleft()
-            if cell==last:return True
+            remaining.discard(cell)
             # Four-connected search prevents diagonal corner cutting.
             for dx,dy in ((1,0),(-1,0),(0,1),(0,-1)):
                 nxt=(cell[0]+dx,cell[1]+dy)
                 if nxt not in visited and clear(nxt):visited.add(nxt);queue.append(nxt)
-        return False
+        return not remaining
 
 
 def build_grid(world_path,config):

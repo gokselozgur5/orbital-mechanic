@@ -11,6 +11,30 @@ original localization branch; six migrated commits do not count as new deliverie
 [Draft PR #16](https://github.com/gokselozgur5/orbital-mechanic/pull/16) links #6/#7,
 which remain open until full live localization/navigation acceptance and review.
 
+**OM-021: inspection-pose geometry is accepted offline; deployment is pending.**
+The waypoint loader, map generator and artifact binding now validate the three
+machine IDs against actual static collision boxes. Controls must match each
+machine's west-face center. Goals need a clear 0.47 m arrival envelope (0.37 m
+robot plus 0.10 m XY tolerance), inflated connectivity from the origin and control
+distance within the station's 0.75 m bound throughout that tolerance. Reviewed
+footprint/arrival bounds cannot be reduced through JSON configuration. The ROS
+entry point refuses missing geometry before constructing a command owner.
+
+All 127 local tests pass. The identical 14-test regression file produces 21
+failing subcases on `24df24d`; all cases pass on the new implementation, including
+valid translated geometry and the exact proximity boundary. Other regressions
+cover the production CLI, disconnected destinations, changed validation source
+and tampered map evidence. Two map generations agree byte-for-byte at revision
+`1c58f56cf5246735`; the occupancy image is unchanged. Each original pose has
+0.05 m control-distance margin after arrival tolerance.
+
+Map identity now binds the geometry validation dependencies and includes a
+per-machine report. Existing generated artifacts are preserved. Before deploying
+this change, regenerate the map, explicitly reload localization and verify seed,
+map binding and readiness; an already-loaded old revision is intentionally
+rejected. No native process or simulation was changed. OM-018/019/020 and the
+measured tour remain pending; SSH access to the configured Thor is unresolved.
+
 **OM-018: arm callback races are fixed locally; native commissioning is pending.**
 The command callback now expires the health lease before admitting a request or
 arm. If moving feedback arrives while a guard-arm response is pending, that

@@ -7,21 +7,19 @@ import sys
 
 ROOT=Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(ROOT))
-from orbital.mapping import build_grid
+from orbital.navigation_configuration import parse_waypoint_contract
+from orbital.inspection_geometry import validate_inspection_map
+from orbital.map_binding import generator_digest, read_source
 
 
 def generate():
-    config_path=ROOT/'config/known-map.json'
-    config=json.loads(config_path.read_text())
-    world=(ROOT/config['world']).resolve()
-    if not world.is_relative_to(ROOT):raise ValueError('World must be inside this repository')
-    grid=build_grid(world,config)
-    for name,pose in config['inspection_poses'].items():
-        if not grid.reachable((0.,0.),pose['goal_xy_yaw'][:2],config['robot_radius_m']):
-            raise ValueError(f'Inspection pose is unreachable in inflated grid: {name}')
-    source_sha=hashlib.sha256(world.read_bytes()).hexdigest()
-    config_sha=hashlib.sha256(config_path.read_bytes()).hexdigest()
-    generator_sha=hashlib.sha256((ROOT/'orbital/mapping.py').read_bytes()+Path(__file__).read_bytes()).hexdigest()
+    config_bytes=read_source(ROOT,'config/known-map.json')
+    config,poses=parse_waypoint_contract(config_bytes)
+    inspection=validate_inspection_map(config,poses,ROOT)
+    grid=inspection.grid
+    source_sha=hashlib.sha256(read_source(ROOT,config['world'])).hexdigest()
+    config_sha=hashlib.sha256(config_bytes).hexdigest()
+    generator_sha=generator_digest(ROOT)
     identity=hashlib.sha256((source_sha+config_sha+generator_sha).encode()).hexdigest()[:16]
     output=ROOT/'runtime/maps'/identity
     image=grid.pgm()
@@ -32,8 +30,8 @@ def generate():
               'image_sha256':hashlib.sha256(image).hexdigest(),
               'map_yaml_sha256':hashlib.sha256(yaml).hexdigest(),
               'width':grid.width,'height':grid.height,'frame':config['frame'],
-              'reachable_poses':list(config['inspection_poses']),
-              'validation_scope':'offline inflated-grid reachability, not live navigation'}
+              'reachable_poses':list(poses), 'inspection_geometry':inspection.checks,
+              'validation_scope':'offline arrival clearance, control geometry and inflated reachability; not live navigation'}
     artifacts={'map.pgm':image,'map.yaml':yaml,'manifest.json':(json.dumps(manifest,indent=2)+'\n').encode()}
     output.mkdir(parents=True,exist_ok=True)
     for name,data in artifacts.items():

@@ -7,7 +7,16 @@ import json
 import math
 from pathlib import Path
 
-from orbital.mapping import build_grid, FREE, OCCUPIED
+from orbital.mapping import FREE, OCCUPIED
+from orbital.navigation_configuration import parse_waypoint_contract
+from orbital.inspection_geometry import validate_inspection_map
+
+# Every repository module used to generate/validate these map artifacts is part
+# of their revision. Include this file because it owns the identity calculation.
+GENERATOR_SOURCES = ('orbital/mapping.py', 'orbital/path_clearance.py',
+                     'orbital/machines.py', 'orbital/navigation_configuration.py',
+                     'orbital/inspection_geometry.py', 'orbital/map_binding.py',
+                     'scripts/generate-known-map.py')
 
 
 def sha(data):
@@ -23,20 +32,23 @@ def read_source(root, relative):
     return path.read_bytes()
 
 
+def generator_digest(root):
+    return sha(b''.join(read_source(root, name) for name in GENERATOR_SOURCES))
+
+
 def validate_bundle(root, map_yaml):
     root = Path(root).resolve()
     config_bytes = read_source(root, 'config/known-map.json')
-    config = json.loads(config_bytes)
-    if config['frame'] != 'map':
-        raise ValueError('Map frame must be map')
+    config, poses = parse_waypoint_contract(config_bytes)
     world = read_source(root, config['world'])
     source_sha, config_sha = sha(world), sha(config_bytes)
-    generator_sha = sha(read_source(root, 'orbital/mapping.py')+read_source(root, 'scripts/generate-known-map.py'))
+    generator_sha = generator_digest(root)
     revision = sha((source_sha+config_sha+generator_sha).encode())[:16]
     expected = root/'runtime/maps'/revision/'map.yaml'
     if Path(map_yaml).absolute() != expected:
         raise ValueError('Loaded map revision differs from versioned source')
-    grid = build_grid(root/config['world'], config)
+    inspection = validate_inspection_map(config, poses, root)
+    grid = inspection.grid
     image = grid.pgm()
     yaml = (f'image: map.pgm\nresolution: {grid.resolution}\n'
             f'origin: [{grid.origin[0]}, {grid.origin[1]}, 0.0]\n'
@@ -50,7 +62,7 @@ def validate_bundle(root, map_yaml):
     expected_fields = {'source_sha256':source_sha, 'config_sha256':config_sha, 'generator_sha256':generator_sha,
                        'image_sha256':sha(image), 'map_yaml_sha256':sha(yaml),
                        'width':grid.width, 'height':grid.height, 'frame':'map',
-                       'reachable_poses':list(config['inspection_poses'])}
+                       'reachable_poses':list(poses), 'inspection_geometry':inspection.checks}
     if any(manifest.get(k) != v for k, v in expected_fields.items()):
         raise ValueError('Map manifest differs from source')
     return {'revision':revision, 'config_sha256':config_sha, 'image_sha256':sha(image),
