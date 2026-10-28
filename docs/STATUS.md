@@ -4,7 +4,39 @@ Updated: 2026-10-28
 
 ## Active delivery goal
 
-The user resumed Orbital work and requested at least 100 substantive atomic commits. [GOAL_100.md](GOAL_100.md) defines the product, evidence gates and counting rules. The isolated branch `codex/nav2-integration` is based on the corrected Gmail-attributed main; its six migrated navigation commits preserve the original source tree and do not count toward the new goal. Original branch and dirty main drafts are untouched. OM-002 now provides a read-only installed-artifact compatibility gate. Thor reports Nav2 1.3.13 consistently across nine required packages; server/plugin artifacts, stamped-publisher support and the action contract pass. Seven rejection/control tests bring the local suite to 66 passing tests. This does not prove plugin runtime loading or lifecycle compatibility. OM-003 now configures the real controller/local costmap and verifies plugin loading, inactive lifecycle state and sole stamped output on empty domain84; an unstamped negative control fails as required. No world or movement was started. OM-004 now verifies native known-map planning: six clear swept-footprint routes, occupied/outside goal rejection and an independently rejected straight path through a machine. All 72 local tests pass. Native result source hashes and route points are retained in private review artifacts; see NAV2_INTEGRATION.md. OM-005 adds the validated supervisor executable with duplicate-owner and continuous command-authority checks. All 77 local tests and 11 composed ROS fixture scenarios pass, including existing/late competing publishers and process death. Native source manifests and results remain in private review artifacts. OM-006 now composes the native planner/controller/navigator and lifecycle manager with a restricted behavior tree. Empty-domain native tests passed explicit startup, a zero-motion goal, normal shutdown and controller-death teardown of all five owned processes. OM-007 adds navigation service ownership and prerequisite invocation monitoring. Six real systemd fixture cases passed, including dependency restart and removal of detached SIGTERM-ignoring descendants. An initial Requisite-based design restarted navigation unexpectedly; the final design reproduced and eliminated that behavior. See NAVIGATION_SERVICE.md. Live demo/localization stayed active; the production navigation service is not deployed yet. OM-008 adds a pre-start ROS graph and fresh-stationary guard gate. The read-only live domain42 check passed, as did six domain84 DDS acceptance/refusal cases; all 84 local tests pass. Endpoint/parent ownership checks do not attribute individual TF messages, which remains explicitly unproven. OM-009 records source/config/Nav2 artifact identity around the graph gate and binds its report hash. Native proof captured 74 sources/107 installed artifacts, rejected a changed controller setting and failed gate, and matched again after restoring bytes. All 91 local tests pass. The content record does not freeze mutable source or prove runtime-loaded libraries. Next: lifecycle readiness and coordinated live deployment, then the first measured route. No new autonomous-motion acceptance has occurred yet.
+The user requested at least 100 substantive atomic commits toward the complete
+maintenance MVP. [GOAL_100.md](GOAL_100.md) defines scope and evidence gates. The
+isolated `codex/nav2-integration` branch preserves the dirty main checkout and
+original localization branch; six migrated commits do not count as new deliveries.
+[Draft PR #16](https://github.com/gokselozgur5/orbital-mechanic/pull/16) links #6/#7,
+which remain open until full live localization/navigation acceptance and review.
+
+**OM-010: the native navigation stack is now deployed on Thor in guarded standby.**
+Planner, controller and navigator passed unconfigured → inactive → active checks;
+the health observer and supervisor are running. Guard remained latched, localization
+was healthy and no supervisor velocity requests were emitted. A repeated read-only
+check passed with no lifecycle commands. Independent Gazebo before/after pose queries
+reported zero net translation/yaw change at their output precision, within the
+1 mm / 0.001 rad acceptance bounds. No target or arm command was sent.
+
+Native isolated readiness tests passed configuration, activation, repeated checks,
+changed-source rejection with stop/pause, and explicit recovery after restoring
+bytes. The first stop-RPC attempt timed out; persistent clients and bounded
+discovery/response waits passed the subsequent proof. All 92 local tests pass. Earlier
+controller, planner, graph, service and manifest proofs are documented in
+[NAV2_INTEGRATION.md](NAV2_INTEGRATION.md) and [NAVIGATION_SERVICE.md](NAVIGATION_SERVICE.md).
+
+Native and live readiness used identical source/artifact content identity
+`4a5eda76f5780bcd255157fbf5eab1205c7ea7a4648b14a40ad93753afed0d5d`.
+The live demo/localization InvocationIDs did not change. Deployment added navigation
+sources and backed up three older localization test scripts before updating their
+unseeded checks. Running world, robot and guard source files were already identical.
+Raw results, source bindings and rollback metadata remain in private review artifacts.
+
+Readiness is not autonomous route acceptance. Next: real unseeded/reseed/reset/loss
+and TF-authority gates, then the measured three-machine tour and failure cases.
+Physical arrival/collision/mission acceptance remains outstanding. No maintenance
+mission, live LLM call or paid resource was started.
 
 ## Current phase and next action
 

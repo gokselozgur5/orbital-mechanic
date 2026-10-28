@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Prove graph-gate acceptance/refusal over DDS on empty localhost domain84."""
+import argparse
 import hashlib
 import json
 import os
@@ -14,6 +15,9 @@ from orbital.navigation_graph import BASE_TOPICS,NAV_TOPICS,NAV_NODES,PARENTS
 
 
 def main():
+    parser=argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--hold',action='store_true',help='Keep base fixtures alive for native readiness tests')
+    args=parser.parse_args()
     if os.environ.get('ROS_DOMAIN_ID')!='84' or os.environ.get('ROS_AUTOMATIC_DISCOVERY_RANGE')!='LOCALHOST':
         raise RuntimeError('Requires empty localhost domain84')
     import rclpy
@@ -23,12 +27,13 @@ def main():
     from rclpy.qos import QoSProfile,DurabilityPolicy,ReliabilityPolicy
     from rosidl_runtime_py.utilities import get_message
     from builtin_interfaces.msg import Time
-    from geometry_msgs.msg import TransformStamped, Twist
-    from nav_msgs.msg import Odometry
+    from geometry_msgs.msg import TransformStamped, Twist, PoseWithCovarianceStamped
+    from nav_msgs.msg import Odometry, OccupancyGrid
     from nav2_msgs.action import NavigateToPose,ComputePathToPose,FollowPath
     from rosgraph_msgs.msg import Clock
     from std_msgs.msg import String
     from std_srvs.srv import Trigger
+    from sensor_msgs.msg import LaserScan, Imu
     from tf2_msgs.msg import TFMessage
     rclpy.init(args=[])
     probe=Node('orbital_graph_fixture_preflight')
@@ -54,7 +59,17 @@ def main():
     retained=QoSProfile(depth=1,durability=DurabilityPolicy.TRANSIENT_LOCAL,reliability=ReliabilityPolicy.RELIABLE)
     for topic,owners in BASE_TOPICS.items():
         for name,kind in owners:
-            pubs[(topic,name)]=node(name).create_publisher(get_message(kind),topic,retained if topic=='/tf_static' else 10)
+            pubs[(topic,name)]=node(name).create_publisher(get_message(kind),topic,retained if topic in ('/tf_static','/map','/amcl_pose') else 10)
+    if args.hold:
+        from orbital.mapping import build_grid,FREE,OCCUPIED
+        config=json.loads((ROOT/'config/known-map.json').read_text())
+        grid=build_grid(ROOT/config['world'],config)
+        message=OccupancyGrid();message.header.frame_id='map'
+        message.info.width,message.info.height,message.info.resolution=grid.width,grid.height,grid.resolution
+        message.info.origin.position.x,message.info.origin.position.y=grid.origin
+        message.info.origin.orientation.w=1.
+        message.data=[0 if c==FREE else 100 if c==OCCUPIED else -1 for c in grid.cells]
+        pubs[('/map','map_server')].publish(message)
     def service(request,response):
         response.success=True;return response
     services=[node('motion_guard').create_service(Trigger,p,service) for p in ('/motion/stop','/motion/reset_stop')]
@@ -67,6 +82,16 @@ def main():
         odom=Odometry();odom.header.frame_id='odom';odom.child_frame_id='base_footprint'
         odom.header.stamp=stamp;odom.pose.pose.orientation.w=1.
         pubs[('/odom','ros_gz_bridge')].publish(odom)
+        if args.hold:
+            scan=LaserScan();scan.header.frame_id='lidar_link';scan.header.stamp=stamp
+            scan.angle_min,scan.angle_max,scan.angle_increment=-3.14,3.14,6.28/359
+            scan.range_min,scan.range_max=.1,12.;scan.ranges=[4.]*360
+            pubs[('/scan','ros_gz_bridge')].publish(scan)
+            imu=Imu();imu.header.frame_id='base_link';imu.header.stamp=stamp;imu.orientation.w=1.
+            pubs[('/imu','ros_gz_bridge')].publish(imu)
+            pose=PoseWithCovarianceStamped();pose.header.frame_id='map';pose.header.stamp=stamp
+            pose.pose.pose.orientation.w=1.;pose.pose.covariance[0]=pose.pose.covariance[7]=pose.pose.covariance[35]=.01
+            pubs[('/amcl_pose','amcl')].publish(pose)
         if settings['guard']:
             pubs[('/motion/state','motion_guard')].publish(String(data=json.dumps({'latched':True,'linear_mps':0.,'angular_rps':0.})))
         transforms={('ros_gz_bridge','/tf'):[],('amcl','/tf'):[],
@@ -81,6 +106,10 @@ def main():
     timer=node('ros_gz_bridge').create_timer(.05,publish)
     (ROOT/'runtime').mkdir(exist_ok=True)
     try:
+        if args.hold:
+            (ROOT/'runtime/graph-fixture-ready').write_text('ready')
+            executor.spin()
+            return 0
         for case in ('before','configured','duplicate_tf','duplicate_action','bypass','stale_guard'):
             extra_nodes=[]
             extra_actions=[]

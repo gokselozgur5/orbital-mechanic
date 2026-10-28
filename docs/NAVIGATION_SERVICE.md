@@ -8,8 +8,8 @@ The launcher is `scripts/launch-navigation.py`; the foreground entry is
 `start-navigation.sh` → `navigation-service.py`. The launcher is restricted to
 Thor's Orbital checkout inside tmux. The service starts Nav2 **unconfigured**.
 Activation, graph preflight, deployed-source binding and live route acceptance
-remain separate gates. This service has not yet been deployed into the live
-simulation; it is not a claim that navigation is ready to drive.
+remain separate gates. OM-010 deployed this service into the live simulation and verified guarded standby.
+See STATUS.md for the source identity and evidence; route acceptance remains open.
 
 ## Failure contract
 

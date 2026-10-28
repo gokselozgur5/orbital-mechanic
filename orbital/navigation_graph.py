@@ -41,11 +41,12 @@ PARENTS = {'base_footprint':'odom', 'base_link':'base_footprint', 'lidar_link':'
 
 
 def graph_errors(snapshot, phase):
-    if phase not in ('before','configured'):
+    if phase not in ('before','unconfigured','configured'):
         raise ValueError('Unknown graph phase')
     errors = []
     expected = dict(BASE_TOPICS)
-    expected.update({topic: owners if phase=='configured' else [] for topic,owners in NAV_TOPICS.items()})
+    expected.update({topic: owners if phase!='before' and (phase=='configured' or topic!='/navigation/raw_cmd_vel') else []
+                     for topic,owners in NAV_TOPICS.items()})
     expected.update({topic:[] for topic in BYPASS_TOPICS})
     for topic, owners in expected.items():
         actual = Counter((p['node'],p['namespace'],p['type']) for p in snapshot['publishers'].get(topic,[]))
@@ -58,7 +59,7 @@ def graph_errors(snapshot, phase):
             errors.append('Missing or duplicate node: '+name)
     for name in NAV_NODES:
         count = sum(v for (n,_),v in nodes.items() if n==name)
-        if count != (1 if phase=='configured' else 0) or (phase=='configured' and nodes[(name,'/')] != 1):
+        if count != (0 if phase=='before' else 1) or (phase!='before' and nodes[(name,'/')] != 1):
             errors.append('Unexpected navigation node ownership: '+name)
     action_types = {kind for _,kind in NAV_ACTIONS.values()}
     actions = [a for a in snapshot['actions'] if a['name'] in NAV_ACTIONS or a['type'] in action_types]

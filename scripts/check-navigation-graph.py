@@ -104,7 +104,7 @@ def main():
     if os.environ.get('ROS_DOMAIN_ID') not in ('42','84') or os.environ.get('ROS_AUTOMATIC_DISCOVERY_RANGE')!='LOCALHOST':
         raise RuntimeError('Requires localhost Orbital domain42 or isolated domain84')
     parser=argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--phase',choices=('before','configured'),default='before')
+    parser.add_argument('--phase',choices=('before','unconfigured','configured'),default='before')
     args=parser.parse_args()
     import rclpy
     rclpy.init(args=[])

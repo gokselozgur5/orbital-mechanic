@@ -220,13 +220,54 @@ source/artifact tables and the gate binding remain in private review artifacts.
 under Thor's Orbital runtime directory. It restores the changed configuration in
 `finally`; it never edits the live checkout or starts navigation.
 
+## Guarded lifecycle readiness (OM-010)
+
+From an already-started navigation service, with the Orbital ROS environment loaded:
+
+```bash
+python3 scripts/check-navigation-ready.py --configure
+python3 scripts/check-navigation-ready.py --activate
+python3 scripts/check-navigation-ready.py
+```
+
+The first command accepts the exact unconfigured graph, explicitly configures all
+three native servers and checks their inactive graph. The second revalidates source,
+idle supervisor ownership and latched stationarity before lifecycle RESUME. With no
+flags, a successful check leaves an already configured/active stack unchanged. No mode sends
+a goal or calls reset_stop. A failure requests guard stop and lifecycle PAUSE; the
+independent motion watchdog retains responsibility for motor deadlines.
+
+Every run verifies the source manifest before/after, watches for any target, supervisor
+restart, unlatched guard or velocity request, and checks fresh stationary graph
+observations. It reports localization health separately: infrastructure readiness is
+not permission to drive with invalid localization. Source identity is a before/after
+observation, not a write fence. Per-message TF attribution remains unproven.
+
+The isolated systemd-owned native proof passed configuration, activation, repeat,
+changed-source refusal and explicit recovery. The initial failed-source stop RPC timed
+out; reusing a client created at startup and allowing a bounded three-second limit for each discovery/
+response wait passed the final proof. This does not change the motion watchdog timeout.
+
+Live domain42 then passed configure, activate and a read-only repeat with the same
+native-tested identity `4a5eda76f5780bcd255157fbf5eab1205c7ea7a4648b14a40ad93753afed0d5d`.
+All three servers are active, localization is healthy, guard is latched and no target
+or supervisor velocity request occurred. Gazebo pose queries before/after activation
+reported zero net change at output precision (bounds 1 mm / 0.001 rad). This is a
+stationary endpoint comparison, not continuous route/collision evaluation.
+
+Deployment preserved demo/localization service invocations and their running source.
+Forty files were added/updated after matching the reviewed inventory; the three existing
+changed files were older localization probes lacking the unseeded checks. Previous
+bytes and a rollback manifest were saved under the scoped deployment runtime directory.
+Private `readiness-native-*`, `readiness-live-*` and deployment artifacts retain raw
+results and source hashes. Full live failure/route acceptance remains open.
+
 ## Next gates
 
 1. Controller/local-costmap inactive configuration is verified above; validate actual motion after full composition.
 2. Known-map planning and native behavior-tree composition are verified above.
-3. Native lifecycle and output type are verified; add complete deployment preflight and source binding.
-4. Deploy the owned navigation service with shared-world preflight and a latched
-   guard. Confirm that no command bypass or competing controller exists.
+3. Native lifecycle, startup graph and source binding now pass in live guarded standby.
+4. Complete live unseeded, reseed/reset/loss and stronger TF-authority gates.
 5. Run announced bounded motion, independent arrival/collision evaluation and
    failure stopping before closing Phase 2.
 

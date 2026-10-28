@@ -23,6 +23,12 @@ class NavigationGraphTests(unittest.TestCase):
         for phase in ('before','configured'):
             self.assertEqual(graph_errors(valid(phase),phase),[])
 
+    def test_unconfigured_stack_cannot_have_controller_or_action_outputs(self):
+        value=valid('configured');value['actions']=[];value['publishers']['/navigation/raw_cmd_vel']=[]
+        self.assertEqual(graph_errors(value,'unconfigured'),[])
+        value['publishers']['/navigation/raw_cmd_vel']=[{'node':'controller_server','namespace':'/','type':'geometry_msgs/msg/TwistStamped'}]
+        self.assertIn('Publisher ownership mismatch: /navigation/raw_cmd_vel',graph_errors(value,'unconfigured'))
+
     def test_duplicate_tf_endpoint_with_same_name(self):
         value=valid();value['publishers']['/tf'].append(copy.deepcopy(value['publishers']['/tf'][0]))
         self.assertIn('Publisher ownership mismatch: /tf',graph_errors(value,'before'))
