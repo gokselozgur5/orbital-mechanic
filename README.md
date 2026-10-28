@@ -128,3 +128,9 @@ typed request/cancel/query commands, exact worker ownership, deadline and replay
 handling, verified artifact references and distinct terminal results. Local
 controlled-transport/process checks run the complete endpoint; native inspection
 and three-machine acceptance remain open.
+
+[Maintenance transitions and postconditions](docs/MAINTENANCE_ACTIONS.md) define
+the required isolate/reset/restore evidence and ownership. A public recovery
+checker now drives the ROS-free baseline's outcome using ten seconds of fresh
+healthy station samples. Mutating ROS endpoints and native maintenance remain
+pending.

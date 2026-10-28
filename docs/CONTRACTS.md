@@ -12,6 +12,11 @@ The [inspection endpoint](INSPECTION_ENDPOINT.md) now wraps that reader with a
 run/mission/action envelope, cancellation, terminal ownership and exact replay.
 It uses typed bounded JSON on String topics, not a generated ROSIDL action type.
 
+The [maintenance action contract](MAINTENANCE_ACTIONS.md) specifies required
+transitions, effect evidence and cancellation ownership. Its public recovery
+checker is implemented and used by the ROS-free baseline; mutating ROS endpoints
+and their native acceptance remain pending.
+
 ## Common envelope
 
 Every tool request includes schema_version, run_id, mission_id, action_id and validated arguments. A request may carry an observation_id precondition. Results contain status, typed error_code, started/finished simulation times, wall duration, observation references and any state change. Allowed statuses: succeeded, rejected, failed, cancelled, timed_out. A transport acknowledgement is not task success.
@@ -61,5 +66,11 @@ A successful repair requires the correct machine and intervention, a sustained h
 `orbital/machines.py` implements a ROS-free subset. Each powered healthy machine draws 100 W; a latched or jammed pump draws 300 W. The shared 450 W supply provides 28 V with 0.08 V droop per excess watt, clamped at zero. Reported current is load divided by measured bus voltage (1 V floor). Thermal target is 25 °C + 0.08 °C/W with a 30-second first-order time constant. A powered jam produces vibration 3 arbitrary units versus 0.2 normally.
 
 Reset requires isolation, temperature at most 40 °C and an unused reset attempt. Only a latched controller fault clears on reset. Recovery requires all machines powered at normal load and bus voltage at least 27 V continuously for 10 seconds. These constants are illustrative and uncalibrated.
+
+That continuous condition belongs to the internal model oracle. The new public
+checker requires a complete sequence of fresh healthy measurements spanning ten
+simulation seconds and describes its result as sampled recovery. It does not
+infer behavior between samples or establish that a reset was applied. The
+baseline uses the public result to decide its recovery outcome.
 
 The pure model receives distance/speed/timestamps from its caller. In future ROS integration these must come from trusted robot state, never planner arguments. This library is not an independently secured gateway. Telemetry run IDs, fresh public reading and inspection mission/action ownership now exist locally; native inspection acceptance, cross-action mission ownership, sensor noise, unknown faults and integrated navigation/camera diagnosis remain open. A persistent jam may be re-energized by the model to demonstrate continued failure; the scripted policy instead escalates upon its vibration evidence.

@@ -11,6 +11,29 @@ original localization branch; six migrated commits do not count as new deliverie
 [Draft PR #16](https://github.com/gokselozgur5/orbital-mechanic/pull/16) links #6/#7,
 which remain open until full live localization/navigation acceptance and review.
 
+**OM-051: maintenance contract and public recovery postcondition implemented locally.**
+The [maintenance action contract](MAINTENANCE_ACTIONS.md) defines allowed
+isolate/reset/restore transitions, drive-hold and fresh-observation requirements,
+effect confirmation, cancellation and unresolved ownership for #9. The actual
+model demonstrates that isolated measurements cannot distinguish an unapplied
+reset, a cleared latch and a persistent jam; a versioned exact applied-operation
+record is therefore required before exposing reset through an endpoint.
+
+`RecoveryEvidence` now verifies ten simulation seconds of consecutive healthy
+public station measurements, with every machine powered, bus voltage at least
+27 V and per-machine observed power at most 110 W. Gaps, expiry or unhealthy
+measurements discard the window; malformed input/run changes fail the reader.
+The ROS-free baseline uses this checker rather than hidden `Station.recovered`.
+Its synthetic geometry and synchronous calls remain prototype-only; no mutating
+ROS endpoint, hold or native maintenance acceptance is claimed. This work is
+isolated on `codex/maintenance-actions`, stacked on `codex/machine-integration`.
+
+All 473 local tests pass (12 new), plus the model baseline, 154 Python AST files,
+17 shell scripts and two XML sources. The identical public-decision regression
+fails on parent b4dba79 when access to `Station.recovered` is disabled and passes
+here. Source bytes remained unchanged during validation. Thor .55 closed SSH
+before authentication (exit 255); no native command or deployment occurred.
+
 **OM-049: cancellable inspection ownership passes local integration checks; native acceptance pending.**
 The typed String command endpoint owns one run/mission/action at a time, invokes
 the actual camera capture in a separate ROS process, and returns an ACK separately
