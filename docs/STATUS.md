@@ -11,7 +11,29 @@ original localization branch; six migrated commits do not count as new deliverie
 [Draft PR #16](https://github.com/gokselozgur5/orbital-mechanic/pull/16) links #6/#7,
 which remain open until full live localization/navigation acceptance and review.
 
-**OM-041: machine registry and telemetry binding pass locally; native inspection remains pending.**
+**OM-042: measured proximity passes locally; native inspection remains pending.**
+The read-only `machine-proximity.py` query uses the registry, actual map-binding
+gate, localization health and an exact-time `map` to `base_footprint` transform.
+It pins publisher/run/epoch identity, checks current source and timing, and
+reports planar control distance for one machine. Caller-supplied pose/distance,
+stale or reset evidence and successful lookups that finish after validity gates
+expire cannot produce an accepted measurement. No control RPC or publisher is
+created; the observer never acknowledges a motion-stop obligation.
+
+All 296 local tests pass, including 25 new production core/CLI and actual map/TF
+adapter tests with controlled transports. Three lookup races (publisher generation,
+clock mode and map age) fail before the final checks and pass afterward; a strict
+timestamp regression also fails before and passes after. The native access check
+could not establish an SSH session (exit 255). No native source, process or world changed. See
+[PROXIMITY.md](PROXIMITY.md) for the evidence contract and commissioning steps.
+
+This remains stacked on navigation through draft PR #19 / issue #8. A valid
+distance is not inspection eligibility: native pose/source commissioning,
+orientation, stationarity, telemetry freshness and action ownership remain open.
+Next local work: measured orientation and stationary inspection interlocks;
+native navigation/map/telemetry gates remain required before live integration.
+
+**OM-041: machine registry and telemetry binding pass locally; native commissioning remains pending.**
 The `codex/machine-integration` branch is based on navigation head `fd86e6e` and
 contributes to [issue #8](https://github.com/gokselozgur5/orbital-mechanic/issues/8).
 The existing telemetry process now binds its three machine IDs to configured SDF
@@ -29,7 +51,7 @@ poses are declared source geometry, not runtime truth or robot proximity.
 
 This is a stacked maintenance change; navigation PR #16 and its native gates stay
 open. Thor SSH still times out and no remote process/source changed. Native
-telemetry/schema/source commissioning, trusted proximity/orientation/stationarity,
+telemetry/schema/source and measured proximity commissioning, orientation/stationarity,
 freshness/noisy data handling and inspection/actions remain outstanding. See
 [MACHINE_REGISTRY.md](MACHINE_REGISTRY.md) for contracts and deployment gates.
 
