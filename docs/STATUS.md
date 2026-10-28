@@ -1,6 +1,10 @@
 # Project status
 
-Updated: 2026-10-24
+Updated: 2026-10-28
+
+## Active delivery goal
+
+The user resumed Orbital work and requested at least 100 substantive atomic commits. [GOAL_100.md](GOAL_100.md) defines the product, evidence gates and counting rules. The isolated branch `codex/nav2-integration` is based on the corrected Gmail-attributed main; its six migrated navigation commits preserve the original source tree and do not count toward the new goal. Original branch and dirty main drafts are untouched. Next: inspect installed Nav2 compatibility and implement the guarded production navigation composition, then prove the first real route. No new autonomous-motion acceptance has occurred yet.
 
 ## Current phase and next action
 
