@@ -7,4 +7,5 @@ mkdir -p runtime/navigation runtime/ros runtime/tmp
 export ROS_LOG_DIR="$ROOT/runtime/ros" TMPDIR="$ROOT/runtime/tmp"
 source scripts/ros-env.sh
 /usr/bin/python3 scripts/check-nav2-compatibility.py > runtime/navigation/compatibility.json
+/usr/bin/python3 scripts/check-navigation-graph.py --phase before > runtime/navigation/graph-before.json
 exec /usr/bin/python3 scripts/navigation-service.py

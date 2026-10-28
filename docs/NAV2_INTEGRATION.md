@@ -151,6 +151,41 @@ This is native composition and process ownership evidence with synthetic static 
 scan and odometry. It is not a moving-world route, supervisor-to-guard integration
 or physical collision/stopping acceptance.
 
+## Startup graph gate (OM-008)
+
+`check-navigation-graph.py --phase before` now runs before the service starts its
+children. It observes the graph repeatedly after discovery, requiring the expected
+TF/map/sensor/guard publishers and services and no existing navigation owner, route
+action server or bypass command publisher. Duplicate nodes/endpoints, wrong message
+types and conflicting/missing TF parents fail. `--phase configured` instead expects
+the exact supervisor/monitor/controller/planner/navigator graph for the later
+pre-activation gate. Neither mode arms or activates anything.
+
+Both modes require advancing simulation time, fresh stationary odometry and a fresh
+latched guard with zero output. The pre-start mode can accept an unseeded AMCL node;
+localization health and explicit arm still gate motion. This is a startup snapshot,
+not continuous graph monitoring or a Gazebo transport security boundary.
+
+The read-only live domain42 run passed on 2026-10-28 without changing services or
+motion. Six isolated domain84 DDS cases also passed: valid before/configured graphs
+accepted; a second TF endpoint on the same node, competing navigation action, bypass
+velocity publisher and stale guard report were each rejected for the expected reason.
+Seven new policy regressions bring the local suite to 84 passing tests. Results and
+source bindings are retained in private `graph-readonly-result.json` and
+`graph-fixtures-result.json` artifacts.
+
+The installed Jazzy Python callback metadata was re-probed: it contains timestamps
+and sequence fields but no publisher GID. Endpoint GIDs are available from graph
+introspection, but this does not associate each TF sample with an endpoint. Reports
+therefore explicitly set `per_message_tf_authority_proven: false`. Node/endpoint
+counts and parent checks detect common duplicate-tree errors; stronger TF edge
+authority attribution remains OM-016. Trusted node names are not authentication.
+
+To repeat the read-only live check, load the Orbital ROS environment and run
+`python3 scripts/check-navigation-graph.py --phase before`. For fault injection,
+use `check-navigation-graph-fixtures.py` only on empty localhost domain84; the script
+refuses another domain or an already populated graph.
+
 ## Next gates
 
 1. Controller/local-costmap inactive configuration is verified above; validate actual motion after full composition.
