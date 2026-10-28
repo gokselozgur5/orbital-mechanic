@@ -11,6 +11,26 @@ original localization branch; six migrated commits do not count as new deliverie
 [Draft PR #16](https://github.com/gokselozgur5/orbital-mechanic/pull/16) links #6/#7,
 which remain open until full live localization/navigation acceptance and review.
 
+**OM-022: bounded navigation commands pass local tests; native DDS is pending.**
+`scripts/orbital-navigate.py` observes status or sends one request, explicit arm
+or exact-target cancel. It pins supervisor run/sequence, rejects stale targets
+and ambiguous peers, uses a per-checkout/domain lock and never retries an
+unacknowledged command automatically. JSON receipts distinguish acknowledgment,
+rejection, no publication and uncertain delivery. Acknowledgment is not dispatch,
+arrival or physical stopping; an armed goal remains owned by the supervisor after
+the CLI exits. Request validates geometry; cancellation does not depend on
+reloading the local map config or healthy localization.
+
+All 164 local tests pass, including 37 new protocol/CLI cases. The actual CLI
+adapter drives production supervisor callbacks with controlled ROS transport,
+covering request/arm/cancel, retained pending arm, stale tokens and competing
+publishers. Deadline, restart, sequence, malformed input, local lock and input
+boundary tests pass. No native process was changed: Thor SSH still times out.
+Next: native isolated CLI commissioning alongside OM-018, then the coordinated
+OM-021 map reload, physical loss/recovery gates and measured tour. Independent
+next delivery is the trajectory recorder (OM-023). See
+[NAVIGATION_CLIENT.md](NAVIGATION_CLIENT.md) for the operator/receipt contract.
+
 **OM-021: inspection-pose geometry is accepted offline; deployment is pending.**
 The waypoint loader, map generator and artifact binding now validate the three
 machine IDs against actual static collision boxes. Controls must match each
