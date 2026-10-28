@@ -350,3 +350,55 @@ with zero supervisor velocity requests. Source identity:
 All 79 captured source files match the delivered tree. This is one measured
 convergence run into native readiness, not statistical localization accuracy,
 continuous tilt/collision monitoring, autonomous arrival or recovery during a goal.
+
+
+## Live localization freshness faults (OM-013)
+
+Coordinate these stationary fault injections inside Thor `tmux orbital-work`:
+
+```bash
+source scripts/ros-env.sh
+python3 scripts/check-navigation-freshness.py
+python3 scripts/check-navigation-freshness.py --scan-gap
+```
+
+The default case finds the exact AMCL executable inside the owned localization
+cgroup, pins its process with a Linux pidfd, and temporarily suspends it. A separate
+helper requests resume after a two-second timeout or earlier stdin closure. The
+scan case uses the discovered Gazebo `/scan/set_rate` Double→Empty service to
+lower only lidar to 0.1 Hz; its helper restores the versioned 10 Hz rate after
+stdin closes or a three-second timeout. Service calls have their own bounded
+waits, so these are restoration attempts, not hard real-time timing guarantees.
+No arm or velocity command is sent. Exceptions request guard stop, and the AMCL
+case also resumes the pinned process in cleanup.
+
+Both cases require initially healthy, idle native Nav2 with all servers active.
+During the fault, fresh supervisor/guard/health/odometry must continue and the
+specific `transform_invalid` or `scan_stale` reason must precede an explicitly
+rejected target request. The TF case additionally requires advancing lidar.
+Recovery must acknowledge stop and remain idle/latched; a new request is then
+accepted as a positive control and explicitly cancelled without arming. No velocity
+request, dispatch, odometry movement or service invocation change is allowed.
+
+Final native `freshness-3` passed both cases. Rejection was observed 0.689874 s
+(TF) and 1.165830 s (scan) after helper launch; these include process/service
+setup and acknowledgment, and are **not physical braking times**. The recovered
+scan stream supplied 15 advancing samples in 1.5 s. All service/supervisor run
+identities remained unchanged, and both stop calls were acknowledged. Source
+identity `4592da65126331421671819fd672c8b5de977019fa6f8e32b11ab8c610a1b17e`
+matches all 80 delivered source files before and after both cases.
+
+The first scan harness failed its receipt-age assertion because a blocking helper
+acknowledgment wait delayed sensor callbacks. The final harness spins ROS during
+that wait; both the failed report and successful rerun are retained. Separate
+helper controls observed resume after approximately 2.03 s with the pipe held open
+and 0.009 s after closure. Their first immediate process-state assertion raced
+signal delivery; the corrected control waits for the stopped state. The helper
+function is unchanged between those controls and the delivered script.
+
+AMCL legitimately retains its last pose while stationary. Current advancing scan,
+odometry, IMU and time-specific TF remain mandatory; retained pose/covariance alone
+cannot make localization healthy. A replacement seed/reset separately requires
+post-seed pose evidence. This freshness acceptance does not prove pose accuracy
+or stopping during an active moving goal; OM-012 covers sampled accuracy and the
+remaining reset/reseed/physical-stop gates cover those transitions.

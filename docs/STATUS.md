@@ -11,6 +11,24 @@ original localization branch; six migrated commits do not count as new deliverie
 [Draft PR #16](https://github.com/gokselozgur5/orbital-mechanic/pull/16) links #6/#7,
 which remain open until full live localization/navigation acceptance and review.
 
+**OM-013: real lidar and AMCL freshness fault admission checks passed.**
+Native `freshness-3` temporarily lowered only lidar to 0.1 Hz and separately
+suspended the pinned AMCL process. With unaffected inputs advancing, the supervisor
+reported `scan_stale` / `transform_invalid` and rejected new targets. Recovery
+permitted a fresh unarmed request; each positive-control target was cancelled.
+No velocity request, dispatch or odometry movement occurred, and the guard stayed
+latched. Lidar recovered to 15 samples in 1.5 s after restoring 10 Hz; all service
+and supervisor invocations are unchanged from OM-012 below.
+
+Both source-bound cases passed at identity
+`4592da65126331421671819fd672c8b5de977019fa6f8e32b11ab8c610a1b17e` (80 matching
+source files). All 92 local tests pass. Retained failure evidence includes a scan
+harness callback-age error corrected by spinning ROS while awaiting the helper.
+AMCL's stationary retained pose is allowed only alongside valid current inputs/TF;
+GOAL_100's freshness row now makes that existing contract explicit. No moving-goal
+stopping or reset/reseed acceptance is claimed. Next: world reset/reseed ownership,
+TF authority and stationary-arm gates before measured routes.
+
 **OM-012: offset-seed convergence into native navigation passed.**
 Thor `navigation-convergence-20261028T114740Z` restarted the known-origin world,
 proved unseeded AMCL, supplied a deliberate (0.20 m, -0.15 m, 0.15 rad) seed, and

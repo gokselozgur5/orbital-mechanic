@@ -46,7 +46,7 @@ All items below start pending except the goal-contract commit itself. Dependenci
 | --- | --- | --- |
 | OM-011 | Unseeded navigation refusal | Real Gazebo navigation cannot arm before an explicit valid seed. |
 | OM-012 | Offset-seed convergence acceptance | Compare localization against independent simulator pose after bounded motion. |
-| OM-013 | Localization freshness commissioning | Expired scan/pose/TF evidence blocks the integrated supervisor. |
+| OM-013 | Localization freshness commissioning | Expired scan/current-TF evidence blocks the integrated supervisor; retained stationary AMCL pose must be valid and satisfy the post-seed gate. |
 | OM-014 | Localization reset integration | World reset invalidates the old target and requires new localization. |
 | OM-015 | Reseed ownership integration | Reseeding during a goal stops it and cannot resume its previous command stream. |
 | OM-016 | TF authority audit | Verify one owner per dynamic edge and reject inconsistent frames. |
