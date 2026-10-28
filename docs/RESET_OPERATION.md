@@ -4,7 +4,8 @@ OM-054 extends the [owned maintenance endpoint](MAINTENANCE_ENDPOINT.md) with
 one reset attempt after a verified isolation. The same station executor owns
 sampling, replay history and mutation. A reset application is observable control
 state; it does not prove fault clearance, successful repair or recovery. Power
-stays off. Restore and restart reconciliation remain separate work.
+stays off. OM-055 now supplies [owned restoration](RESTORE_OPERATION.md) as a
+separate explicit action. Restart reconciliation remains open.
 
 ## Request and eligibility
 

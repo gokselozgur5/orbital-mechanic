@@ -11,6 +11,45 @@ original localization branch; six migrated commits do not count as new deliverie
 [Draft PR #16](https://github.com/gokselozgur5/orbital-mechanic/pull/16) links #6/#7,
 which remain open until full live localization/navigation acceptance and review.
 
+**OM-055: owned power restoration implemented; native acceptance pending.**
+The [restore endpoint](RESTORE_OPERATION.md) requires the same owner's verified
+reset, retained eligible history, current cooldown and a third live inspection.
+The published station independently validates reset ownership and reserves one
+energization attempt before mutation; an unknown exception cannot renew it.
+Final source/pose/hold/freshness checks follow artifact I/O. Two fresh exact
+post-effect packets confirm power on before release, with actual voltage,
+current, vibration and temperature in the schema-3 terminal result.
+
+Cancellation before commitment preserves isolation. After commitment it reports
+an applied energized result; it never silently rolls back or claims isolation.
+Unknown outcomes stay nonterminal. Exact replay cannot repeat energization, and
+another action/owner/later isolation cannot reuse the old reset budget. CLI
+restore requires explicit owner/mission/reset identity and never retries blindly.
+
+The composed controls exercise actual station/guard/navigation code and three
+real capture children over controlled transport. New same-effect packets feed
+the existing ten-second public recovery checker independently. A post-restore
+jam control confirms power on without a recovery claim. The endpoint result
+itself is an energization result, not a mission-level recovery API. Full recovery
+orchestration, independent sequence traces, native commissioning and restart
+reconciliation remain open. Evidence: operator workspace
+`reviews/orbital-delivery-20261028/om055`.
+
+The first composed recovery run exceeded the fixture's old 20-second total
+watchdog while awaiting restoration verification. The fixture now budgets the
+third capture and additional recovery observation separately (60 seconds total
+for this scenario); the complete targeted run passed in 24.538 seconds. All 115
+production Python sources were byte-identical across that fixture adjustment.
+Production action deadlines, monotonic clocks and freshness gates are unchanged.
+The original failed run is retained; this local fixture bound is not a native
+timing or performance acceptance claim.
+
+Final validation passes all 628 tests (31 new), the causal baseline, 176 Python
+AST files, 17 shell scripts and two XML sources with unchanged pinned source
+bytes. Four deliberately disabled reservation, final-freshness, observed-power
+and model-prerequisite gates fail their intended controls. These sensitivity
+checks are separate from the retained fixture watchdog failure above.
+
 **OM-054: bounded reset implemented; native acceptance pending.**
 The [reset endpoint](RESET_OPERATION.md) reuses the exact published station,
 non-expiring drive hold and capture ownership. Retained powered excess-load/low-
@@ -32,8 +71,8 @@ Local composed controls run isolate then reset with the actual station, guard,
 navigation supervisor and two separate real captures over controlled transport.
 They cover cancellation on either side of commitment and expiry after real
 artifact reads. No native DDS/timing, independent reset replay, electrical
-isolation or repaired-machine acceptance follows. Restore and restart
-reconciliation remain pending. Exact validation is retained under operator
+isolation or repaired-machine acceptance follows. OM-055 above adds restoration; restart
+reconciliation remains pending. Exact validation is retained under operator
 workspace `reviews/orbital-delivery-20261028/om054`.
 
 Review found an initial candidate could complete after the first post-reset
@@ -94,7 +133,7 @@ reap. Cancellation after commitment reports the verified applied isolation and
 never restores power. Unknown effects or lost evidence retain nonterminal
 ownership. The CLI supports status/isolate/query/cancel and never blindly
 retransmits isolation. Legacy schema-1 telemetry remains readable. OM-054 above
-adds reset; restore and restart reconciliation remain pending.
+adds reset and OM-055 adds restore; restart reconciliation remains pending.
 
 Composed local tests run the actual station, guard, navigation supervisor,
 separate capture worker and artifact reader. The child receives actual parent
@@ -103,7 +142,7 @@ timing, then resumes for post-effect observations; production keeps real
 monotonic time. These controls are not native DDS/timing or physical acceptance.
 Thor SSH still closes before authentication; no native deployment occurred.
 OM-053 needs independently retained/native isolation acceptance without counting
-this verifier again. Restore and the complete maintenance mission remain open.
+this verifier again. The complete maintenance mission remains open.
 
 All 523 local tests pass (50 new), plus the model baseline, 168 Python AST files,
 17 shell scripts and two XML sources. Source bytes stayed unchanged throughout

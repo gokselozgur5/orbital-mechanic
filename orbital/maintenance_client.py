@@ -13,7 +13,7 @@ class MaintenanceClient(InspectionClient):
                          family='maintenance', operation='isolate')
 
     def execute(self, value, *, wait=True):
-        self.operation = 'reset' if value.get('op') == 'reset' else 'isolate'
+        self.operation = value['op'] if value.get('op') in ('reset', 'restore') else 'isolate'
         return super().execute(value, wait=wait)
 
     def observe_state(self, text):
@@ -35,11 +35,15 @@ class MaintenanceClient(InspectionClient):
 
 
 def run_ros(op, *, machine_id=None, timeout_s=10., run_id=None, mission_id=None, action_id=None,
-            isolation_action_id=None, wait=True):
+            isolation_action_id=None, reset_action_id=None, wait=True):
     if op in ('cancel', 'query') and not all((run_id, mission_id, action_id)):
         raise ValueError('exact_action_identity_required')
     if op == 'reset' and not all((run_id, mission_id, isolation_action_id)):
         raise ValueError('exact_isolation_identity_required')
+    if op == 'restore' and not all((run_id, mission_id, reset_action_id)):
+        raise ValueError('exact_reset_identity_required')
+    if (op != 'reset' and isolation_action_id is not None) or (op != 'restore' and reset_action_id is not None):
+        raise ValueError('unexpected_prerequisite_identity')
     import rclpy
     from rclpy.signals import SignalHandlerOptions
     from std_msgs.msg import String
@@ -63,10 +67,11 @@ def run_ros(op, *, machine_id=None, timeout_s=10., run_id=None, mission_id=None,
         value = {'schema_version': 1, 'command_id': uuid.uuid4().hex, 'op': op,
             'run_id': run_id or status['run_id'], 'mission_id': mission_id or uuid.uuid4().hex,
             'action_id': action_id or uuid.uuid4().hex, 'arguments': {}}
-        if op in ('isolate', 'reset'):
+        if op in ('isolate', 'reset', 'restore'):
             value['arguments'] = {'machine_id': machine_id, 'timeout_s': timeout_s,
                 'station_run_id': status['station_run_id'], 'control_revision': status['control_revision']}
             if op == 'reset': value['arguments']['isolation_action_id'] = isolation_action_id
+            if op == 'restore': value['arguments']['reset_action_id'] = reset_action_id
         outcome = client.execute(value, wait=wait)
         return outcome
     finally:

@@ -4,8 +4,9 @@ OM-052 adds `isolate`, `cancel`, `query` and `status` to the station process.
 It changes the exact `Station` instance that publishes `/station/telemetry`.
 No second station model is started in the capture process. OM-054 adds
 [bounded reset](RESET_OPERATION.md) after an exact owned isolation, using retained
-powered observations, cooldown and a second live inspection. Restore remains
-future work and is refused by the wire parser.
+powered observations, cooldown and a second live inspection. OM-055 adds
+[owned power restoration](RESTORE_OPERATION.md) after verified reset and a third
+inspection. Recovery and restart reconciliation remain separate work.
 
 Local controls execute the actual station adapter, motion guard, navigation
 supervisor, separate capture process and artifact reader with controlled ROS
@@ -21,6 +22,7 @@ After commissioning the exact source and sourcing the Orbital ROS environment:
 python3 scripts/maintain-machine.py status
 python3 scripts/maintain-machine.py isolate pump --timeout 15
 python3 scripts/maintain-machine.py reset pump --run-id RUN --mission-id MISSION --isolation-action-id ISOLATION --timeout 15
+python3 scripts/maintain-machine.py restore pump --run-id RUN --mission-id MISSION --reset-action-id RESET --timeout 15
 python3 scripts/maintain-machine.py query --run-id RUN --mission-id MISSION --action-id ACTION
 python3 scripts/maintain-machine.py cancel --run-id RUN --mission-id MISSION --action-id ACTION
 ```
@@ -35,7 +37,7 @@ it sends no pose, velocity, paths, topics or caller evidence.
 `transport` distinguishes `not_sent`, `rejected`, `acknowledged`, `terminal` and
 `uncertain`. Exit 0 may mean an ACK when explicitly requested; inspect the
 transport and result fields. A non-success terminal or uncertainty returns 2.
-The client sends each isolation/reset once. Loss/timeout/interrupt triggers at most one exact
+The client sends each isolation/reset/restore once. Loss/timeout/interrupt triggers at most one exact
 cancel attempt, never another power request. A lost reply can be recovered with
 same-run query. Server restart requires reconciliation, not replaying the
 operation with a new run or action ID.
@@ -130,6 +132,10 @@ for isolation replay; it explicitly refuses reset results as isolation evidence.
 Reset results use schema 2 with the prior isolation result and powered eligibility
 references, plus temperature in their post-effect verification. Existing isolation
 results keep schema 1. Independent reset replay and native acceptance remain open.
+Restore results use schema 3 with their prior reset chain and actual energized
+measurements. Cancel after restore can report a verified applied effect with
+power on; it is not a rollback or an isolation claim. Successful restoration is
+separate from observed station recovery.
 
 ## Startup, shutdown and validation
 

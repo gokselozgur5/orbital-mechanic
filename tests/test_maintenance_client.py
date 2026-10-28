@@ -16,6 +16,7 @@ from orbital.inspection_client import close_client
 from orbital import maintenance_protocol as protocol
 import test_maintenance_owner as owner_fixture
 import test_maintenance_reset as reset_fixture
+import test_maintenance_restore as restore_fixture
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -235,3 +236,69 @@ class ResetClientTests(unittest.TestCase):
             with contextlib.redirect_stdout(io.StringIO()): self.assertEqual(cli.main(args), 0)
         self.assertEqual(invoke.call_count, 1)
         self.assertEqual(invoke.call_args.kwargs['isolation_action_id'], self.f.request['action_id'])
+
+
+class RestoreClientTests(unittest.TestCase):
+    publish = MaintenanceClientTests.publish
+    spin = MaintenanceClientTests.spin
+
+    def setUp(self):
+        self.f=restore_fixture.RestoreFixture()
+        self.f.setUp();self.addCleanup(self.f.doCleanups);self.f.prepare()
+        self.sent=[]
+        self.complete=self.no_ack=self.drop_results=False
+        self.peers=['station-publisher']
+        self.next_sample=self.f.clock.wall+.5
+        self.client=MaintenanceClient(self.publish,self.spin,lambda:self.peers,now=lambda:self.f.clock.wall)
+        self.f.owner.on_result=lambda v:None if self.drop_results else self.client.observe_result(canonical(v))
+
+    def test_restore_recovers_exact_energized_result_without_retry(self):
+        self.client.discover();self.complete=self.no_ack=self.drop_results=True
+        receipt=self.client.execute(self.f.restore_request)
+        self.assertEqual(receipt['transport'],'terminal',receipt)
+        self.assertEqual(receipt['result']['status'],'succeeded')
+        self.assertEqual(receipt['result']['operation'],'restore')
+        self.assertTrue(receipt['result']['state_change']['verification']['powered'])
+        self.assertEqual([v['op'] for v in self.sent],['restore'])
+
+    def test_restore_timeout_uses_requested_budget_and_one_exact_cancel(self):
+        self.client.discover();start=self.f.clock.wall
+        receipt=self.client.execute(self.f.restore_request)
+        self.assertEqual(receipt['transport'],'uncertain',receipt)
+        self.assertGreaterEqual(self.f.clock.wall-start,12.)
+        self.assertEqual([v['op'] for v in self.sent],['restore','cancel'])
+        self.assertEqual(self.sent[0]['action_id'],self.sent[1]['action_id'])
+        self.assertFalse(self.f.model.station.machines['pump'].powered)
+
+    def test_restore_refuses_not_ready_server_without_publication(self):
+        self.client.discover();self.client.latest['ready']=False
+        self.assertEqual(self.client.execute(self.f.restore_request)['transport'],'not_sent')
+        self.assertEqual(self.sent,[])
+
+    def test_restore_digest_conflict_is_uncertain_and_never_retried(self):
+        self.client.discover()
+        def publish(text):
+            self.sent.append(json.loads(text))
+            reply=self.f.owner.handle(text)
+            if reply['action'] is not None:reply['action']['request_sha256']='f'*64
+            self.client.observe_reply(canonical(reply))
+        self.client.publish=publish
+        self.assertEqual(self.client.execute(self.f.restore_request)['transport'],'uncertain')
+        self.assertEqual([v['op'] for v in self.sent],['restore','cancel'])
+        self.assertEqual(self.client.failure,'invalid_reply')
+
+    def test_restore_cli_requires_exact_reset_identity_and_preserves_uncertainty(self):
+        spec=importlib.util.spec_from_file_location('restore_cli',ROOT/'scripts/maintain-machine.py')
+        cli=importlib.util.module_from_spec(spec);spec.loader.exec_module(cli)
+        args=['restore','pump','--run-id',self.f.owner.run_id,'--mission-id',self.f.request['mission_id'],
+              '--reset-action-id',self.f.reset_request['action_id']]
+        env={'ROS_DOMAIN_ID':'84','ROS_AUTOMATIC_DISCOVERY_RANGE':'LOCALHOST'}
+        with patch.dict(os.environ,env),patch.object(cli,'run_ros',return_value={'transport':'uncertain','result':None}) as invoke:
+            for omitted in (2,4,6):
+                with contextlib.redirect_stderr(io.StringIO()),self.assertRaises(SystemExit):
+                    cli.main(args[:omitted]+args[omitted+2:])
+            with contextlib.redirect_stderr(io.StringIO()),self.assertRaises(SystemExit):
+                cli.main(args+['--isolation-action-id',self.f.request['action_id']])
+            with contextlib.redirect_stdout(io.StringIO()):self.assertEqual(cli.main(args),2)
+        self.assertEqual(invoke.call_count,1)
+        self.assertEqual(invoke.call_args.kwargs['reset_action_id'],self.f.reset_request['action_id'])

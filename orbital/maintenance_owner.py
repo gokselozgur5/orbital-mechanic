@@ -1,4 +1,4 @@
-"""Single-executor isolation/reset on the published model with retained holds."""
+"""Single-executor station controls with retained observation and drive ownership."""
 import copy
 from dataclasses import dataclass
 import hashlib
@@ -51,6 +51,7 @@ class Action:
     result: dict = None
     reset_basis: dict = None
     isolation: dict = None
+    reset: dict = None
 
     @property
     def args(self): return self.request['arguments']
@@ -104,7 +105,7 @@ class MaintenanceOwner:
         action = self.actions.get(request['action_id'])
         if action is not None and action.request['mission_id'] != request['mission_id']:
             return reject('action_conflict')
-        if request['op'] in ('isolate', 'reset'):
+        if request['op'] in ('isolate', 'reset', 'restore'):
             digest = request_digest(request)
             if action is not None:
                 if digest != action.digest:
@@ -121,25 +122,29 @@ class MaintenanceOwner:
                         or self.missions.get(request['mission_id'], self.model.run_id) != self.model.run_id):
                     return reject('wrong_station_state')
                 prior = None
-                if request['op'] == 'reset':
-                    prior = self.actions.get(args['isolation_action_id'])
-                    if (prior is None or prior.operation != 'isolate' or prior.result is None
+                if request['op'] in ('reset', 'restore'):
+                    resetting = request['op'] == 'reset'
+                    prior = self.actions.get(args['isolation_action_id' if resetting else 'reset_action_id'])
+                    if (prior is None or prior.operation != ('isolate' if resetting else 'reset') or prior.result is None
                             or prior.request['mission_id'] != request['mission_id']
                             or prior.args['station_run_id'] != args['station_run_id']
                             or prior.args['machine_id'] != args['machine_id']
                             or prior.result['state_change']['disposition'] != 'applied'):
-                        return reject('isolation_required')
+                        return reject('isolation_required' if resetting else 'reset_required')
                     if (prior.reset_basis is None or self.reset_evidence.failure
                             or args['machine_id'] in self.reset_evidence.high_vibration):
-                        return reject('reset_not_eligible')
-                    if not self.model.reset_available(args['machine_id']):
-                        return reject('reset_attempt_exhausted')
+                        return reject(request['op']+'_not_eligible')
+                    available = self.model.reset_available if resetting else self.model.restore_available
+                    if not available(args['machine_id']):
+                        return reject(request['op']+'_attempt_exhausted')
                 started, sim = self.now(), self.sim_ns()
                 token = {'owner_run_id': self.run_id, 'mission_id': request['mission_id'],
                          'action_id': request['action_id'], 'token': uuid.uuid4().hex}
                 action = Action(request, digest, started, sim, started+args['timeout_s'], token)
                 if prior is not None:
-                    action.reset_basis, action.isolation = copy.deepcopy(prior.reset_basis), copy.deepcopy(prior.result)
+                    action.reset_basis = copy.deepcopy(prior.reset_basis)
+                    if request['op'] == 'reset': action.isolation = copy.deepcopy(prior.result)
+                    else: action.reset = copy.deepcopy(prior.result)
                 # Record ownership before publication: a transport exception is
                 # not proof that the guard could not receive this acquire.
                 self.actions[request['action_id']] = self.active = action
@@ -218,9 +223,9 @@ class MaintenanceOwner:
                     or source['control_revision'] != action.args['control_revision']
                     or record['measurements']['powered'] is not (action.operation == 'isolate')):
                 raise ValueError('wrong_inspection_station_state')
-            if action.operation == 'reset' and (record['measurements']['temperature_c'] > MAX_RESET_TEMPERATURE_C
+            if action.operation in ('reset', 'restore') and (record['measurements']['temperature_c'] > MAX_RESET_TEMPERATURE_C
                     or record['measurements']['current_a'] != 0 or record['measurements']['vibration_au'] != 0):
-                raise ValueError('reset_requires_cool_isolation')
+                raise ValueError('control_requires_cool_isolation')
             action.observation = copy.deepcopy(reference)
             if action.operation == 'isolate':
                 action.reset_basis = self.reset_evidence.retain(action.args['machine_id'], record, self.now(), self.sim_ns())
@@ -235,12 +240,12 @@ class MaintenanceOwner:
                 now, sim = self.now(), self.sim_ns()
                 if action.operation == 'isolate' and not self.reset_evidence.confirm(action.reset_basis, now, sim):
                     action.reset_basis = None
-                if action.operation == 'reset':
+                if action.operation in ('reset', 'restore'):
                     values = self.reset_evidence.isolated(action.args['machine_id'], action.args['station_run_id'],
                         action.args['control_revision'], now, sim)
                     if (values['temperature_c'] > MAX_RESET_TEMPERATURE_C
                             or action.args['machine_id'] in self.reset_evidence.high_vibration):
-                        raise ValueError('reset_requires_cool_isolation')
+                        raise ValueError('control_requires_cool_isolation')
                 now, sim = self.now(), self.sim_ns()
                 fresh(record, now, sim, current)
                 if now >= action.deadline:
@@ -252,9 +257,12 @@ class MaintenanceOwner:
                 if action.operation == 'isolate':
                     action.effect = self.model.isolate(context, action.args['station_run_id'],
                                                        action.args['control_revision'], admission=admit)
-                else:
+                elif action.operation == 'reset':
                     action.effect = self.model.reset_machine(context, action.args['station_run_id'],
                         action.args['control_revision'], isolation_action_id=action.args['isolation_action_id'], admission=admit)
+                else:
+                    action.effect = self.model.restore_machine(context, action.args['station_run_id'],
+                        action.args['control_revision'], reset_action_id=action.args['reset_action_id'], admission=admit)
             except EffectRejected:
                 self.stop('timed_out' if self.now() >= action.deadline else 'failed',
                           'deadline_exceeded' if self.now() >= action.deadline else 'precondition_failed')
@@ -275,6 +283,13 @@ class MaintenanceOwner:
             action.unknown = True
             self.stop('failed', 'effect_unknown')
 
+    @staticmethod
+    def _postcondition(action, machine):
+        if action.operation == 'restore':
+            return machine['powered'] is True  # Energization is distinct from recovery.
+        return (machine['powered'] is False and machine['current_a'] == 0 and machine['vibration_au'] == 0
+                and (action.operation != 'reset' or machine['temperature_c'] <= MAX_RESET_TEMPERATURE_C))
+
     def _verify(self, action):
         action.verification = None  # A cached postcondition cannot renew freshness.
         try:
@@ -287,7 +302,7 @@ class MaintenanceOwner:
             return
         if packet['stamp_ns'] <= action.effect['applied_stamp_ns']:
             return
-        if action.operation == 'reset':
+        if action.operation in ('reset', 'restore'):
             pair = action.verification_packets
             now, sim = self.now(), self.sim_ns()
             if len(pair) < 2 or any(p['stamp_ns'] <= action.effect['applied_stamp_ns']
@@ -296,26 +311,23 @@ class MaintenanceOwner:
                 return
             if (pair[-1][0]['sequence'] != pair[0][0]['sequence']+1
                     or any(p['control']['last_applied'] != action.effect
-                        or p['machines'][action.args['machine_id']]['powered'] is not False
-                        or p['machines'][action.args['machine_id']]['current_a'] != 0
-                        or p['machines'][action.args['machine_id']]['vibration_au'] != 0
-                        or p['machines'][action.args['machine_id']]['temperature_c'] > MAX_RESET_TEMPERATURE_C
+                        or not self._postcondition(action, p['machines'][action.args['machine_id']])
                         for p, _ in pair)):
-                self.stop('failed', 'reset_not_verified')
+                self.stop('failed', action.operation+'_not_verified')
                 return
         control = packet.get('control')
         machine = packet['machines'][action.args['machine_id']]
         if (control is None or control['last_applied'] != action.effect
-                or machine['powered'] is not False or machine['current_a'] != 0 or machine['vibration_au'] != 0
-                or (action.operation == 'reset' and machine['temperature_c'] > MAX_RESET_TEMPERATURE_C)):
-            self.stop('failed', 'isolation_not_verified' if action.operation == 'isolate' else 'reset_not_verified')
+                or not self._postcondition(action, machine)):
+            self.stop('failed', 'isolation_not_verified' if action.operation == 'isolate' else action.operation+'_not_verified')
             return
         action.verification = {'run_id': packet['run_id'], 'sequence': packet['sequence'],
                                'stamp_ns': packet['stamp_ns'], 'control_revision': control['revision'],
                                'sample_sha256': hashlib.sha256(canonical(packet).encode()).hexdigest(),
-                               'machine_id': action.args['machine_id'], 'powered': False,
-                               'current_a': 0., 'vibration_au': 0.}
-        if action.operation == 'reset': action.verification['temperature_c'] = machine['temperature_c']
+                               'machine_id': action.args['machine_id'],
+                               **{key:machine[key] for key in ('powered', 'current_a', 'vibration_au')}}
+        if action.operation in ('reset', 'restore'): action.verification['temperature_c'] = machine['temperature_c']
+        if action.operation == 'restore': action.verification['voltage_v'] = packet['voltage_v']
         action.phase = 'releasing'
 
     def tick(self):
@@ -336,7 +348,7 @@ class MaintenanceOwner:
                 if action.phase != 'holding' and not held and not action.release_requested:
                     self.stop('failed', 'maintenance_hold_lost')
                 elif action.phase == 'holding' and held:
-                    if action.operation == 'reset':
+                    if action.operation in ('reset', 'restore'):
                         self.live.begin(action.args['machine_id'])
                         action.phase = 'cooling'
                     else:
@@ -370,7 +382,8 @@ class MaintenanceOwner:
 
     def finish(self, action):
         status, code = action.stop_reason or ('succeeded', None)
-        result = {'schema_version': 1 if action.operation == 'isolate' else 2, 'kind': 'maintenance_result', **action.identity(),
+        result = {'schema_version': {'isolate':1, 'reset':2, 'restore':3}[action.operation],
+                  'kind': 'maintenance_result', **action.identity(),
                   'request_sha256': action.digest, 'operation': action.operation, 'machine_id': action.args['machine_id'],
                   'station_run_id': action.args['station_run_id'], 'status': status, 'error_code': code,
                   'started_sim_stamp_ns': action.started_sim, 'finished_sim_stamp_ns': self.sim_ns(),
@@ -380,6 +393,7 @@ class MaintenanceOwner:
                   'hold_released': True}
         if action.operation == 'reset':
             result.update(isolation=copy.deepcopy(action.isolation), eligibility=copy.deepcopy(action.reset_basis))
+        if action.operation == 'restore': result['reset'] = copy.deepcopy(action.reset)
         action.result, action.phase = result, 'terminal'
         self.last_result = copy.deepcopy(result)
         self.active = None

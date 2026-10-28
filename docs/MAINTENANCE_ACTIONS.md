@@ -7,8 +7,9 @@ The ROS-free baseline uses that checker instead of the model's hidden
 `Station.recovered` oracle. OM-052 now implements an
 [owned isolation endpoint](MAINTENANCE_ENDPOINT.md), exact guard inhibition and
 versioned applied-effect telemetry. OM-054 implements [bounded reset](RESET_OPERATION.md)
-with retained powered eligibility and one attempt. Restore and native maintenance
-acceptance remain unimplemented. The inspection
+with retained powered eligibility and one attempt. OM-055 adds
+[owned restoration](RESTORE_OPERATION.md). Native maintenance acceptance and
+restart reconciliation remain open. The inspection
 endpoint supplies observations; its cached success grants no maintenance rights.
 
 ## Ownership and admission
@@ -42,7 +43,8 @@ Before each effect, the executor must independently establish:
   serialized mutation; neither an old file nor a successful ACK renews freshness.
 
 OM-052 implements these gates for isolation and OM-054 reuses them for reset,
-with a new inspection after cooldown. They remain requirements for future restore.
+with a new inspection after cooldown. OM-055 reuses them for restoration after
+verified reset and another live inspection.
 The pure `Station.intervene` caller-supplied geometry checks are insufficient for
 ROS admission. The hold must compose with the existing motion supervisor and
 drive guard; adding an unrelated boolean in the maintenance process is not enough.
@@ -180,8 +182,9 @@ Failure/cancellation after a real effect must never masquerade as a mutation-fre
 rejection. The isolation implementation retains unknown effects as nonterminal
 `unresolved` ownership; it emits no terminal result until a known disposition
 and exact hold release are verified. Restart never adopts that old action.
-OM-054 adds reset boundary/loss controls; restore and durable reconciliation
-remain open. The current API is
+OM-054 adds reset boundary/loss controls and OM-055 adds restoration. A cancelled
+restore can retain an observed energized outcome; there is no implicit rollback.
+Durable reconciliation remains open. The current API is
 documented separately.
 
 ## Acceptance and remaining work
@@ -201,8 +204,9 @@ effect telemetry and local isolation verification/cancellation/replay controls.
 OM-053 adds [independently retained isolation observations](ISOLATION_EVIDENCE.md)
 and offline postcondition replay; native isolation acceptance remains pending.
 This does not count the same owner verifier again. OM-054 adds bounded reset,
-eligibility/cooldown, reserved attempts and observed application. Restore,
-reconciliation and native sequence acceptance remain open through OM-060. Reuse this checker in
+eligibility/cooldown, reserved attempts and observed application. OM-055 adds
+owned restoration and keeps applied power distinct from recovered health.
+Reconciliation and native sequence acceptance remain open through OM-060. Reuse this checker in
 that integration; do not count its implementation twice. The full mission needs
 independent evaluation of causality, collisions, unnecessary interventions and
 safe escalation as well as this observation result. Thor access and preceding

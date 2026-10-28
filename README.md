@@ -143,4 +143,8 @@ before releasing its hold. [Bounded reset](docs/RESET_OPERATION.md) now requires
 retained eligible powered observations, verified owned isolation, cooldown and
 a second live inspection. One reserved attempt and an exact new observed effect
 precede release; power stays off. Local controlled-transport checks pass;
-restore, restart reconciliation and native maintenance acceptance remain pending.
+[owned restoration](docs/RESTORE_OPERATION.md) adds verified reset ownership,
+a third inspection and one reserved energization attempt. It reports actual
+powered measurements, including after cancellation. Observed recovery is a
+separate ten-second public measurement window. Full recovery orchestration,
+restart reconciliation and native maintenance acceptance remain pending.
