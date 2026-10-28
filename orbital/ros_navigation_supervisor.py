@@ -51,6 +51,17 @@ class NavigationSupervisor(HealthInterlock):
     def guard_fresh(self):
         return self.guard_state is not None and time.monotonic()-self.guard_at<.3
 
+    def command_authority_clear(self):
+        for topic, kind in (('/motion/request','geometry_msgs/msg/TwistStamped'),
+                            ('/navigation/state','std_msgs/msg/String')):
+            publishers=self.get_publishers_info_by_topic(topic)
+            if (len(publishers)!=1 or publishers[0].node_name!=self.get_name()
+                    or publishers[0].node_namespace!=self.get_namespace() or publishers[0].topic_type!=kind):
+                return False
+        raw=self.get_publishers_info_by_topic('/navigation/raw_cmd_vel')
+        return len(raw)<=1 and all(p.node_name=='controller_server' and p.node_namespace=='/'
+                                  and p.topic_type=='geometry_msgs/msg/TwistStamped' for p in raw)
+
     def on_health(self,msg):
         super().on_health(msg)
         if hasattr(self,'session') and self.lease.stop_required and self.session.current is not None:
@@ -58,6 +69,7 @@ class NavigationSupervisor(HealthInterlock):
 
     def on_command(self,msg):
         try:
+            if not self.command_authority_clear():raise ValueError('Competing command authority')
             command=self.commands.decode(msg.data)
             op=command['op'];accepted=False
             if op=='request':
@@ -83,6 +95,9 @@ class NavigationSupervisor(HealthInterlock):
         self.lease.tick(now)
         if (target is None or self.lease.stop_required or not self.session.motion_permitted(target)
                 or not self.guard_fresh() or self.guard_state['latched']):return
+        if not self.command_authority_clear():
+            self.lease.invalidate('command_authority_ambiguous')
+            self.session.cancel(target,'command_authority_ambiguous');return
         publishers=self.get_publishers_info_by_topic('/navigation/raw_cmd_vel')
         if len(publishers)!=1 or publishers[0].node_name!='controller_server':
             self.session.cancel(target,'controller_authority_ambiguous');return
@@ -113,6 +128,8 @@ class NavigationSupervisor(HealthInterlock):
         except TransformException:return None
 
     def tick(self):
+        if hasattr(self,'session') and not self.command_authority_clear():
+            self.lease.invalidate('command_authority_ambiguous')
         super().tick()
         if not hasattr(self,'session'):return
         now=time.monotonic()

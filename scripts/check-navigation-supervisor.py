@@ -97,11 +97,32 @@ def main():
         children.append(child);return child
     try:
         spawn([str(ROOT/'scripts/check-navigation-action.py'),'--server'],'composed-action-server.log')
-        owner=spawn([__file__,'--supervisor'],'composed-supervisor.log')
+        config_path=ROOT/'runtime/supervisor-test-map.json'
+        config_path.write_text(json.dumps({'frame':'map','inspection_poses':{
+            'normal':{'goal_xy_yaw':[0.,0.,0.]},'success':{'goal_xy_yaw':[3.,0.,0.]}}}))
+        entry=[str(ROOT/'scripts/navigation-supervisor.py'),'--map-config',str(config_path),'--goal-timeout','3']
+        competing=fixture.create_publisher(TwistStamped,'/motion/request',1)
+        rejected=spawn(entry,'competing-owner.log')
+        wait(lambda:rejected.poll() is not None,8)
+        assert rejected.returncode!=0 and 'Competing publisher on /motion/request' in (ROOT/'runtime/competing-owner.log').read_text()
+        fixture.destroy_publisher(competing)
+        wait(lambda:not fixture.get_publishers_info_by_topic('/motion/request'))
+        report.append({'case':'entrypoint_rejects_existing_command_writer','passed':True})
+        owner=spawn(entry,'composed-supervisor.log')
         pump(1);fixture.pose.publish(fixture.pose_message())
         wait(lambda:probe.server_is_ready() and request.get_subscription_count()>0 and idle(),8)
         pump(.3);assert data['output']==0 and data['nav']['forwarded_commands']==0
         report.append({'case':'raw_velocity_blocked_without_target_and_arm','passed':True})
+        duplicate=spawn(entry,'duplicate-owner.log')
+        wait(lambda:duplicate.poll() is not None)
+        assert duplicate.returncode!=0 and 'already running' in (ROOT/'runtime/duplicate-owner.log').read_text()
+        report.append({'case':'entrypoint_rejects_duplicate_owner_process','passed':True})
+        target=running()
+        competing=fixture.create_publisher(TwistStamped,'/motion/request',1)
+        wait(lambda:data['guard']['latched'] and data['output']==0,2)
+        fixture.destroy_publisher(competing)
+        wait(idle)
+        report.append({'case':'late_competing_writer_cancels_active_target','passed':True})
         target=running();before=raw_count;fixture.publish_scan=False
         delay=wait(lambda:data['guard']['latched'] and data['output']==0,2)
         assert raw_count>before

@@ -86,6 +86,38 @@ collisions, unknown cells, invalid/outside paths and corner geometry; all 72 loc
 tests pass. These results establish static route clearance, not tracking accuracy,
 dynamic collision avoidance or physical arrival. The test TF is not localization.
 
+## Supervisor executable (OM-005)
+
+`scripts/navigation-supervisor.py` loads named map-frame poses from
+`config/known-map.json` and starts the existing guarded action owner on a
+single-threaded executor. It validates finite numeric poses, normalized yaw,
+unique JSON keys, stable names and a bounded goal timeout before creating a ROS
+publisher. This is input validation; geometric pose commissioning remains a
+separate gate. Only localhost-only domains 42 (Orbital) and 84 (isolated tests)
+are accepted. No target is requested or armed at startup.
+
+A checkout/domain file lock rejects duplicate local launches. Two seconds of DDS
+discovery precedes startup: an existing `/motion/request` or `/navigation/state`
+writer, or an incompatible/competing raw controller writer, prevents ownership.
+The supervisor also checks command authority on its steady timer and command
+path. A newly discovered competitor invalidates health, cancels the active
+navigation target and requests the guard stop. This is accidental-conflict
+protection among trusted processes, not a ROS security/authentication boundary.
+Cross-checkout races remain subject to DDS discovery; full graph readiness is
+OM-008. Exit stops publication; the independent guard watchdog must remain alive.
+
+On 2026-10-28, `check-navigation-supervisor.py` ran the actual entrypoint with a
+fixture pose file on empty domain84. All 11 scenarios passed, including existing
+writer refusal, duplicate process refusal, late-writer cancellation, stale input,
+health loss, stop-service loss, measured-arrival rejection/acceptance, explicit
+cancellation and supervisor process death. The fake controller kept publishing
+during death/health-loss checks. Five new input regressions bring local tests to
+77. Source hashes for every deployed file match the tested worktree.
+
+The action server, sensors and guard feedback in this trial are fixtures. This
+proves ROS integration behavior, not physical stopping distance, real Nav2
+tracking or localization accuracy. No live domain42 service was started.
+
 ## Next gates
 
 1. Controller/local-costmap inactive configuration is verified above; validate actual motion after full composition.
