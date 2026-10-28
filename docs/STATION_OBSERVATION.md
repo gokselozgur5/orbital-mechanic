@@ -33,7 +33,10 @@ sequence/stamp are positive integers below 2^63, never booleans or coerced float
 
 The bounded parser permits at most 16384 UTF-8 bytes, rejects duplicate keys,
 nonfinite numbers and malformed/deeply nested JSON, and does not expose rejected
-input in errors. Power state must be boolean. Temperature, current, vibration,
+input in errors. A character-count check precedes UTF-8 encoding so already
+oversized transport input does not allocate another full payload copy. This
+bounds decoder copying; ROS has already allocated the incoming message.
+Power state must be boolean. Temperature, current, vibration,
 voltage and model time must be finite numeric values, never missing, null or
 boolean. Defensive protocol ranges are: voltage 0–10000 V, current and vibration
 0–1e6 in their declared units, temperature −273.15–1e6 °C, and model time 0–(2^63−1)/1e9
@@ -122,6 +125,11 @@ time during result identity preparation. They fail before the final checks are
 moved after that work and pass afterward. Injection marks a scheduling boundary;
 it does not claim UUID generation normally changes external state. These are
 local source/transport regressions, not observed native incidents.
+
+A separate allocation regression sends an already allocated 1 MiB string. The
+initial byte-limit check copied it before rejecting it; the same test now rejects
+it below a 64 KiB additional tracked-allocation bound. This correction belongs
+to OM-046 and does not add a separate delivery credit.
 
 Before native use, recheck Thor ownership and commission OM-041's exact telemetry
 source/schema together with this reader on an empty isolated domain. Exercise

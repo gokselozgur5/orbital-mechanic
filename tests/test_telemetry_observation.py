@@ -1,11 +1,12 @@
 import copy
 import json
+import tracemalloc
 
 from orbital.machine_registry import MachineRegistry
 from orbital.machine_telemetry import MachineTelemetry
 from orbital.machines import Fault
 from orbital.proximity import Unavailable
-from orbital.telemetry_observation import TelemetryEvidence
+from orbital.telemetry_observation import MAX_PACKET_BYTES,TelemetryEvidence
 from test_machine_registry import RegistryFixture
 
 
@@ -145,6 +146,17 @@ class TelemetryObservationTests(RegistryFixture):
             value=TelemetryEvidence(self.registry)
             self.assertFalse(value.observe(packet,10.,10**9))
             self.assertEqual(value.failure,'invalid_telemetry')
+
+    def test_oversized_packet_is_rejected_without_copying_its_entire_payload(self):
+        value=TelemetryEvidence(self.registry)
+        oversized=' '*(1024*1024)  # The transport already allocated this input.
+        tracemalloc.start()
+        try:
+            self.assertFalse(value.observe(oversized,10.,10**9))
+            _,peak=tracemalloc.get_traced_memory()
+        finally:tracemalloc.stop()
+        self.assertEqual(value.failure,'invalid_telemetry')
+        self.assertLess(peak,4*MAX_PACKET_BYTES)
 
     def test_result_mutation_cannot_change_later_public_evidence(self):
         value=self.pair();result=value.measure(10.51,1510000000)

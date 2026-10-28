@@ -30,7 +30,8 @@ def number(value, low=0., high=1e6):
 
 def decode(text, registry):
     """Accept exactly the existing public wire schema, including its full catalog."""
-    if not isinstance(text,str) or len(text.encode('utf-8'))>MAX_PACKET_BYTES:
+    if (not isinstance(text,str) or len(text)>MAX_PACKET_BYTES
+            or len(text.encode('utf-8'))>MAX_PACKET_BYTES):
         raise ValueError('invalid_telemetry')
     value = _json(text,MAX_PACKET_BYTES)
     if (set(value)!=FIELDS or type(value['schema_version']) is not int or value['schema_version']!=1

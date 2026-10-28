@@ -27,7 +27,7 @@ No control publisher/client, hidden fault field, diagnosis or action permission
 is introduced. Numerically valid noisy values are retained without model-based
 correction; causal diagnosis and noise confidence remain subsequent work.
 
-All 361 local tests pass, including 29 new tests. Baseline, shell/AST/XML and
+All 362 local tests pass, including 30 new tests. Baseline, shell/AST/XML and
 whitespace checks pass. The shipped publisher and reader/CLI run with controlled ROS
 transport, covering normal samples, malformed/schema/source/time/order failures,
 final-read races and cleanup. Review reproduced five station-reader and ten
@@ -38,6 +38,10 @@ dependencies. A fresh Thor SSH attempt timed out (exit 255); no
 native source/process changed. Joint robot/telemetry inspection records, camera
 capture, inspection endpoints and all native gates remain open under issue #8.
 Contract: [STATION_OBSERVATION.md](STATION_OBSERVATION.md).
+
+OM-046's follow-up size correction rejects an oversized string before UTF-8
+encoding can copy its full payload. The same 1 MiB allocation regression fails
+before the correction and passes after; this receives no separate delivery credit.
 
 **OM-044: settled inspection preconditions pass locally; native inspection remains pending.**
 The production `read_inspection_state` reader and CLI `--require-settled-pose`
