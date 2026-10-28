@@ -492,3 +492,64 @@ All 85 captured sources match identity
 native execution; all 92 local tests pass. This is the first dispatched actual Nav2
 goal and its reseed cancellation. Arrival at the three machines, blocked/changed
 obstacles and independent physical stopping/collision evaluation remain open.
+
+## Per-message TF authority (OM-016)
+
+The Python graph gate retains its narrower endpoint/parent scope. The native
+auditor adds the missing message-to-publisher relation using
+`rclcpp::MessageInfo::get_rmw_message_info().publisher_gid`. It joins that GID to
+endpoint metadata from the **same ROS context**; GIDs are not compared across
+process contexts and node names are not authentication.
+
+| Edge | Expected publisher | Topic |
+| --- | --- | --- |
+| map → odom | amcl | /tf |
+| odom → base_footprint | ros_gz_bridge | /tf |
+| base_link → left_wheel/right_wheel | robot_state_publisher | /tf |
+| base_footprint → base_link | robot_state_publisher | /tf_static |
+| base_link → lidar_link/camera_link | robot_state_publisher | /tf_static |
+| camera_link → camera_optical_frame | robot_state_publisher | /tf_static |
+
+Run inside Thor `tmux orbital-work`, with no motion commands:
+
+```bash
+bash scripts/build-tf-authority.sh
+# Private proof refuses an occupied domain. No simulator or drive is launched.
+source /opt/ros/jazzy/setup.bash
+export ROS_DOMAIN_ID=84 ROS_AUTOMATIC_DISCOVERY_RANGE=LOCALHOST
+python3 scripts/check-tf-authority.py --output runtime/tf-proof-new-run
+# Read-only live gate; use before subsequent route trials.
+source scripts/ros-env.sh
+python3 scripts/audit-tf-authority.py
+```
+
+The build uses installed Jazzy rclcpp/tf2_msgs, CMake, a C++17 compiler and
+nlohmann-json. Thor verification used GCC 13.3.0, rclcpp 28.1.22, Fast DDS RMW
+8.4.4 and nlohmann-json 3.11.3. The executable stays in ignored runtime storage.
+The live wrapper binds before/after source manifests and executable SHA-256;
+it does not certify reproducible compilation or the complete runtime library set.
+C++ and CMake sources are now mandatory manifest inputs. A regression first
+failed because changing the auditor left the old Python-only manifest unchanged.
+
+Seven real-DDS fixture cases passed in `tf-authority-proof/fixtures-3`: correct
+owners, wrong owner, wrong parent, nonfinite translation, missing edge, duplicate
+same-name publishers, and frozen dynamic timestamps. The wrong-owner case retains
+the correct endpoint inventory and TF parents, isolating the missing relation.
+Static transforms are published once before the auditor joins. Dynamic edges
+must have multiple observations and advancing, nonregressing stamps. Unknown GIDs,
+multiple owners and invalid geometry fail the gate.
+
+Initial `fixtures-1` and `live-1` failed closed on node-name discovery placeholders.
+`live-1` records `_NODE_NAME_UNKNOWN_`/`_NODE_NAMESPACE_UNKNOWN_` resolving to the
+correct node. The auditor now defers incomplete metadata instead of treating it
+as a conflicting identity. It still rejects unresolved messages/final endpoints
+or any conflict between two complete identities. Failed evidence is retained.
+
+Live `live-2` passed eight edges in 256 messages, with unchanged service identities,
+healthy idle/latched navigation and zero new velocity requests. All 90 source files
+match `5b0d335e780bf2e7fd93fdf8b3faba193221af026e0c4545d2b39a44fc5e2ff2`.
+The native executable SHA is
+`7e0794e504d7951e49f6dab48dfb4a5e3639b4119068251dcb2340252442f4f6`.
+Independent Gazebo comparison still reports 0.0109483 m / 0.0208018 rad localization
+error. All 94 local tests pass. A passing bounded sample is not a continuous TF
+interlock, localization accuracy proof or machine-arrival/collision acceptance.

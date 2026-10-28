@@ -15,6 +15,8 @@ REQUIRED = (
     'scripts/navigation.launch.py','scripts/localization-monitor.py','scripts/ros-env.sh',
     'scripts/check-navigation-graph.py','scripts/check-nav2-compatibility.py',
     'scripts/navigation-manifest.py','orbital/navigation_manifest.py',
+    'native/tf_authority/CMakeLists.txt','native/tf_authority/audit.cpp',
+    'scripts/build-tf-authority.sh',
 )
 
 

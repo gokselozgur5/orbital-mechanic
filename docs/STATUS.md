@@ -11,6 +11,27 @@ original localization branch; six migrated commits do not count as new deliverie
 [Draft PR #16](https://github.com/gokselozgur5/orbital-mechanic/pull/16) links #6/#7,
 which remain open until full live localization/navigation acceptance and review.
 
+**OM-016: native per-message TF publisher attribution passed.**
+A read-only C++ auditor maps each received DDS publisher GID to ROS endpoint
+metadata in the same process. Seven isolated real-DDS controls pass, including a
+wrong publisher with otherwise correct graph/parents, duplicate same-name owners,
+wrong parent, nonfinite geometry, missing edge and frozen dynamic timestamps.
+The positive control also proves late-join delivery of static transforms.
+
+Live `tf-authority-proof/live-2` passed all eight edges across 256 messages. Source
+identity `5b0d335e780bf2e7fd93fdf8b3faba193221af026e0c4545d2b39a44fc5e2ff2`
+matches all 90 captured source files; executable SHA is separately recorded.
+94 local tests pass. All service invocations stayed unchanged; the supervisor
+remains healthy/idle/latched with 4 historical commands and no new requests.
+Independent Gazebo pose/localization error remains unchanged from OM-015.
+
+An initial conservative rejection exposed incomplete DDS node-name discovery;
+unknown placeholders now wait for resolution, while unresolved final mappings
+still fail. Failed runs are retained. This is sampled ownership evidence, not
+authentication, continuous enforcement, route acceptance or reproducible-build
+proof. Use the new audit before route trials. Next: map identity binding (OM-017),
+stationary arm, physical loss-stop and the measured tour.
+
 **OM-015: the first native Nav2 goal moved and was cancelled by reseeding.**
 The bounded `navigation-reseed-1` trial requested/armed pump, observed running Nav2
 and 0.0766208 rad/s odometry rotation, then published an uncertain origin seed. The

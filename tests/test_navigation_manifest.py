@@ -28,6 +28,23 @@ class NavigationManifestTests(unittest.TestCase):
         before=self.manifest();(self.root/'scripts/navigation-service.py').write_text('changed')
         with self.assertRaisesRegex(ValueError,'changed'):verify(before,self.manifest())
 
+    def test_native_auditor_changes_identity(self):
+        for name in ('native/tf_authority/audit.cpp', 'native/tf_authority/CMakeLists.txt'):
+            p = self.root/name
+            p.parent.mkdir(parents=True, exist_ok=True)
+            p.write_text('native fixture')
+        for name in ('native/tf_authority/audit.cpp', 'native/tf_authority/CMakeLists.txt'):
+            with self.subTest(source=name):
+                before = self.manifest()
+                (self.root/name).write_text('different auditor or build definition')
+                with self.assertRaisesRegex(ValueError, 'changed'):
+                    verify(before, self.manifest())
+
+    def test_missing_native_auditor_fails(self):
+        (self.root/'native/tf_authority/audit.cpp').unlink()
+        with self.assertRaises(FileNotFoundError):
+            self.manifest()
+
     def test_installed_change_after_preflight_is_rejected(self):
         (self.prefix/'lib/libnav2_fixture.so').write_bytes(b'changed binary')
         with self.assertRaisesRegex(ValueError,'during capture'):self.manifest()
