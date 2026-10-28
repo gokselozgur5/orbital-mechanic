@@ -183,7 +183,8 @@ class IsolationTrace:
             return None
         terminal = self.terminal
         digest = protocol.request_digest(self.request)
-        if (terminal['request_sha256'] != digest or terminal['machine_id'] != self.target['machine_id']
+        if (terminal['operation'] != 'isolate' or terminal['request_sha256'] != digest
+                or terminal['machine_id'] != self.target['machine_id']
                 or terminal['station_run_id'] != self.baseline['run_id']
                 or not self.baseline['stamp_ns'] <= terminal['started_sim_stamp_ns'] <= terminal['finished_sim_stamp_ns']):
             raise ValueError('trace_result_binding')

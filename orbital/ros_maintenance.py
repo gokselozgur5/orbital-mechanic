@@ -85,7 +85,7 @@ class StationMaintenance:
             node.create_subscription(String, '/navigation/state', lambda msg:self.holds.on_navigation(msg.data), 10)
             node.create_subscription(String, '/navigation/health', self.live.health, 10)
             node.create_subscription(Odometry, '/odom', self.live.odometry, qos_profile_sensor_data)
-            node.create_subscription(String, '/station/telemetry', lambda msg:self.owner.telemetry(msg.data), 5)
+            node.create_subscription(String, '/station/telemetry', self.telemetry, 5)
         except BaseException:
             self.close()
             raise
@@ -112,6 +112,15 @@ class StationMaintenance:
 
     def publish(self, topic, value):
         self.publishers[topic].publish(self.String(data=canonical(value)))
+
+    def telemetry(self, message):
+        try:
+            self.authority()
+        except (ValueError, RuntimeError, OSError):
+            if self.pinned is not None or self.broken:
+                self.owner.reset_evidence.fail('maintenance_authority_changed')
+            return
+        self.owner.telemetry(message.data)
 
     def receive(self, message):
         if isinstance(message.data, str) and len(message.data) <= MAX_COMMAND_BYTES and len(self.queue) < 16:

@@ -139,5 +139,8 @@ checker now drives the ROS-free baseline's outcome using ten seconds of fresh
 healthy station samples. An [owned isolation endpoint](docs/MAINTENANCE_ENDPOINT.md)
 now joins the actual station model, guard inhibition, navigation quiescence and
 live camera inspection. It confirms the exact effect through newer telemetry
-before releasing its hold. Local controlled-transport checks pass; reset/restore
-and native maintenance acceptance remain pending.
+before releasing its hold. [Bounded reset](docs/RESET_OPERATION.md) now requires
+retained eligible powered observations, verified owned isolation, cooldown and
+a second live inspection. One reserved attempt and an exact new observed effect
+precede release; power stays off. Local controlled-transport checks pass;
+restore, restart reconciliation and native maintenance acceptance remain pending.

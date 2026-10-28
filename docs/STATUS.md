@@ -11,6 +11,45 @@ original localization branch; six migrated commits do not count as new deliverie
 [Draft PR #16](https://github.com/gokselozgur5/orbital-mechanic/pull/16) links #6/#7,
 which remain open until full live localization/navigation acceptance and review.
 
+**OM-054: bounded reset implemented; native acceptance pending.**
+The [reset endpoint](RESET_OPERATION.md) reuses the exact published station,
+non-expiring drive hold and capture ownership. Retained powered excess-load/low-
+vibration measurements must match the prior isolation inspection. Missing,
+contradictory or high-vibration history refuses reset; isolated zero readings
+cannot erase that history. Current cooldown at most 40 °C and a new inspection
+precede final pose/source/hold/freshness checks after artifact I/O.
+
+The station reserves one attempt before the pulse, including an unknown outcome
+without an incremented model counter. Reset never restores power. Two strictly
+post-effect samples with the exact reset identity/revision, continued isolation
+and cooldown precede exact release. Cancellation before the pulse preserves the
+attempt; cancellation after it verifies and reports the applied effect. Unknown
+outcomes retain ownership. Reset results use schema 2 with their prior isolation
+result and eligibility references; legacy isolation results remain schema 1.
+The isolation recorder explicitly refuses reset results as isolation evidence.
+
+Local composed controls run isolate then reset with the actual station, guard,
+navigation supervisor and two separate real captures over controlled transport.
+They cover cancellation on either side of commitment and expiry after real
+artifact reads. No native DDS/timing, independent reset replay, electrical
+isolation or repaired-machine acceptance follows. Restore and restart
+reconciliation remain pending. Exact validation is retained under operator
+workspace `reviews/orbital-delivery-20261028/om054`.
+
+Review found an initial candidate could complete after the first post-reset
+sample expired while the latest sample was still fresh. The identical regression
+fails on the retained candidate and passes after requiring both receipt and
+simulation ages for both samples through release acknowledgement. The initial
+596-test pass did not cover this boundary; final validation includes that new
+regression. This was corrected before publication within OM-054.
+
+Final validation passes all 597 tests (36 new), the causal baseline, 175 Python
+AST files, 17 shell scripts and two XML sources with unchanged source bytes.
+Four deliberate mutations fail their intended history, reservation, final
+freshness and complete-pair assertions. These are sensitivity controls, separate
+from the reproduced candidate defect. Final logs and source hashes are under
+`reviews/orbital-delivery-20261028/om054/final` in the operator workspace.
+
 **OM-053: retained isolation evidence passes local controls; native acceptance pending.**
 The [read-only recorder](ISOLATION_EVIDENCE.md) retains exact command/state/result
 and station wire packets under a bounded exclusive trace. Offline replay checks
@@ -54,8 +93,8 @@ Cancellation before commitment prevents the effect and still waits for child
 reap. Cancellation after commitment reports the verified applied isolation and
 never restores power. Unknown effects or lost evidence retain nonterminal
 ownership. The CLI supports status/isolate/query/cancel and never blindly
-retransmits isolation. Legacy schema-1 telemetry remains readable; reset/restore
-are refused by the new command parser. Restart reconciliation is still pending.
+retransmits isolation. Legacy schema-1 telemetry remains readable. OM-054 above
+adds reset; restore and restart reconciliation remain pending.
 
 Composed local tests run the actual station, guard, navigation supervisor,
 separate capture worker and artifact reader. The child receives actual parent
@@ -64,7 +103,7 @@ timing, then resumes for post-effect observations; production keeps real
 monotonic time. These controls are not native DDS/timing or physical acceptance.
 Thor SSH still closes before authentication; no native deployment occurred.
 OM-053 needs independently retained/native isolation acceptance without counting
-this verifier again. Reset/restore and the complete maintenance mission remain open.
+this verifier again. Restore and the complete maintenance mission remain open.
 
 All 523 local tests pass (50 new), plus the model baseline, 168 Python AST files,
 17 shell scripts and two XML sources. Source bytes stayed unchanged throughout

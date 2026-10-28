@@ -1,10 +1,11 @@
-# Owned power isolation
+# Owned station maintenance
 
 OM-052 adds `isolate`, `cancel`, `query` and `status` to the station process.
 It changes the exact `Station` instance that publishes `/station/telemetry`.
-No second station model is started in the capture process. The allowed reset and
-restore transitions in [MAINTENANCE_ACTIONS.md](MAINTENANCE_ACTIONS.md) remain
-future work; the wire parser refuses those operations today.
+No second station model is started in the capture process. OM-054 adds
+[bounded reset](RESET_OPERATION.md) after an exact owned isolation, using retained
+powered observations, cooldown and a second live inspection. Restore remains
+future work and is refused by the wire parser.
 
 Local controls execute the actual station adapter, motion guard, navigation
 supervisor, separate capture process and artifact reader with controlled ROS
@@ -19,6 +20,7 @@ After commissioning the exact source and sourcing the Orbital ROS environment:
 ```bash
 python3 scripts/maintain-machine.py status
 python3 scripts/maintain-machine.py isolate pump --timeout 15
+python3 scripts/maintain-machine.py reset pump --run-id RUN --mission-id MISSION --isolation-action-id ISOLATION --timeout 15
 python3 scripts/maintain-machine.py query --run-id RUN --mission-id MISSION --action-id ACTION
 python3 scripts/maintain-machine.py cancel --run-id RUN --mission-id MISSION --action-id ACTION
 ```
@@ -33,7 +35,7 @@ it sends no pose, velocity, paths, topics or caller evidence.
 `transport` distinguishes `not_sent`, `rejected`, `acknowledged`, `terminal` and
 `uncertain`. Exit 0 may mean an ACK when explicitly requested; inspect the
 transport and result fields. A non-success terminal or uncertainty returns 2.
-The client sends isolation once. Loss/timeout/interrupt triggers at most one exact
+The client sends each isolation/reset once. Loss/timeout/interrupt triggers at most one exact
 cancel attempt, never another power request. A lost reply can be recovered with
 same-run query. Server restart requires reconciliation, not replaying the
 operation with a new run or action ID.
@@ -124,7 +126,10 @@ telemetry run/sequence/stamp, control revision, public sample digest and measure
 isolated values. `not_applied` has no effect or verification. Unknown effects
 produce no terminal result. The digest is a reference, not a retained complete
 trace. The [independent recorder](ISOLATION_EVIDENCE.md) now retains source packets
-for offline replay; native isolation acceptance remains OM-053 work.
+for isolation replay; it explicitly refuses reset results as isolation evidence.
+Reset results use schema 2 with the prior isolation result and powered eligibility
+references, plus temperature in their post-effect verification. Existing isolation
+results keep schema 1. Independent reset replay and native acceptance remain open.
 
 ## Startup, shutdown and validation
 

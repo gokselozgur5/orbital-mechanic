@@ -1,4 +1,4 @@
-"""Exact isolation commands; a missing result never authorizes another effect."""
+"""Exact maintenance commands; a missing result never authorizes another effect."""
 import time
 import uuid
 
@@ -11,6 +11,10 @@ class MaintenanceClient(InspectionClient):
     def __init__(self, publish, spin, authority, *, now=time.monotonic):
         super().__init__(publish, spin, authority, now=now, protocol=protocol,
                          family='maintenance', operation='isolate')
+
+    def execute(self, value, *, wait=True):
+        self.operation = 'reset' if value.get('op') == 'reset' else 'isolate'
+        return super().execute(value, wait=wait)
 
     def observe_state(self, text):
         try:
@@ -30,9 +34,12 @@ class MaintenanceClient(InspectionClient):
             self.failure = 'invalid_or_changed_server_state'
 
 
-def run_ros(op, *, machine_id=None, timeout_s=10., run_id=None, mission_id=None, action_id=None, wait=True):
+def run_ros(op, *, machine_id=None, timeout_s=10., run_id=None, mission_id=None, action_id=None,
+            isolation_action_id=None, wait=True):
     if op in ('cancel', 'query') and not all((run_id, mission_id, action_id)):
         raise ValueError('exact_action_identity_required')
+    if op == 'reset' and not all((run_id, mission_id, isolation_action_id)):
+        raise ValueError('exact_isolation_identity_required')
     import rclpy
     from rclpy.signals import SignalHandlerOptions
     from std_msgs.msg import String
@@ -56,9 +63,10 @@ def run_ros(op, *, machine_id=None, timeout_s=10., run_id=None, mission_id=None,
         value = {'schema_version': 1, 'command_id': uuid.uuid4().hex, 'op': op,
             'run_id': run_id or status['run_id'], 'mission_id': mission_id or uuid.uuid4().hex,
             'action_id': action_id or uuid.uuid4().hex, 'arguments': {}}
-        if op == 'isolate':
+        if op in ('isolate', 'reset'):
             value['arguments'] = {'machine_id': machine_id, 'timeout_s': timeout_s,
                 'station_run_id': status['station_run_id'], 'control_revision': status['control_revision']}
+            if op == 'reset': value['arguments']['isolation_action_id'] = isolation_action_id
         outcome = client.execute(value, wait=wait)
         return outcome
     finally:

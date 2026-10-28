@@ -6,7 +6,8 @@ recovery checker in `orbital/maintenance_observation.py`.
 The ROS-free baseline uses that checker instead of the model's hidden
 `Station.recovered` oracle. OM-052 now implements an
 [owned isolation endpoint](MAINTENANCE_ENDPOINT.md), exact guard inhibition and
-versioned applied-effect telemetry. Reset/restore and native maintenance
+versioned applied-effect telemetry. OM-054 implements [bounded reset](RESET_OPERATION.md)
+with retained powered eligibility and one attempt. Restore and native maintenance
 acceptance remain unimplemented. The inspection
 endpoint supplies observations; its cached success grants no maintenance rights.
 
@@ -40,8 +41,8 @@ Before each effect, the executor must independently establish:
   operation preconditions below. Revalidate after I/O and immediately before the
   serialized mutation; neither an old file nor a successful ACK renews freshness.
 
-OM-052 implements these gates for isolation and tests their local composition.
-The same gates remain requirements for future reset/restore operations.
+OM-052 implements these gates for isolation and OM-054 reuses them for reset,
+with a new inspection after cooldown. They remain requirements for future restore.
 The pure `Station.intervene` caller-supplied geometry checks are insufficient for
 ROS admission. The hold must compose with the existing motion supervisor and
 drive guard; adding an unrelated boolean in the maintenance process is not enough.
@@ -75,7 +76,7 @@ planner memory. A new server run cannot silently renew an old mission's attempt.
 
 The causal model can still demonstrate a reset followed by re-energization of a
 jam for evaluator tests. That model capability does not authorize this sequence
-through the future maintenance gateway. A healthy mission requests no mutation.
+through the maintenance gateway. A healthy mission requests no mutation.
 
 ## ACK, effect record and observation are distinct
 
@@ -89,8 +90,8 @@ public isolated measurements at matched temperatures/times. The executable
 observability control in `test_maintenance_observation.py` demonstrates this on
 the actual model. Waiting for another unchanged isolated sample cannot solve it.
 
-Before exposing reset as an endpoint, extend the public actuator state through a
-versioned telemetry contract. The selected design is a monotonically increasing
+The public actuator state uses a versioned telemetry contract. Its design is a
+monotonically increasing
 control revision with a bounded record of the exact applied mission/action,
 machine, operation, request digest and simulation stamp. The station owner
 records it only after that serialized effect, and subsequent telemetry includes
@@ -104,8 +105,9 @@ its reset. A complete trace needs retained source samples and the action record,
 not merely a hash or caller-supplied identifier. The new wire schema, actuator
 record/replay storage are implemented for isolation in OM-052. Telemetry schema 2
 adds `control.revision` and the exact `control.last_applied` record; strict
-readers also accept legacy schema 1 for read-only observation. Reset/publication
-semantics remain pending. The endpoint requires schema 2 for its live inspection.
+readers also accept legacy schema 1 for read-only observation. OM-054 publishes
+reset effects through that same contract and requires a new matching pair before
+release. The endpoint requires schema 2 for its live inspection.
 
 The simplified model's power switch and current represent simulated isolation.
 They do not prove physical electrical isolation or absence of residual energy on
@@ -178,7 +180,8 @@ Failure/cancellation after a real effect must never masquerade as a mutation-fre
 rejection. The isolation implementation retains unknown effects as nonterminal
 `unresolved` ownership; it emits no terminal result until a known disposition
 and exact hold release are verified. Restart never adopts that old action.
-Reset/restore require their own boundary and loss controls. The current API is
+OM-054 adds reset boundary/loss controls; restore and durable reconciliation
+remain open. The current API is
 documented separately.
 
 ## Acceptance and remaining work
@@ -197,8 +200,9 @@ OM-052 implements the station-owner isolation endpoint, drive hold, versioned
 effect telemetry and local isolation verification/cancellation/replay controls.
 OM-053 adds [independently retained isolation observations](ISOLATION_EVIDENCE.md)
 and offline postcondition replay; native isolation acceptance remains pending.
-This does not count the same owner verifier again. Reset/restore, reconciliation and
-native sequence acceptance remain open through OM-060. Reuse this checker in
+This does not count the same owner verifier again. OM-054 adds bounded reset,
+eligibility/cooldown, reserved attempts and observed application. Restore,
+reconciliation and native sequence acceptance remain open through OM-060. Reuse this checker in
 that integration; do not count its implementation twice. The full mission needs
 independent evaluation of causality, collisions, unnecessary interventions and
 safe escalation as well as this observation result. Thor access and preceding

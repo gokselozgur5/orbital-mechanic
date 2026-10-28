@@ -1,33 +1,38 @@
-"""Bounded isolation requests; all effect geometry and permission stay server-side."""
+"""Bounded isolation/reset requests; geometry and permission stay server-side."""
 import hashlib
 
 from orbital.inspection_protocol import canonical, decode, finite, identifier, MAX_REPLY_BYTES, MAX_ACTIONS, TERMINAL
 from orbital.machines import MACHINE_IDS
 from orbital.station_control import control
+from orbital.reset_evidence import basis as reset_basis
 
 REJECTION_CODES = frozenset(('invalid_argument', 'wrong_run', 'action_conflict', 'unavailable',
-                             'busy', 'history_full', 'unknown_action', 'wrong_station_state'))
+                             'busy', 'history_full', 'unknown_action', 'wrong_station_state',
+                             'isolation_required', 'reset_not_eligible', 'reset_attempt_exhausted'))
 ERROR_CODES = frozenset(('hold_acquisition_unavailable', 'deadline_exceeded', 'cancel_requested',
     'owner_shutdown', 'inspection_unavailable', 'precondition_failed', 'effect_unknown',
     'station_run_changed', 'isolation_not_verified', 'clock_regressed', 'maintenance_hold_lost',
-    'precondition_lost', 'maintenance_evidence_unavailable'))
+    'precondition_lost', 'maintenance_evidence_unavailable', 'reset_not_verified'))
 
 
 def command(text):
     value = decode(text)
     if (set(value) != {'schema_version', 'run_id', 'mission_id', 'action_id', 'command_id', 'op', 'arguments'}
             or type(value['schema_version']) is not int or value['schema_version'] != 1
-            or value['op'] not in ('isolate', 'cancel', 'query') or not isinstance(value['arguments'], dict)):
+            or value['op'] not in ('isolate', 'reset', 'cancel', 'query') or not isinstance(value['arguments'], dict)):
         raise ValueError('invalid_argument')
     for name in ('run_id', 'mission_id', 'action_id', 'command_id'):
         identifier(value[name])
     args = value['arguments']
-    if value['op'] == 'isolate':
-        if (set(args) != {'machine_id', 'station_run_id', 'control_revision', 'timeout_s'}
+    if value['op'] in ('isolate', 'reset'):
+        fields = {'machine_id', 'station_run_id', 'control_revision', 'timeout_s'}
+        if value['op'] == 'reset': fields.add('isolation_action_id')
+        if (set(args) != fields
                 or args['machine_id'] not in MACHINE_IDS or type(args['control_revision']) is not int
                 or not 0 <= args['control_revision'] < 2**63):
             raise ValueError('invalid_argument')
         identifier(args['station_run_id'])
+        if value['op'] == 'reset': identifier(args['isolation_action_id'])
         args['timeout_s'] = finite(args['timeout_s'], .1, 30.)
     elif args:
         raise ValueError('invalid_argument')
@@ -57,9 +62,11 @@ def result(value):
     fields = {'schema_version', 'kind', 'run_id', 'mission_id', 'action_id', 'request_sha256', 'operation',
               'machine_id', 'station_run_id', 'status', 'error_code', 'started_sim_stamp_ns',
               'finished_sim_stamp_ns', 'wall_duration_s', 'observation', 'state_change', 'hold_released'}
+    operation = value.get('operation') if isinstance(value, dict) else None
+    if operation == 'reset': fields |= {'isolation', 'eligibility'}
     if (not isinstance(value, dict) or set(value) != fields or type(value['schema_version']) is not int
-            or value['schema_version'] != 1 or value['kind'] != 'maintenance_result'
-            or value['operation'] != 'isolate' or value['machine_id'] not in MACHINE_IDS
+            or (value['schema_version'], operation) not in ((1, 'isolate'), (2, 'reset'))
+            or value['kind'] != 'maintenance_result' or value['machine_id'] not in MACHINE_IDS
             or value['status'] not in TERMINAL or value['hold_released'] is not True):
         raise ValueError('invalid_result')
     for key in ('run_id', 'mission_id', 'action_id', 'station_run_id'): identifier(value[key])
@@ -71,6 +78,22 @@ def result(value):
     elif value['error_code'] not in ERROR_CODES:
         raise ValueError('invalid_result')
     if value['observation'] is not None: observation(value['observation'])
+    if operation == 'reset':
+        prior = value['isolation']
+        if not isinstance(prior, dict) or prior.get('operation') != 'isolate' or prior.get('schema_version') != 1:
+            raise ValueError('invalid_reset_prerequisite')
+        result(prior)
+        basis = reset_basis(value['eligibility'])
+        if (any(prior[k] != value[k] for k in ('run_id', 'mission_id', 'machine_id', 'station_run_id'))
+                or prior['action_id'] == value['action_id'] or prior['state_change']['disposition'] != 'applied'
+                or prior['finished_sim_stamp_ns'] > value['started_sim_stamp_ns']
+                or basis['run_id'] != value['station_run_id'] or basis['machine_id'] != value['machine_id']
+                or basis['control_revision']+1 != prior['state_change']['effect']['control_revision']
+                or basis['registry_identity'] != prior['observation']['registry_identity']
+                or basis['samples'][-1]['stamp_ns'] > prior['state_change']['effect']['applied_stamp_ns']
+                or not any(v['stamp_ns'] == prior['observation']['sample_stamp_ns'] for v in basis['samples'])
+                or (value['observation'] is not None and value['observation']['registry_identity'] != basis['registry_identity'])):
+            raise ValueError('invalid_reset_prerequisite')
     change = value['state_change']
     if not isinstance(change, dict) or set(change) != {'disposition', 'effect', 'verification'}:
         raise ValueError('invalid_effect_result')
@@ -81,12 +104,14 @@ def result(value):
         effect, verified = change['effect'], change['verification']
         if not isinstance(effect, dict): raise ValueError('invalid_effect_result')
         control({'revision': effect.get('control_revision'), 'last_applied': effect}, value['finished_sim_stamp_ns'])
-        if (effect['operation'] != 'isolate' or effect['owner_run_id'] != value['run_id']
+        if (effect['operation'] != operation or effect['owner_run_id'] != value['run_id']
                 or any(effect[k] != value[k] for k in ('mission_id', 'action_id', 'request_sha256', 'machine_id'))
                 or value['observation'] is None):
             raise ValueError('invalid_effect_result')
-        if not isinstance(verified, dict) or set(verified) != {'run_id', 'sequence', 'stamp_ns', 'control_revision',
-                'sample_sha256', 'machine_id', 'powered', 'current_a', 'vibration_au'}:
+        verification_fields = {'run_id', 'sequence', 'stamp_ns', 'control_revision',
+                'sample_sha256', 'machine_id', 'powered', 'current_a', 'vibration_au'}
+        if operation == 'reset': verification_fields.add('temperature_c')
+        if not isinstance(verified, dict) or set(verified) != verification_fields:
             raise ValueError('invalid_effect_result')
         identifier(verified['sample_sha256'], 64)
         integer(verified['sequence'], 1); integer(verified['stamp_ns'], 1)
@@ -97,6 +122,10 @@ def result(value):
                 or verified['stamp_ns'] <= effect['applied_stamp_ns']
                 or not 0 <= value['finished_sim_stamp_ns']-verified['stamp_ns'] < 1000000000):
             raise ValueError('invalid_effect_result')
+        if operation == 'reset':
+            finite(verified['temperature_c'], -273.15, 40.)
+            if effect['control_revision'] <= prior['state_change']['effect']['control_revision']:
+                raise ValueError('invalid_reset_revision')
     else:
         raise ValueError('invalid_effect_result')
     return value
@@ -109,7 +138,7 @@ def action_view(value):
     for key in ('run_id', 'mission_id', 'action_id'): identifier(value[key])
     identifier(value['request_sha256'], 64)
     if value['machine_id'] not in MACHINE_IDS or value['phase'] not in {
-            'holding', 'inspecting', 'verifying', 'releasing', 'unresolved', 'terminal'}:
+            'holding', 'cooling', 'inspecting', 'verifying', 'releasing', 'unresolved', 'terminal'}:
         raise ValueError('invalid_action')
     stop = value['stop_reason']
     if stop is not None and (not isinstance(stop, (list, tuple)) or len(stop) != 2

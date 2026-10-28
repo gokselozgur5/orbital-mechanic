@@ -33,7 +33,7 @@ class MaintenanceEndpointTests(unittest.TestCase):
         for name in ('config/robot.urdf', 'config/bridge.yaml'):
             shutil.copyfile(ROOT/name, self.root/name)
 
-    def run_endpoint(self, mode='success', *, retained=False):
+    def run_endpoint(self, mode='success', *, retained=False, reset=False):
         host_started = time.monotonic()
         clock = SharedClock(self.root, create=True)
         self.addCleanup(clock.close)
@@ -171,22 +171,27 @@ class MaintenanceEndpointTests(unittest.TestCase):
                     if timer.name == 'station_telemetry' and now() >= timer.next:
                         timer.callback(); timer.next = now()+timer.period
             statuses = outputs.get('/maintenance/state', [])
-            if (statuses and request is None and statuses[-1]['ready']
+            if (statuses and (request is None or (reset and request['op'] == 'isolate'
+                    and len(outputs.get('/maintenance/result', [])) == 1)) and statuses[-1]['ready']
                     and (trace is None or trace.ready_at is not None)):
                 status = statuses[-1]
+                second = request is not None
                 request = {'schema_version': 1, 'run_id': status['run_id'], 'mission_id': mission_id,
-                    'action_id': action_id, 'command_id': uuid.uuid4().hex, 'op': 'isolate',
+                    'action_id': uuid.uuid4().hex if second else action_id,
+                    'command_id': uuid.uuid4().hex, 'op': 'reset' if second else 'isolate',
                     'arguments': {'machine_id': 'pump', 'station_run_id': status['station_run_id'],
                                   'control_revision': status['control_revision'], 'timeout_s': 15.}}
+                if second: request['arguments']['isolation_action_id'] = action_id
                 deliver('/maintenance/command', NS(data=canonical(request)))
             if station is not None and station.owner.active is not None:
                 action = station.owner.active
                 if action.inspector is not None and action.inspector.active is None:
                     clock.unfreeze()  # Post-effect samples use this same actual station.
-                if mode == 'cancel' and action.inspector is not None and action.inspector.active is not None and not cancelled:
+                target_operation = not reset or action.operation == 'reset'
+                if target_operation and mode == 'cancel' and action.inspector is not None and action.inspector.active is not None and not cancelled:
                     deliver('/maintenance/command', NS(data=canonical({**request, 'op': 'cancel', 'arguments': {}})))
                     cancelled = True
-                if mode == 'cancel_after_effect' and action.effect is not None and not cancelled:
+                if target_operation and mode == 'cancel_after_effect' and action.effect is not None and not cancelled:
                     deliver('/maintenance/command', NS(data=canonical({**request, 'op': 'cancel', 'arguments': {}})))
                     cancelled = True
             if time.monotonic()-host_started > 20.:
@@ -199,7 +204,8 @@ class MaintenanceEndpointTests(unittest.TestCase):
         real_read = inspection_owner.read_capture
         def read(*args):
             value = real_read(*args)
-            if mode == 'late': clock.advance(.25, force=True)
+            if mode == 'late' and (not reset or station.owner.active.operation == 'reset'):
+                clock.advance(.25, force=True)
             return value
         h.modules['rclpy'].spin_once = spin
         try:
@@ -210,7 +216,7 @@ class MaintenanceEndpointTests(unittest.TestCase):
                 guard = motion.GuardNode()
                 supervisor = navigation.NavigationSupervisor({'pump': (2., 1.8, 0.)}, map_config_sha256=h.config_hash)
                 ros_machine_telemetry.run(self.root, now=now,
-                    stop_requested=lambda:bool(outputs.get('/maintenance/result')) and (
+                    stop_requested=lambda:len(outputs.get('/maintenance/result', [])) == (2 if reset else 1) and (
                         trace is None or trace.assess(round(now()*1e9), h.sim) is not None))
                 if trace is not None:
                     value = trace.end(round(now()*1e9), h.sim, trace_sources(station.owner.model.registry))
@@ -226,8 +232,8 @@ class MaintenanceEndpointTests(unittest.TestCase):
         self.assertIsNone(guard.guard.maintenance.active)
         self.assertTrue(all(v.linear.x == 0 and v.angular.z == 0 for v in outputs['/motion/guarded_cmd_vel']))
         for status in outputs['/maintenance/state']: state(canonical(status))
-        self.assertEqual(len(outputs['/maintenance/result']), 1)
-        terminal = result(outputs['/maintenance/result'][0])
+        self.assertEqual(len(outputs['/maintenance/result']), 2 if reset else 1)
+        terminal = result(outputs['/maintenance/result'][-1])
         action = station.owner.actions[request['action_id']]
         diagnostic = self.root/'runtime/test-worker-error.txt'
         self.endpoint_diagnostic = {'terminal': terminal,
@@ -236,6 +242,38 @@ class MaintenanceEndpointTests(unittest.TestCase):
             'guard_failure': station.holds.failure}
         self.assertTrue(outputs['/maintenance/reply'][0]['accepted'])
         return terminal, outputs
+
+    def test_owned_reset_uses_second_real_capture_and_same_station(self):
+        terminal, output = self.run_endpoint(reset=True)
+        self.assertEqual(terminal['status'], 'succeeded', self.endpoint_diagnostic)
+        self.assertEqual(terminal['operation'], 'reset')
+        self.assertEqual(terminal['isolation'], output['/maintenance/result'][0])
+        self.assertEqual(output['/station/telemetry'][-1]['control']['revision'], 2)
+        self.assertFalse(output['/station/telemetry'][-1]['machines']['pump']['powered'])
+        ref = terminal['observation']
+        record, image = read_capture(self.root, ref['observation_id'], ref['manifest_sha256'])
+        self.assertEqual(record['telemetry_source']['control_revision'], 1)
+        self.assertEqual(record['inspection_action']['action_id'], terminal['action_id'])
+        self.assertGreater(len(image), 900000)
+
+    def test_reset_real_capture_cancel_retains_isolation_without_pulse(self):
+        terminal, output = self.run_endpoint('cancel', reset=True)
+        self.assertEqual(terminal['status'], 'cancelled', self.endpoint_diagnostic)
+        self.assertEqual(terminal['state_change']['disposition'], 'not_applied')
+        self.assertEqual(output['/station/telemetry'][-1]['control']['revision'], 1)
+        self.assertFalse(output['/station/telemetry'][-1]['machines']['pump']['powered'])
+
+    def test_reset_real_artifact_delay_prevents_second_effect(self):
+        terminal, output = self.run_endpoint('late', reset=True)
+        self.assertEqual(terminal['status'], 'failed', self.endpoint_diagnostic)
+        self.assertEqual(terminal['state_change']['disposition'], 'not_applied')
+        self.assertEqual(output['/station/telemetry'][-1]['control']['revision'], 1)
+
+    def test_reset_cancellation_after_actual_pulse_waits_for_verification(self):
+        terminal, output = self.run_endpoint('cancel_after_effect', reset=True)
+        self.assertEqual(terminal['status'], 'cancelled', self.endpoint_diagnostic)
+        self.assertEqual(terminal['state_change']['disposition'], 'applied')
+        self.assertEqual(output['/station/telemetry'][-1]['control']['revision'], 2)
 
     def test_same_station_guard_navigation_real_capture_and_verification(self):
         terminal, output = self.run_endpoint()
