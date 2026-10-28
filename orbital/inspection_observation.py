@@ -73,14 +73,18 @@ class InspectionEvidence:
         if not 0<=sim_ns-self.sample_stamp<=MAX_POSE_AGE_NS:
             self.fail('inspection_sample_expired')
 
-    def measure(self, now, sim_ns, transform):
-        self.check(now,sim_ns)
-        observation = self.station.measure(now,sim_ns)
-        robot = self.robot.measure(self.sample_stamp,sim_ns,now,transform)
+    def measure_robot(self, stamp, now, sim_ns, transform):
+        robot = self.robot.measure(stamp,sim_ns,now,transform)
         if robot['within_inspection_pose'] and robot['stationarity']['reason']=='awaiting_time_matched_odometry':
             raise InspectionPending('awaiting_sample_time_odometry')
         if not robot['within_settled_inspection_pose']:
             self.fail('inspection_pose_required')
+        return robot
+
+    def measure(self, now, sim_ns, transform):
+        self.check(now,sim_ns)
+        observation = self.station.measure(now,sim_ns)
+        robot = self.measure_robot(self.sample_stamp,now,sim_ns,transform)
         sample = observation['telemetry']
         machine_id = self.robot.machine.machine_id
         return {'schema_version':1,'kind':'machine_inspection_observation','valid':True,

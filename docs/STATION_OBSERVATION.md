@@ -142,7 +142,8 @@ map regeneration/reload/seed/readiness and preserve the guardian for armed trial
 Do not combine stored CLI JSON with separately sampled robot pose and call it
 inspection. The joint reader acquires current telemetry and settled robot state
 together and binds their source/time identities through result acceptance.
-Maintaining gates through inspection ownership, camera capture, endpoint cancellation,
+Optional [camera capture](CAMERA_OBSERVATIONS.md) now extends that live reader.
+Native camera acceptance, maintaining gates through inspection ownership, endpoint cancellation,
 noise confidence, causal diagnosis and maintenance permissions remain separate
 acceptance work. No native deployment, movement or maintenance action occurred
 for this delivery.

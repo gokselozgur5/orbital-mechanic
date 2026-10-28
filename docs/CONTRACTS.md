@@ -5,8 +5,9 @@ These are design contracts, not implemented endpoints. The same tools serve scri
 The read-only [station observation CLI](STATION_OBSERVATION.md) now implements
 fresh public telemetry consumption. The [machine observation CLI](INSPECTION_OBSERVATION.md)
 combines a selected public sample with exact same-time settled robot state. These
-readers do not yet expose this common mission envelope, capture camera evidence
-or provide maintenance endpoints.
+readers do not yet expose this common mission envelope or provide maintenance
+endpoints. Optional [camera capture](CAMERA_OBSERVATIONS.md) now adds bounded
+local RGB evidence with its own acquisition timestamp and robot pose.
 
 ## Common envelope
 

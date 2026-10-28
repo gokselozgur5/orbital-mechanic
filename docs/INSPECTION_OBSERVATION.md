@@ -3,7 +3,8 @@
 OM-047 adds a read-only, target-specific record that binds public machine
 telemetry to a localized, settled robot pose at the telemetry sample's exact
 simulation timestamp. One live ROS observer acquires both kinds of evidence.
-This is local software integration toward issue #8. Camera capture, the common
+This is local software integration toward issue #8. Optional
+[camera capture](CAMERA_OBSERVATIONS.md) now extends it locally; the common
 inspection action envelope and native commissioning remain pending.
 
 After commissioning the owned Orbital runtime and sourcing ROS:
@@ -13,8 +14,9 @@ ROS_DOMAIN_ID=42 ROS_AUTOMATIC_DISCOVERY_RANGE=LOCALHOST \
   python3 scripts/machine-observation.py pump --timeout 5
 ```
 
-The other allowed targets are `cooler` and `power_unit`. The only optional input
-is a finite timeout from 0.1 to 10 seconds. There are no caller-supplied poses,
+The other allowed targets are `cooler` and `power_unit`. The timeout is finite
+and bounded from 0.1 to 10 seconds. Optional `--with-camera` selects schema-2
+local capture, described separately. There are no caller-supplied poses,
 telemetry files, clocks, paths, topics or tolerance overrides. Domain 84 is for a
 controlled fixture after verifying its graph is empty. The library entry point
 is `orbital.ros_proximity.read_machine_observation`.
@@ -125,6 +127,7 @@ then collect all three controls at independently verified arrival poses. Any
 armed movement retains the trial guardian. No native movement or deployment was
 performed for this delivery.
 
-Camera evidence, cancellable inspection ownership, noise confidence, causal
-diagnosis and interlocked maintenance remain separate work. Separately stored
+Camera evidence now has local capture/validation coverage; native camera acceptance,
+cancellable inspection ownership, noise confidence, causal diagnosis and
+interlocked maintenance remain separate work. Separately stored
 station and proximity CLI results still cannot substitute for this live capture.

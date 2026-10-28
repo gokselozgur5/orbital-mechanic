@@ -11,6 +11,36 @@ original localization branch; six migrated commits do not count as new deliverie
 [Draft PR #16](https://github.com/gokselozgur5/orbital-mechanic/pull/16) links #6/#7,
 which remain open until full live localization/navigation acceptance and review.
 
+**OM-048: camera evidence passes local integration checks; native capture remains pending.**
+`machine-observation.py --with-camera` and `capture_machine_observation` acquire
+an image/CameraInfo pair on the joint observer. Image and telemetry stamps remain
+separate, with an explicit maximum 100 ms difference. Both must be post-settling;
+image-time robot and optical TF are measured and checked against the configured
+mount, while telemetry-time pose and all existing gates remain required.
+Source-bound dimensions, RGB stride/byte limits, calibration, frame/time/order,
+publisher identity and 200 ms image/info freshness are enforced.
+
+Schema 2 references a lossless RGB PPM and bounded manifest under ignored
+`runtime/inspection/<observation_id>`. Exclusive no-follow writes, a nonblocking
+writer lock, a 64-entry quota and bounded digest-verified reads prevent arbitrary
+paths, overwrites or unlimited capture retention. Identities are prepared before
+final validity checks; live validity and stored bytes are rechecked around
+manifest publication. Managed failure/interruption removes the acceptance marker
+and retains bounded partial evidence. Stored files alone are not action permission
+or a successful inspection endpoint result; crash recovery remains future work.
+
+All 415 local tests pass, including 32 new core/adapter/filesystem/CLI tests.
+The causal baseline, shell syntax, Python AST, XML and whitespace checks pass.
+A late-digest freshness failure in the initial new writer is reproduced and the
+identical regression passes after correction. A real
+monotonic-clock paced controlled transport probe accepts actual local capture and
+rejects a 250 ms storage delay with no accepted manifest. Synthetic pixels and
+controlled transports do not prove native rendered visibility, DDS timing or
+vision diagnosis. Thor SSH again timed out (exit 255); no native state changed.
+The map revision remains `f02e11a9cb0e4f2f`. Issue #8 / draft PR #19 remain open;
+next are cancellable inspection ownership and all pending native gates.
+Contract: [CAMERA_OBSERVATIONS.md](CAMERA_OBSERVATIONS.md).
+
 **OM-047: joint machine/robot observations pass locally; native inspection remains pending.**
 The production `read_machine_observation` reader and `machine-observation.py`
 CLI use one live observer to bind a selected public telemetry sample to robot TF
@@ -33,8 +63,9 @@ checks also pass. Native DDS timing and inspection acceptance remain unverified.
 A fresh strict SSH read
 to Thor timed out (exit 255); no native state changed. The map revision remains
 `f02e11a9cb0e4f2f`, with the existing explicit reload/seed/readiness requirements.
-Issue #8 / draft PR #19 remain In Progress. Camera evidence, cancellable inspection
-ownership and maintenance endpoints remain subsequent work.
+Issue #8 / draft PR #19 remain In Progress. OM-048 adds local camera capture above;
+native camera acceptance, cancellable inspection ownership and maintenance endpoints
+remain subsequent work.
 Contract: [INSPECTION_OBSERVATION.md](INSPECTION_OBSERVATION.md).
 
 **OM-046: fresh public telemetry reading passes locally; native integration remains pending.**

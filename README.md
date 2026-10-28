@@ -114,5 +114,11 @@ robot state alone grants no permission.
 
 [Same-time machine observations](docs/INSPECTION_OBSERVATION.md) acquire a public
 telemetry sample and the settled robot pose at that sample's exact timestamp on
-one live observer. Local core/adapter/CLI tests pass; camera evidence, inspection
-ownership and native acceptance remain pending.
+one live observer. Local core/adapter/CLI tests pass; inspection ownership and
+native acceptance remain pending.
+
+[Camera evidence](docs/CAMERA_OBSERVATIONS.md) is available through
+`machine-observation.py --with-camera`. It preserves actual image/telemetry
+times, validates image-time pose and calibration, and retains a bounded local
+RGB/manifest bundle with digest verification. Local software tests pass; native
+rendered evidence and complete inspection-action acceptance remain pending.

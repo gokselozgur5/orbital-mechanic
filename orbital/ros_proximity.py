@@ -37,7 +37,7 @@ def authority(node, expected=None):
     return sorted(snapshot)
 
 
-def _observe(root, machine_id, *, timeout, now, require_settled, inspection):
+def _observe(root, machine_id, *, timeout, now, require_settled, inspection, with_camera=False):
     if type(timeout) not in (int,float) or not math.isfinite(timeout) or not .1 <= timeout <= 10.:
         raise ValueError('timeout_must_be_between_0.1_and_10_seconds')
     deadline = now()+timeout
@@ -46,6 +46,11 @@ def _observe(root, machine_id, *, timeout, now, require_settled, inspection):
     evidence = capture.robot if capture else ProximityEvidence(registry,machine_id)
     if type(require_settled) is not bool:
         raise ValueError('require_settled_must_be_boolean')
+    camera = None
+    if with_camera:
+        from orbital.camera_observation import CameraContract,CameraEvidence,CAMERA_TOPICS,OPTICAL_FRAME
+        from orbital.inspection_artifacts import CaptureStore
+        camera = CameraEvidence(CameraContract.load(registry))
     prepared = MapSnapshot.prepare(registry)
     if now()>=deadline:
         raise Unavailable('proximity_deadline_exceeded')
@@ -59,10 +64,13 @@ def _observe(root, machine_id, *, timeout, now, require_settled, inspection):
     from tf2_ros import Buffer, TransformException, TransformListener
     from orbital.ros_map_binding import collect
 
-    node = listener = None
+    node = listener = store = None
+    accepted = False
     sources = proximity_sources()
     if capture:
         sources['/station/telemetry'] = [('station_telemetry','std_msgs/msg/String')]
+    if camera:
+        sources.update(CAMERA_TOPICS)
     rclpy.init(args=[])
     try:
         node = rclpy.create_node('orbital_proximity_'+uuid.uuid4().hex[:12],
@@ -92,6 +100,15 @@ def _observe(root, machine_id, *, timeout, now, require_settled, inspection):
             capture.station.tick(now(),node.get_clock().now().nanoseconds)
             node.create_subscription(String,'/station/telemetry',
                 lambda msg:capture.station.observe(msg.data,now(),node.get_clock().now().nanoseconds),5)
+        if camera:
+            from sensor_msgs.msg import Image,CameraInfo
+            from rclpy.qos import QoSProfile,ReliabilityPolicy
+            camera.tick(now(),node.get_clock().now().nanoseconds)
+            node.create_subscription(Image,'/camera/image_raw',
+                lambda msg:camera.image(msg,now(),node.get_clock().now().nanoseconds),
+                QoSProfile(depth=1,reliability=ReliabilityPolicy.RELIABLE))
+            node.create_subscription(CameraInfo,'/camera/camera_info',
+                lambda msg:camera.info(msg,now(),node.get_clock().now().nanoseconds),qos_profile_sensor_data)
         def source_fence():
             if node.get_parameter('use_sim_time').value is not True:
                 raise Unavailable('simulation_clock_mode_changed')
@@ -101,14 +118,18 @@ def _observe(root, machine_id, *, timeout, now, require_settled, inspection):
                 raise Unavailable(evidence.error)
             if capture:
                 capture.station.tick(now(),node.get_clock().now().nanoseconds)
+            if camera:
+                camera.tick(now(),node.get_clock().now().nanoseconds)
 
         settled_generation = None
         if capture:
-            while capture.selected is None:
+            while capture.selected is None or (camera and camera.selected is None):
                 rclpy.spin_once(node,timeout_sec=min(.02,remaining()))
                 source_fence()
                 try:
                     capture.select(now(),node.get_clock().now().nanoseconds)
+                    if camera:
+                        camera.select(capture.sample_stamp,capture.settled_stamp,now(),node.get_clock().now().nanoseconds)
                 except InspectionPending:
                     continue
             settled_generation = capture.settled_generation
@@ -135,6 +156,8 @@ def _observe(root, machine_id, *, timeout, now, require_settled, inspection):
             observed_at = now()
             if capture:
                 capture.check(observed_at,node.get_clock().now().nanoseconds)
+            if camera:
+                camera.check(observed_at,node.get_clock().now().nanoseconds)
             if not 0 <= observed_at-bound_at < MAP_MAX_AGE_S:
                 raise Unavailable('map_binding_observation_expired')
             return observed_at
@@ -146,11 +169,17 @@ def _observe(root, machine_id, *, timeout, now, require_settled, inspection):
                 requested = capture.sample_stamp if capture else evidence.requested(node.get_clock().now().nanoseconds)
                 transform = buffer.lookup_transform('map','base_footprint',
                     Time(nanoseconds=requested,clock_type=ClockType.ROS_TIME))
+                if camera:
+                    camera_time = Time(nanoseconds=camera.selected[0][0],clock_type=ClockType.ROS_TIME)
+                    camera_base = buffer.lookup_transform('map','base_footprint',camera_time)
+                    camera_optical = buffer.lookup_transform('map',OPTICAL_FRAME,camera_time)
             except (Unavailable,TransformException):
                 continue
             identity = {'observation_id':uuid.uuid4().hex,
                 'authority_identity':hashlib.sha256(json.dumps(initial,separators=(',',':')).encode()).hexdigest()}
             registry.verify_current()
+            if camera:
+                camera.contract.verify_current()
             prepared.verify_current(root,mapping['map_yaml'])
             # A successful lookup can finish after discovery, clock mode or map
             # evidence changes. Recheck before accepting the measured candidate.
@@ -158,6 +187,14 @@ def _observe(root, machine_id, *, timeout, now, require_settled, inspection):
             if capture:
                 try:
                     result = capture.measure(observed_at,node.get_clock().now().nanoseconds,transform)
+                    if camera:
+                        robot = capture.measure_robot(camera.selected[0][0],observed_at,
+                            node.get_clock().now().nanoseconds,camera_base)
+                        result['camera'] = camera.describe(capture.sample_stamp,observed_at,
+                            node.get_clock().now().nanoseconds,robot,camera_optical)
+                        result['schema_version'] = 2
+                        result['scope'] = ('time-associated public telemetry, settled robot poses and raw camera evidence; '
+                                           'not a diagnosis, a hold or maintenance authorization')
                 except InspectionPending:
                     continue
             else:
@@ -172,13 +209,29 @@ def _observe(root, machine_id, *, timeout, now, require_settled, inspection):
                     raise Unavailable('settled_inspection_pose_required')
             result.update(**identity,map_binding=mapping['binding'],map_observed_age_s=observed_at-bound_at)
             remaining()
+            if camera:
+                def storage_guard():
+                    rclpy.spin_once(node,timeout_sec=min(.001,remaining()))
+                    camera.contract.verify_current()
+                    prepared.verify_current(root,mapping['map_yaml'])
+                    fence()
+                    remaining()
+                store = CaptureStore(registry.root,result['observation_id'])
+                result = store.save(result,camera.selected[0][2],storage_guard)
+            remaining()
+            accepted = True
             return result
     finally:
-        if listener is not None:
-            listener.unregister()
-        if node is not None:
-            node.destroy_node()
-        rclpy.try_shutdown()
+        try:
+            if store is not None and not accepted:
+                store.reject()
+        finally:
+            if store is not None:store.close()
+            if listener is not None:
+                listener.unregister()
+            if node is not None:
+                node.destroy_node()
+            rclpy.try_shutdown()
 
 
 def run(root, machine_id, *, timeout=10., now=time.monotonic, require_settled=False):
@@ -193,3 +246,8 @@ def read_inspection_state(root, machine_id, *, timeout=10., now=time.monotonic):
 def read_machine_observation(root, machine_id, *, timeout=10., now=time.monotonic):
     """Capture same-time telemetry/robot evidence on one live observer, without actions."""
     return _observe(root,machine_id,timeout=timeout,now=now,require_settled=True,inspection=True)
+
+
+def capture_machine_observation(root, machine_id, *, timeout=10., now=time.monotonic):
+    """Acquire a joint observation with a bounded, verified local camera bundle."""
+    return _observe(root,machine_id,timeout=timeout,now=now,require_settled=True,inspection=True,with_camera=True)

@@ -2,6 +2,7 @@
 import copy
 import importlib.util
 import json
+import math
 from pathlib import Path
 import sys
 from types import ModuleType, SimpleNamespace as NS
@@ -39,6 +40,12 @@ class Harness:
         self.telemetry_hook = None
         self.drop_telemetry = self.missing_telemetry_publisher = False
         self.odom_delay_ns = 0
+        self.drop_image = self.drop_info = self.missing_camera_publisher = False
+        self.camera_hook = None
+        self.camera_order = ('image','info')
+        self.next_camera = 1600000000
+        self.camera_lookups = []
+        self.wrong_camera_tf = False
         owner = self
         parameters = {
             '/map_server':{'yaml_filename':str(self.map_path),'frame_id':'map','topic_name':'map','use_sim_time':True},
@@ -56,7 +63,8 @@ class Harness:
                                         orientation=NS(x=p['origin'][3],y=p['origin'][4],z=p['origin'][5],w=p['origin'][6]))))
         class Node:
             def create_subscription(self, kind,topic,callback,qos):
-                assert topic in ('/navigation/health','/map','/odom','/station/telemetry')
+                assert topic in ('/navigation/health','/map','/odom','/station/telemetry','/camera/image_raw','/camera/camera_info')
+                if topic=='/camera/image_raw':assert qos.depth==1 and qos.reliability=='reliable'
                 owner.callbacks[topic] = callback
                 if topic == '/map': callback(grid())
                 return NS(topic=topic)
@@ -83,8 +91,11 @@ class Harness:
             def get_publishers_info_by_topic(self,topic):
                 if topic=='/odom' and owner.missing_odom_publisher: return []
                 if topic=='/station/telemetry' and owner.missing_telemetry_publisher:return []
+                if topic.startswith('/camera/') and owner.missing_camera_publisher:return []
                 owners = NAV_TOPICS.get(topic,BASE_TOPICS.get(topic,[]))
                 if topic=='/station/telemetry':owners=[('station_telemetry','std_msgs/msg/String')]
+                if topic.startswith('/camera/'):
+                    owners=[('ros_gz_bridge','sensor_msgs/msg/'+('Image' if topic.endswith('image_raw') else 'CameraInfo'))]
                 return [NS(node_name=name,node_namespace='/',topic_type=kind,
                            endpoint_gid=[i+1]*(23)+[2 if owner.changed_gid else 1],
                            qos_profile=NS(durability='transient_local')) for i,(name,kind) in enumerate(owners)]
@@ -102,11 +113,21 @@ class Harness:
         class Buffer:
             def __init__(self,**kwargs): pass
             def lookup_transform(self,parent,child,stamp):
-                assert (parent,child) == ('map','base_footprint')
+                assert parent=='map' and child in ('base_footprint','camera_optical_frame')
                 owner.lookups.append(stamp.nanoseconds)
+                owner.camera_lookups.append((child,stamp.nanoseconds))
                 if owner.no_tf: raise LookupError('controlled missing transform')
                 if owner.lookup_hook: owner.lookup_hook()
-                return transform(stamp.nanoseconds+int(owner.wrong_tf),*owner.pose)
+                result = transform(stamp.nanoseconds+int(owner.wrong_tf),*owner.pose)
+                if child=='camera_optical_frame':
+                    x,y,yaw = owner.pose
+                    sr,cr = math.sin(-1.570796/2),math.cos(-1.570796/2)
+                    ox,oy,oz,ow = sr*cr,sr*sr,cr*sr,cr*cr
+                    z,w = math.sin(yaw/2),math.cos(yaw/2)
+                    result.child_frame_id = child
+                    result.transform.translation = NS(x=x+.28*math.cos(yaw),y=y+.28*math.sin(yaw),z=.34+int(owner.wrong_camera_tf))
+                    result.transform.rotation = NS(x=w*ox-z*oy,y=w*oy+z*ox,z=w*oz+z*ow,w=w*ow-z*oz)
+                return result
         def spin(node,timeout_sec):
             owner.wall += timeout_sec
             if not owner.paused: owner.sim += round(timeout_sec*1e9)
@@ -128,6 +149,21 @@ class Harness:
                 if owner.telemetry_hook:packet=owner.telemetry_hook(packet)
                 if not owner.drop_telemetry and packet is not None:
                     owner.callbacks['/station/telemetry'](NS(data=json.dumps(packet)))
+            if '/camera/image_raw' in owner.callbacks and owner.sim>=owner.next_camera:
+                owner.next_camera = owner.sim+200000000
+                focal = 640/(2*math.tan(.6))
+                header = NS(frame_id='camera_optical_frame',stamp=NS(sec=owner.sim//10**9,nanosec=owner.sim%10**9))
+                messages = {'image':NS(header=copy.deepcopy(header),width=640,height=480,encoding='rgb8',step=1920,
+                                       is_bigendian=0,data=bytes((7,31,193))*(640*480)),
+                            'info':NS(header=copy.deepcopy(header),width=640,height=480,distortion_model='plumb_bob',
+                                      d=[0.]*5,k=[focal,0.,320.,0.,focal,240.,0.,0.,1.],r=[1.,0.,0.,0.,1.,0.,0.,0.,1.],
+                                      p=[focal,0.,320.,0.,0.,focal,240.,0.,0.,0.,1.,0.],binning_x=0,binning_y=0,
+                                      roi=NS(x_offset=0,y_offset=0,width=0,height=0,do_rectify=False))}
+                for kind in owner.camera_order:
+                    if getattr(owner,'drop_'+kind):continue
+                    message = messages[kind]
+                    if owner.camera_hook:owner.camera_hook(kind,message)
+                    owner.callbacks['/camera/'+('image_raw' if kind=='image' else 'camera_info')](message)
         def unregister(): owner.unregistered = True
         def shutdown(): owner.shutdown = True
         exports = {
@@ -137,6 +173,7 @@ class Harness:
             'rclpy.parameter':{'Parameter':lambda *a,**kw:NS(),'parameter_value_to_python':lambda v:v},
             'rclpy.qos':{'QoSProfile':NS,'DurabilityPolicy':NS(TRANSIENT_LOCAL='transient_local'),'ReliabilityPolicy':NS(RELIABLE='reliable'),'qos_profile_sensor_data':NS()},
             'std_msgs.msg':{'String':NS},'nav_msgs.msg':{'OccupancyGrid':NS,'Odometry':NS},
+            'sensor_msgs.msg':{'Image':NS,'CameraInfo':NS},
             'nav_msgs.srv':{'GetMap':NS(Request=NS)},'rcl_interfaces.srv':{'GetParameters':NS(Request=NS)},
             'tf2_ros':{'Buffer':Buffer,'TransformException':LookupError,'TransformListener':lambda *a:NS(unregister=unregister)},
         }
