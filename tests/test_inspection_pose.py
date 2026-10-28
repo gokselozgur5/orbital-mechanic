@@ -33,7 +33,7 @@ class InspectionPoseTests(RegistryFixture):
     def test_all_three_nominal_poses_have_measured_position_and_heading(self):
         for machine,y in (('pump',1.8),('cooler',0.),('power_unit',-1.8)):
             value = self.measure(y=y,machine=machine)
-            self.assertEqual(value['schema_version'],2)
+            self.assertEqual(value['schema_version'],3)
             self.assertTrue(value['within_inspection_pose'])
             self.assertEqual(value['inspection_pose']['target_xy_yaw'],[2.,y,0.])
             self.assertEqual(value['inspection_pose']['xy_error_m'],0.)

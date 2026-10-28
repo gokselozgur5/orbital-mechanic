@@ -102,6 +102,7 @@ Local integration tests pass; native commissioning remains pending.
 
 [Measured machine proximity and inspection pose](docs/PROXIMITY.md) combine
 registered control geometry, verified map binding, localization health and
-exact-time robot TF. The query can require the measured inspection position and
-heading. Local core/adapter tests pass. Native measurement, stationarity and
-inspection/action acceptance remain open; pose evidence alone grants no permission.
+exact-time robot TF. The query can require the measured inspection position,
+heading and a fresh half-second stopped-odometry window. Local core/adapter tests
+pass. Native measurement and inspection/action acceptance remain open; sampled
+robot state alone grants no permission.

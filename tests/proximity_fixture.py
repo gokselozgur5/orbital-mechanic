@@ -28,6 +28,10 @@ class Harness:
         self.lookup_hook = None
         self.lookups = []
         self.pose = (2.,1.8,0.)
+        self.moving = self.drop_odom = False
+        self.spin_hook = None
+        self.call_hook = None
+        self.missing_odom_publisher = False
         owner = self
         parameters = {
             '/map_server':{'yaml_filename':str(self.map_path),'frame_id':'map','topic_name':'map','use_sim_time':True},
@@ -45,7 +49,7 @@ class Harness:
                                         orientation=NS(x=p['origin'][3],y=p['origin'][4],z=p['origin'][5],w=p['origin'][6]))))
         class Node:
             def create_subscription(self, kind,topic,callback,qos):
-                assert topic in ('/navigation/health','/map')
+                assert topic in ('/navigation/health','/map','/odom')
                 owner.callbacks[topic] = callback
                 if topic == '/map': callback(grid())
                 return NS(topic=topic)
@@ -57,6 +61,7 @@ class Harness:
                 assert path.endswith('/get_parameters') or path == '/map_server/map'
                 def call(request):
                     owner.reads.append((path,getattr(request,'names',None)))
+                    if owner.call_hook: owner.call_hook(path)
                     if path == '/map_server/map': value = NS(map=grid())
                     else:
                         values = parameters[path.removesuffix('/get_parameters')].copy()
@@ -69,6 +74,7 @@ class Harness:
             def destroy_client(self,client):
                 owner.clients.remove(client)
             def get_publishers_info_by_topic(self,topic):
+                if topic=='/odom' and owner.missing_odom_publisher: return []
                 owners = NAV_TOPICS.get(topic,BASE_TOPICS.get(topic,[]))
                 return [NS(node_name=name,node_namespace='/',topic_type=kind,
                            endpoint_gid=[i+1]*(23)+[2 if owner.changed_gid else 1],
@@ -96,9 +102,15 @@ class Harness:
             owner.wall += timeout_sec
             if not owner.paused: owner.sim += round(timeout_sec*1e9)
             owner.sequence += 1
+            if owner.spin_hook: owner.spin_hook()
             if not owner.drop_health and '/navigation/health' in owner.callbacks:
                 owner.callbacks['/navigation/health'](NS(data=health(owner.sequence,owner.sim/1e9,
                     healthy=not owner.unhealthy,epoch=int(owner.changed_epoch))))
+            if not owner.drop_odom and '/odom' in owner.callbacks:
+                pose = transform(owner.sim,*owner.pose).transform
+                owner.callbacks['/odom'](NS(header=NS(frame_id='odom',stamp=NS(sec=owner.sim//10**9,nanosec=owner.sim%10**9)),
+                    child_frame_id='base_footprint',pose=NS(pose=NS(position=pose.translation,orientation=pose.rotation)),
+                    twist=NS(twist=NS(linear=NS(x=.1 if owner.moving else 0.,y=0.,z=0.),angular=NS(x=0.,y=0.,z=0.)))))
         def unregister(): owner.unregistered = True
         def shutdown(): owner.shutdown = True
         exports = {
@@ -106,8 +118,8 @@ class Harness:
             'rclpy.clock':{'ClockType':NS(ROS_TIME=1)},
             'rclpy.time':{'Time':lambda **kw:NS(**kw)},
             'rclpy.parameter':{'Parameter':lambda *a,**kw:NS(),'parameter_value_to_python':lambda v:v},
-            'rclpy.qos':{'QoSProfile':NS,'DurabilityPolicy':NS(TRANSIENT_LOCAL='transient_local'),'ReliabilityPolicy':NS(RELIABLE='reliable')},
-            'std_msgs.msg':{'String':NS},'nav_msgs.msg':{'OccupancyGrid':NS},
+            'rclpy.qos':{'QoSProfile':NS,'DurabilityPolicy':NS(TRANSIENT_LOCAL='transient_local'),'ReliabilityPolicy':NS(RELIABLE='reliable'),'qos_profile_sensor_data':NS()},
+            'std_msgs.msg':{'String':NS},'nav_msgs.msg':{'OccupancyGrid':NS,'Odometry':NS},
             'nav_msgs.srv':{'GetMap':NS(Request=NS)},'rcl_interfaces.srv':{'GetParameters':NS(Request=NS)},
             'tf2_ros':{'Buffer':Buffer,'TransformException':LookupError,'TransformListener':lambda *a:NS(unregister=unregister)},
         }
@@ -116,7 +128,7 @@ class Harness:
             self.modules[name] = ModuleType(name)
             self.modules[name].__dict__.update(values)
 
-    def run(self,timeout=2.,invoke=None):
+    def run(self,timeout=2.,invoke=None,require_settled=False):
         with patch.dict(sys.modules,self.modules):
             spec = importlib.util.spec_from_file_location('orbital.ros_map_binding',ROOT/'orbital/ros_map_binding.py')
             mapping = importlib.util.module_from_spec(spec)
@@ -125,4 +137,4 @@ class Harness:
             with patch.dict(sys.modules,{'orbital.ros_map_binding':mapping}):
                 if invoke is not None:
                     return invoke()
-                return ros_proximity.run(self.root,'pump',timeout=timeout,now=lambda:self.wall)
+                return ros_proximity.run(self.root,'pump',timeout=timeout,now=lambda:self.wall,require_settled=require_settled)

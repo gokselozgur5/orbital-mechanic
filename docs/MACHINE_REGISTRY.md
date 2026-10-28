@@ -115,8 +115,9 @@ named process or start another world to update it. Compare all three native mode
 and control bindings and retain exact source/registry identities. This turn made
 no native deployment, movement, world change or maintenance intervention.
 
-The [measured proximity and inspection pose query](PROXIMITY.md) now passes local
-core/adapter tests; native commissioning remains open. Next: stationary interlocks,
+The [measured proximity and settled inspection pose query](PROXIMITY.md) now
+passes local core/adapter tests; native commissioning remains open. It combines
+fresh robot geometry with a bounded direct-odometry settling history. Next:
 observation freshness/validity, then inspection and maintenance endpoints. Keep
 the independent collision evaluator and hidden scenario state outside planner
 inputs throughout that integration.

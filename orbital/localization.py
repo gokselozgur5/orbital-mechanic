@@ -7,6 +7,9 @@ arguments are never evidence. No command or target is emitted by this module.
 from dataclasses import dataclass
 import math
 
+STATIONARY_LINEAR_M_S = .01
+STATIONARY_ANGULAR_RAD_S = .02
+
 
 def finite(values, size):
     return len(values) == size and all(math.isfinite(v) for v in values)
@@ -139,7 +142,8 @@ class LocalizationHealth:
         valid = (parent == 'odom' and child == 'base_footprint' and planar_pose_valid(position, orientation) and finite(linear, 3) and finite(angular, 3))
         accepted = self._record('odom', stamp, now, valid)
         if accepted:
-            self.stationary = math.hypot(*linear) <= .01 and math.hypot(*angular) <= .02
+            self.stationary = (math.hypot(*linear) <= STATIONARY_LINEAR_M_S
+                               and math.hypot(*angular) <= STATIONARY_ANGULAR_RAD_S)
         elif not valid:
             self.stationary = False
         return accepted

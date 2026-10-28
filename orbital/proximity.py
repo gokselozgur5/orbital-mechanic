@@ -10,6 +10,7 @@ from orbital.inspection_geometry import ARRIVAL_XY_TOLERANCE_M, ARRIVAL_YAW_TOLE
 from orbital.localization import planar_pose_valid
 from orbital.machines import MAX_CONTROL_DISTANCE_M
 from orbital.navigation_client import _json
+from orbital.stationary import StationaryWindow
 
 TF_DELAY_NS = 100000000
 MAX_POSE_AGE_NS = 200000000
@@ -36,6 +37,7 @@ class ProximityEvidence:
         self.epoch_floor = None
         self.last_clock = None
         self.error = None
+        self.stationary = StationaryWindow()
 
     def health(self, text, now):
         if self.error:
@@ -51,12 +53,42 @@ class ProximityEvidence:
             elif self.source != source:
                 self.error = 'localization_generation_changed'
                 return
+            old_generation,old_sequence = self.lease.generation,self.lease.sequence
             accepted = self.lease.observe(report, now)
+            if (not accepted or not report['stationary'] or self.lease.generation!=old_generation
+                    or (old_sequence is not None and report['sequence']!=old_sequence+1)):
+                self.stationary.reset('health_transition_or_gap')
             if not accepted and report['healthy'] and self.lease.reason != 'ready':
                 self.error = 'invalid_health_sequence_or_time'
         except (ValueError, TypeError, OverflowError):
             self.lease.invalidate('malformed_health')
             self.error = 'malformed_health'
+            self.stationary.reset('malformed_health')
+
+    def stationary_health(self, now, sim_ns):
+        self.lease.tick(now)
+        if self.error or self.epoch_floor is None or not self.lease.healthy or not self.lease.stationary:
+            self.stationary.reset('localization_unavailable_or_moving')
+            return False
+        try:
+            age = timestamp(sim_ns)-timestamp(round(self.lease.sim_time*1e9))
+        except (Unavailable,TypeError,OverflowError):
+            self.stationary.reset('invalid_health_clock')
+            return False
+        if not 0<=age<=MAX_POSE_AGE_NS:
+            self.stationary.reset('health_simulation_time_mismatch')
+            return False
+        return True
+
+    def odometry(self, msg, now, sim_ns):
+        if not self.stationary_health(now,sim_ns):
+            return False
+        return self.stationary.observe(msg,now,sim_ns,self.epoch_floor)
+
+    def settled(self, now, sim_ns):
+        requested = self.requested(sim_ns)
+        self.stationary_health(now,sim_ns)
+        return self.stationary.report(now,sim_ns,requested)
 
     def requested(self, sim_ns):
         timestamp(sim_ns)
@@ -77,6 +109,7 @@ class ProximityEvidence:
         # pending_stop belongs to motion ownership. This observer neither clears
         # it nor treats a distance observation as a stop acknowledgment.
         if not self.lease.healthy:
+            self.stationary.reset('localization_unavailable')
             raise Unavailable('localization_unavailable')
         health_stamp = timestamp(round(self.lease.sim_time*1e9))
         if not 0 <= sim_ns-health_stamp <= MAX_POSE_AGE_NS:
@@ -108,17 +141,22 @@ class ProximityEvidence:
         pose_reason = ('outside_control_distance' if not within_distance else
                        'outside_inspection_position' if not within_xy else
                        'outside_inspection_heading' if not within_yaw else 'within_pose_bounds')
-        return {'schema_version':2, 'valid':True, 'machine_id':self.machine.machine_id,
+        stationary = self.stationary.report(now,sim_ns,requested)
+        within_pose = within_distance and within_xy and within_yaw
+        return {'schema_version':3, 'valid':True, 'machine_id':self.machine.machine_id,
                 'registry_identity':self.registry.identity, 'frame':'map',
                 'control_xy_m':list(self.machine.control), 'robot_pose_xyz_xyzw':[*position,*orientation],
                 'pose_stamp_ns':requested, 'observed_sim_stamp_ns':sim_ns,
                 'health':{'run_id':self.lease.run_id, 'epoch':self.lease.epoch,
-                          'sequence':self.lease.sequence, 'received_age_s':now-self.lease.received_at},
+                          'sequence':self.lease.sequence, 'received_age_s':now-self.lease.received_at,
+                          'stationary':self.lease.stationary},
                 'distance_m':distance, 'distance_limit_m':MAX_CONTROL_DISTANCE_M,
                 'within_distance':within_distance,
-                'within_inspection_pose':within_distance and within_xy and within_yaw,
+                'within_inspection_pose':within_pose,
+                'stationarity':stationary,
+                'within_settled_inspection_pose':within_pose and stationary['settled'] and self.lease.stationary,
                 'inspection_pose':{'target_xy_yaw':list(goal), 'robot_yaw_rad':yaw,
                                    'xy_error_m':xy_error, 'xy_limit_m':ARRIVAL_XY_TOLERANCE_M,
                                    'yaw_error_rad':yaw_error, 'yaw_limit_rad':ARRIVAL_YAW_TOLERANCE_RAD,
                                    'reason':pose_reason},
-                'scope':'localized distance and inspection pose bounds; not inspection or maintenance authorization'}
+                'scope':'localized pose and sampled settled robot state; not inspection or maintenance authorization'}

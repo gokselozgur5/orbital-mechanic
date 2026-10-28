@@ -7,6 +7,7 @@ import time
 import uuid
 
 from orbital.machine_registry import MachineRegistry
+from orbital.map_snapshot import MapSnapshot
 from orbital.navigation_graph import BASE_TOPICS, NAV_TOPICS
 from orbital.proximity import ProximityEvidence, Unavailable
 
@@ -14,7 +15,7 @@ MAP_MAX_AGE_S = .5
 
 
 def authority(node):
-    expected = {name:BASE_TOPICS[name] for name in ('/tf','/tf_static','/clock','/map')}
+    expected = {name:BASE_TOPICS[name] for name in ('/tf','/tf_static','/clock','/map','/odom')}
     expected['/navigation/health'] = NAV_TOPICS['/navigation/health']
     snapshot = []
     for topic, owners in expected.items():
@@ -30,15 +31,22 @@ def authority(node):
     return sorted(snapshot)
 
 
-def run(root, machine_id, *, timeout=10., now=time.monotonic):
+def run(root, machine_id, *, timeout=10., now=time.monotonic, require_settled=False):
     if not math.isfinite(timeout) or not .1 <= timeout <= 10.:
         raise ValueError('timeout_must_be_between_0.1_and_10_seconds')
     deadline = now()+timeout
     registry = MachineRegistry.load(root)
     evidence = ProximityEvidence(registry,machine_id)
+    if type(require_settled) is not bool:
+        raise ValueError('require_settled_must_be_boolean')
+    prepared = MapSnapshot.prepare(registry)
+    if now()>=deadline:
+        raise Unavailable('proximity_deadline_exceeded')
     import rclpy
+    from nav_msgs.msg import Odometry
     from rclpy.clock import ClockType
     from rclpy.parameter import Parameter
+    from rclpy.qos import qos_profile_sensor_data
     from rclpy.time import Time
     from std_msgs.msg import String
     from tf2_ros import Buffer, TransformException, TransformListener
@@ -53,6 +61,8 @@ def run(root, machine_id, *, timeout=10., now=time.monotonic):
         listener = TransformListener(buffer,node)
         node.create_subscription(String,'/navigation/health',
                                  lambda msg:evidence.health(msg.data,now()),10)
+        node.create_subscription(Odometry,'/odom',
+            lambda msg:evidence.odometry(msg,now(),node.get_clock().now().nanoseconds),qos_profile_sensor_data)
 
         def remaining():
             left = deadline-now()
@@ -67,19 +77,35 @@ def run(root, machine_id, *, timeout=10., now=time.monotonic):
                 initial = authority(node)
             except Unavailable:
                 pass
-        mapping = collect(node,root,timeout=remaining())
-        remaining()
-        if mapping.get('passed') is not True or mapping['binding']['config_sha256'] != registry.config_sha256:
-            raise Unavailable('map_registry_binding_mismatch')
-        bound_at = now()
-
-        def fence():
+        def source_fence():
             if node.get_parameter('use_sim_time').value is not True:
                 raise Unavailable('simulation_clock_mode_changed')
             if authority(node) != initial:
                 raise Unavailable('publisher_generation_changed')
             if evidence.error:
                 raise Unavailable(evidence.error)
+
+        settled_generation = None
+        if require_settled:
+            while settled_generation is None:
+                rclpy.spin_once(node,timeout_sec=min(.02,remaining()))
+                source_fence()
+                try:
+                    state = evidence.settled(now(),node.get_clock().now().nanoseconds)
+                except Unavailable:
+                    continue
+                if state['settled']:
+                    settled_generation = state['generation']
+        mapping = collect(node,root,timeout=remaining(),prepared=prepared)
+        remaining()
+        if mapping.get('passed') is not True or mapping['binding']['config_sha256'] != registry.config_sha256:
+            raise Unavailable('map_registry_binding_mismatch')
+        bound_at = now()
+
+        def fence():
+            source_fence()
+            if require_settled and evidence.stationary.generation!=settled_generation:
+                raise Unavailable('stationarity_changed_during_query')
             observed_at = now()
             if not 0 <= observed_at-bound_at < MAP_MAX_AGE_S:
                 raise Unavailable('map_binding_observation_expired')
@@ -95,6 +121,7 @@ def run(root, machine_id, *, timeout=10., now=time.monotonic):
             except (Unavailable,TransformException):
                 continue
             registry.verify_current()
+            prepared.verify_current(root,mapping['map_yaml'])
             # A successful lookup can finish after discovery, clock mode or map
             # evidence changes. Recheck before accepting the measured candidate.
             observed_at = fence()
@@ -103,6 +130,11 @@ def run(root, machine_id, *, timeout=10., now=time.monotonic):
             except Unavailable:
                 continue
             remaining()
+            if require_settled:
+                if evidence.stationary.generation!=settled_generation:
+                    raise Unavailable('stationarity_changed_during_query')
+                if not result['within_settled_inspection_pose']:
+                    raise Unavailable('settled_inspection_pose_required')
             result.update(observation_id=uuid.uuid4().hex, map_binding=mapping['binding'],
                           map_observed_age_s=observed_at-bound_at,
                           authority_identity=hashlib.sha256(json.dumps(initial,separators=(',',':')).encode()).hexdigest())
@@ -113,3 +145,8 @@ def run(root, machine_id, *, timeout=10., now=time.monotonic):
         if node is not None:
             node.destroy_node()
         rclpy.try_shutdown()
+
+
+def read_inspection_state(root, machine_id, *, timeout=10., now=time.monotonic):
+    """Acquire fresh robot preconditions internally; a stored result is no action token."""
+    return run(root,machine_id,timeout=timeout,now=now,require_settled=True)

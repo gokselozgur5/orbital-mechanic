@@ -11,6 +11,36 @@ original localization branch; six migrated commits do not count as new deliverie
 [Draft PR #16](https://github.com/gokselozgur5/orbital-mechanic/pull/16) links #6/#7,
 which remain open until full live localization/navigation acceptance and review.
 
+**OM-044: settled inspection preconditions pass locally; native inspection remains pending.**
+The production `read_inspection_state` reader and CLI `--require-settled-pose`
+mode require the accepted inspection pose and direct stopped odometry spanning
+at least 0.5 seconds in both monotonic receipt time and simulation time. All
+velocity axes use the localization monitor's existing 0.01 m/s and 0.02 rad/s
+norm limits. Motion, invalid/out-of-order data, stale/gapped samples and unhealthy,
+moving, frozen or missing health reset the window. Health simulation freshness is
+checked throughout accumulation, not only at the final pose. A post-settling
+invalidation rejects this query even if later callbacks settle again.
+
+The full map geometry is validated before ROS observation starts. During live
+collection and after TF lookup, exact source/artifact fingerprints are checked;
+actual server/retained cells and consumer parameters/subscriptions are still read.
+This avoids spending the short odometry lease on repeated geometry computation.
+The map revision remains `f02e11a9cb0e4f2f`; previous explicit native reload gates
+still apply. Schema 3 exposes stationarity separately from distance/pose.
+
+All 332 local tests pass, including 25 new tests covering the production reader, shipped CLI,
+source changes, cleanup and invalidation races through controlled transport.
+A discriminating regression reproduces two stale/future-health history acceptances
+before the freshness correction and rejects both afterward. Baseline, shell,
+Python AST and XML checks pass. With real wall-clock paced controlled callbacks,
+recomputing geometry during observation expires the stopped history; the prepared
+path accepts a fresh settled pose with the same live map checks. Native odometry/TF
+timing and stopping remain uncommissioned; sampled settling is not a hold or an
+inspection/action authorization. A fresh Thor SSH attempt timed out (exit 255),
+with no native changes. Issue #8 / draft PR #19 remain In Progress. Next: fresh
+public observation handling and inspection integration, plus pending native gates.
+Contract: [PROXIMITY.md](PROXIMITY.md).
+
 **OM-043: measured inspection pose passes locally; native inspection remains pending.**
 The map validator and public registry now require each nominal inspection heading
 to face its actual west-face control. The same fresh TF used for distance reports
