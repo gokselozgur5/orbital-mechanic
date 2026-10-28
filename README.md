@@ -15,7 +15,7 @@ bash scripts/launch-thor.sh
 
 Stop with `bash scripts/stop-thor.sh`. The demonstration runs as a transient user service; it does not start at boot. See [operations](docs/OPERATIONS.md) for installation, Mac SSH forwarding, Foxglove compatibility and sensor verification.
 
-The world contains a wheeled robot, three machine props, camera, lidar, IMU and odometry. Machine telemetry comes from a separate simplified causal model. Its geometry and maintenance controls are not yet integrated with the robot.
+The world contains a wheeled robot, three machine props, camera, lidar, IMU and odometry. Machine telemetry comes from a separate simplified causal model. A public source registry binds its machine IDs to configured scene/control geometry; robot proximity, inspection and maintenance actions remain unintegrated.
 
 Run the ROS-independent checks on a development machine:
 
@@ -95,3 +95,8 @@ Local observer tests pass; native capture and physical route acceptance are pend
 [Sampled collision evaluation](docs/COLLISION_EVALUATION.md) checks observed body,
 wheel and support geometry against the recorded world. Local tests pass; this
 does not establish continuous collision freedom or native route acceptance.
+
+[Machine registry and telemetry](docs/MACHINE_REGISTRY.md) bind each public
+measurement to configured scene identities, source revisions and simulation time.
+Local integration tests pass; native commissioning and trusted robot proximity
+remain pending.

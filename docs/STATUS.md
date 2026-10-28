@@ -11,6 +11,28 @@ original localization branch; six migrated commits do not count as new deliverie
 [Draft PR #16](https://github.com/gokselozgur5/orbital-mechanic/pull/16) links #6/#7,
 which remain open until full live localization/navigation acceptance and review.
 
+**OM-041: machine registry and telemetry binding pass locally; native inspection remains pending.**
+The `codex/machine-integration` branch is based on navigation head `fd86e6e` and
+contributes to [issue #8](https://github.com/gokselozgur5/orbital-mechanic/issues/8).
+The existing telemetry process now binds its three machine IDs to configured SDF
+models, collision boxes, controls and inspection poses. A versioned public catalog
+identifies exact world/map source bytes; each measurement carries the catalog,
+simulation timestamp, run/sequence and units while retaining the causal model's
+existing observation fields. Scenario truth remains outside the projection.
+
+All 271 local tests pass, including 27 new registry/core/actual-adapter cases.
+The identical source-change regression fails on `fd86e6e` and passes now: changed
+source stops publication before the next measurement. Duplicate/missing geometry,
+invalid controls, source boundaries, clock pause/reset/gaps, clock-mode changes,
+identity drift and publication errors have discriminating controls. Registry
+poses are declared source geometry, not runtime truth or robot proximity.
+
+This is a stacked maintenance change; navigation PR #16 and its native gates stay
+open. Thor SSH still times out and no remote process/source changed. Native
+telemetry/schema/source commissioning, trusted proximity/orientation/stationarity,
+freshness/noisy data handling and inspection/actions remain outstanding. See
+[MACHINE_REGISTRY.md](MACHINE_REGISTRY.md) for contracts and deployment gates.
+
 **OM-027: sampled collision evaluation passes locally; native contact/route acceptance is pending.**
 The evaluator covers the body box, caster sphere and both finite wheel cylinders
 against every declared static obstacle box at observed poses. The recorder now

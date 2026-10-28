@@ -17,6 +17,11 @@ The user requested at least 100 meaningful atomic commits on 2026-10-28. Product
 
 Work in the isolated `codex/nav2-integration` worktree. Preserve the original localization branch and dirty main drafts. Thor operations stay in the project root and tmux orbital-work; own only the Orbital process tree/domain42/GZ orbital-maintenance. Never touch .229, Signal's files/services or Foxglove UI. Coordinate and announce bounded simulator movement/restarts before acceptance runs.
 
+Independent maintenance integration uses the isolated `codex/machine-integration`
+worktree/branch, stacked on the navigation branch with its own issue/PR scope.
+This permits local progress while native navigation prerequisites remain open;
+it does not waive any phase acceptance gate or add history-migration credit.
+
 Phases 0/1 retain their recorded acceptance. Phase 2 requires actual Nav2 routes, independent arrival and collision evidence, and measured failure stopping. Synthetic action tests alone do not close it. Maintenance and scripted missions require fresh public observations and explicit safe failure outcomes. Keep hidden fault truth exclusively in the evaluator.
 
 Planner integration is tested offline with replay fixtures. No paid provisioning or live model calls without explicit authorization. Offline success is not a claim of live provider quality or full Phase 5 acceptance. Raw recordings, credentials, generated outputs and large artifacts stay outside Git.
