@@ -273,3 +273,42 @@ results and source hashes. Full live failure/route acceptance remains open.
 
 The artifact check does not complete any of steps 1–5. Private raw reports live
 outside Git; retain their source hash when collecting later acceptance evidence.
+
+
+## Unseeded admission commissioning (OM-011)
+
+Inside `tmux orbital-work` on Thor, after coordinating the localization restart:
+
+```bash
+bash scripts/check-navigation-unseeded.sh --restart-localization
+```
+
+This stops navigation, verifies the base graph and latched stationary feedback,
+restarts only localization, and proves that active AMCL has no automatic pose or
+map transform while scan/odometry/IMU advance. It then launches the actual
+navigation service and configures its native servers. Global costmap activation
+requires map-to-base TF, so this unseeded check keeps Nav2 inactive; active-stack
+readiness with a seeded localizer is covered separately by OM-010.
+
+The live supervisor receives six schema-valid, run-bound commands: request and
+arm for each of the three machine names. Each must return an explicit rejection
+with the exact sequence and operation. Arm uses a well-formed but unowned target
+because the preceding request must not allocate one. No target ownership, healthy
+localization, velocity request, guard release or odometry movement is allowed.
+Before/after Gazebo pose must agree within 1 mm / 0.001 rad; this endpoint check
+is not continuous collision or trajectory evidence. The probe always requests
+stop on exit, and the runner tears navigation down on failure.
+
+Results and source binding are written under `runtime/unseeded-<UTC timestamp>`.
+Success intentionally leaves localization **unseeded**, native Nav2 **inactive**,
+and the supervisor running with the guard **latched**. Explicit seeding/recovery
+is a separate operator step; never describe this state as ready to navigate.
+
+Thor run `unseeded-20261028T114225Z` passed with AMCL state 3 and all native Nav2
+servers state 2. Six commands were rejected, zero velocity requests were observed,
+and independent pose endpoints agreed exactly at Gazebo output precision. Source
+identity: `145b33f33caa9b155cc4019592a16f99ecf8d4b4e83afb5b1888c97b034a4cbe`.
+A seeded negative control failed on the unexpected AMCL pose, as intended. An earlier
+startup failed closed because the graph gate retained incomplete discovery samples,
+even though its final graph was correct; the successful explicit rerun does not
+remove that startup usability limitation. Both reports are retained privately.

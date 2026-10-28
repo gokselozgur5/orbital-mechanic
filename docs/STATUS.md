@@ -11,7 +11,27 @@ original localization branch; six migrated commits do not count as new deliverie
 [Draft PR #16](https://github.com/gokselozgur5/orbital-mechanic/pull/16) links #6/#7,
 which remain open until full live localization/navigation acceptance and review.
 
-**OM-010: the native navigation stack is now deployed on Thor in guarded standby.**
+**OM-011: live unseeded admission refusal passed. Current runtime is unseeded.**
+The packaged Thor run `unseeded-20261028T114225Z` restarted only localization and
+navigation. Active AMCL produced no pose/map transform while real sensors advanced.
+All six supervisor commands (request/arm for each machine) were explicitly rejected;
+no target was allocated, no velocity request emitted and the guard stayed latched.
+Gazebo endpoint pose change was zero at output precision. Native Nav2 servers are
+now configured/inactive (state 2), deliberately awaiting explicit localization.
+The simulator InvocationID stayed unchanged. Source identity:
+`145b33f33caa9b155cc4019592a16f99ecf8d4b4e83afb5b1888c97b034a4cbe`.
+
+A seeded negative control rejected the probe's unseeded premise. The first full
+launch also failed closed on incomplete DDS discovery; its final graph was valid,
+but accumulated earlier missing-endpoint observations rejected startup. The failed
+report is retained alongside the successful explicit rerun. This conservative
+startup false rejection remains a usability limitation, not a passed route test.
+The runner was corrected for an already-stopped navigation unit and Thor's absent
+ripgrep. All 92 local tests pass. Next: explicit offset-seed commissioning and
+localization recovery, then measured routes. See the OM-011 reproduction below
+in [NAV2_INTEGRATION.md](NAV2_INTEGRATION.md).
+
+**OM-010 historical acceptance: the native navigation stack reached guarded active standby.**
 Planner, controller and navigator passed unconfigured → inactive → active checks;
 the health observer and supervisor are running. Guard remained latched, localization
 was healthy and no supervisor velocity requests were emitted. A repeated read-only
@@ -104,7 +124,7 @@ These stopping times supersede the earlier instantaneous-drive measurements for 
 
 AMCL/map-server launch, explicit uncertain seeding and evaluator probes are now preserved in this branch. The earlier live `body-max-localization` job exited 0: a deliberately offset seed converged after bounded motion to 0.073151 m XY / 0.006311 rad yaw error; a fresh-origin restart measured 0.008088 m / 0.011434 rad. Demo stop removed all seven localization processes in 1.402 s, and neither implicit world start nor implicit localization restart was allowed.
 
-The current source also adds an unseeded negative gate to the probe/runners; that addition is syntax-checked but not yet live-accepted. These scripts remain separate from the isolated health components and have not been redeployed or merged into shared `main` while another Claude's ownership is unresolved. See [NAVIGATION.md](NAVIGATION.md) for exact scope. Initial commissioning does not close #6/#7 or prove autonomous routes.
+The unseeded gate was subsequently deployed and passed in OM-011 above. The integration branch is still separate from shared `main`. See [NAVIGATION.md](NAVIGATION.md) for exact scope. Initial commissioning does not close #6/#7 or prove autonomous routes.
 
 ## Offline target lifecycle policy
 
