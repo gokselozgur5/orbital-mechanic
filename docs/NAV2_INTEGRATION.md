@@ -57,10 +57,39 @@ was reaped, and native logs recorded plugin cleanup. No world, route or movement
 was started. These results prove this configuration and output interface, not
 collision avoidance, measured speed tracking or the production graph.
 
+## Known-map planner trial (OM-004)
+
+`config/nav2-planner.yaml` loads Navfn with unknown-space rejection and zero goal
+substitution tolerance. The global costmap uses the known static map, a 0.37 m
+robot radius and 0.70 m inflation. Production parameters use simulation time.
+
+Run `scripts/check-nav2-planner.py` with Jazzy loaded in empty localhost-only
+ROS domain 84, inside Thor tmux `orbital-work`. The probe starts only the native
+planner/global costmap, publishes the versioned SDF-derived occupancy grid and
+an isolated synthetic TF, and overrides time to wall clock. It never launches a
+controller or world. Each owned child is terminated and reaped on exit.
+
+The 2026-10-28 native run passed six successful plans: origin to each machine,
+pump to cooler, cooler to power unit, and a detour around the cooler to (4, 0).
+The detour was 8.232 m rather than the obstructed 4 m straight line. Every segment,
+including start/goal connectors, passed an independent swept-disc check against
+original occupied/unknown cell squares. This check does not trust Nav2 inflation
+or merely inspect sparse waypoints. A deliberately direct path through the cooler
+was rejected. Native occupied/outside goals aborted with codes 206/204 and no path.
+No velocity publisher appeared on the four checked command topics.
+
+Planner parameters SHA-256:
+`5c04bce652d44a536ac76ed0be3c19493361f13c94b45e08298faa29c28cca1a`.
+The JSON result binds probe, map, world and checker hashes and preserves complete
+route points. Six local regressions exercise sparse crossings, footprint-only
+collisions, unknown cells, invalid/outside paths and corner geometry; all 72 local
+tests pass. These results establish static route clearance, not tracking accuracy,
+dynamic collision avoidance or physical arrival. The test TF is not localization.
+
 ## Next gates
 
 1. Controller/local-costmap inactive configuration is verified above; validate actual motion after full composition.
-2. Configure the known-map planner/global costmap and navigation behavior tree.
+2. Known-map planning is verified above; compose the navigation behavior tree.
 3. Configure actual lifecycle nodes in an empty private domain, inspect their
    graph and parameters, and verify the real stamped publisher type.
 4. Deploy the owned navigation service with shared-world preflight and a latched
