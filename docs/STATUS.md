@@ -11,6 +11,32 @@ original localization branch; six migrated commits do not count as new deliverie
 [Draft PR #16](https://github.com/gokselozgur5/orbital-mechanic/pull/16) links #6/#7,
 which remain open until full live localization/navigation acceptance and review.
 
+**OM-047: joint machine/robot observations pass locally; native inspection remains pending.**
+The production `read_machine_observation` reader and `machine-observation.py`
+CLI use one live observer to bind a selected public telemetry sample to robot TF
+at exactly the same simulation timestamp. The sample must be produced at or
+after a fresh half-second stopped-odometry window. That window's generation and
+the selected packet remain pinned through actual map collection and final checks.
+Fresh lagging odometry may catch up within the fixed 200 ms sample lifetime;
+new telemetry, movement, expiry or changed source/clock/publisher/map evidence
+rejects the query. There is no later-sample or latest-TF fallback.
+
+The target-specific schema-1 record includes public measurements, original
+run/sequence/source/time identities and the complete measured robot-state report.
+It contains no hidden fault fields, camera, diagnosis, stop acknowledgement or
+action permission. The packet hash correlates to the full original public wire
+sample, not a digest recomputable from the returned target-only measurements.
+
+All 383 local tests pass, including 21 new core/adapter/CLI tests with controlled
+transport. The causal baseline, shell syntax, Python AST, XML and whitespace
+checks also pass. Native DDS timing and inspection acceptance remain unverified.
+A fresh strict SSH read
+to Thor timed out (exit 255); no native state changed. The map revision remains
+`f02e11a9cb0e4f2f`, with the existing explicit reload/seed/readiness requirements.
+Issue #8 / draft PR #19 remain In Progress. Camera evidence, cancellable inspection
+ownership and maintenance endpoints remain subsequent work.
+Contract: [INSPECTION_OBSERVATION.md](INSPECTION_OBSERVATION.md).
+
 **OM-046: fresh public telemetry reading passes locally; native integration remains pending.**
 The existing OM-041 public projection is reused rather than reimplemented for
 OM-045 credit. `observe-station.py` and its production reader accept only the exact
@@ -35,8 +61,9 @@ existing proximity-adapter acceptance failures during result preparation. The
 same tests pass after ID/digest work moves before the final validity checks;
 proximity's old adapter is loaded directly from `24860f4` with unchanged runtime
 dependencies. A fresh Thor SSH attempt timed out (exit 255); no
-native source/process changed. Joint robot/telemetry inspection records, camera
-capture, inspection endpoints and all native gates remain open under issue #8.
+native source/process changed. The joint record is now integrated locally in
+OM-047 above; camera capture, inspection endpoints and all native gates remain
+open under issue #8.
 Contract: [STATION_OBSERVATION.md](STATION_OBSERVATION.md).
 
 OM-046's follow-up size correction rejects an oversized string before UTF-8

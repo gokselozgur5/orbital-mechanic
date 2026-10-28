@@ -3,8 +3,10 @@
 These are design contracts, not implemented endpoints. The same tools serve scripted and LLM planners.
 
 The read-only [station observation CLI](STATION_OBSERVATION.md) now implements
-fresh public telemetry consumption. It does not yet expose this common mission
-envelope, combine robot inspection state or provide maintenance endpoints.
+fresh public telemetry consumption. The [machine observation CLI](INSPECTION_OBSERVATION.md)
+combines a selected public sample with exact same-time settled robot state. These
+readers do not yet expose this common mission envelope, capture camera evidence
+or provide maintenance endpoints.
 
 ## Common envelope
 

@@ -3,8 +3,9 @@
 OM-046 adds the actual read-only consumer for the existing OM-041 public telemetry
 projection. It contributes to issue #8 without duplicating that projection or
 claiming OM-045 as a new delivery. Local software tests execute the shipped
-publisher and reader under controlled transport. Native ROS commissioning,
-joint robot/telemetry inspection and maintenance actions remain pending.
+publisher and reader under controlled transport. The separate
+[joint machine/robot reader](INSPECTION_OBSERVATION.md) now passes local tests.
+Native ROS commissioning, complete inspection and maintenance actions remain pending.
 
 On the commissioned Orbital runtime, after sourcing ROS:
 
@@ -139,9 +140,9 @@ scene and owned demo/localization/navigation generations. Coordinate the pending
 map regeneration/reload/seed/readiness and preserve the guardian for armed trials.
 
 Do not combine stored CLI JSON with separately sampled robot pose and call it
-inspection. The next integration must acquire current telemetry and settled
-robot state together, bind their source/time identities and maintain the gates
-through inspection ownership. Camera capture, inspection endpoint cancellation,
+inspection. The joint reader acquires current telemetry and settled robot state
+together and binds their source/time identities through result acceptance.
+Maintaining gates through inspection ownership, camera capture, endpoint cancellation,
 noise confidence, causal diagnosis and maintenance permissions remain separate
 acceptance work. No native deployment, movement or maintenance action occurred
 for this delivery.

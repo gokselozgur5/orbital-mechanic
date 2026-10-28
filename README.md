@@ -15,7 +15,7 @@ bash scripts/launch-thor.sh
 
 Stop with `bash scripts/stop-thor.sh`. The demonstration runs as a transient user service; it does not start at boot. See [operations](docs/OPERATIONS.md) for installation, Mac SSH forwarding, Foxglove compatibility and sensor verification.
 
-The world contains a wheeled robot, three machine props, camera, lidar, IMU and odometry. Machine telemetry comes from a separate simplified causal model. A public source registry binds its machine IDs to configured scene/control geometry. A read-only localized proximity query passes local tests; native proximity, inspection and maintenance actions remain uncommissioned.
+The world contains a wheeled robot, three machine props, camera, lidar, IMU and odometry. Machine telemetry comes from a separate simplified causal model. A public source registry binds its machine IDs to configured scene/control geometry. Read-only proximity and same-time machine/robot observation queries pass local tests; native proximity, inspection and maintenance actions remain uncommissioned.
 
 Run the ROS-independent checks on a development machine:
 
@@ -103,7 +103,7 @@ Local integration tests pass; native commissioning remains pending.
 [Fresh public station observations](docs/STATION_OBSERVATION.md) read the existing
 telemetry through strict schema, source, sequence and dual-clock freshness checks.
 The CLI returns measurements without inferring a diagnosis. Local publisher-to-reader
-tests pass; native transport and joint robot/inspection integration remain pending.
+tests pass; native transport remains pending.
 
 [Measured machine proximity and inspection pose](docs/PROXIMITY.md) combine
 registered control geometry, verified map binding, localization health and
@@ -111,3 +111,8 @@ exact-time robot TF. The query can require the measured inspection position,
 heading and a fresh half-second stopped-odometry window. Local core/adapter tests
 pass. Native measurement and inspection/action acceptance remain open; sampled
 robot state alone grants no permission.
+
+[Same-time machine observations](docs/INSPECTION_OBSERVATION.md) acquire a public
+telemetry sample and the settled robot pose at that sample's exact timestamp on
+one live observer. Local core/adapter/CLI tests pass; camera evidence, inspection
+ownership and native acceptance remain pending.

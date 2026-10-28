@@ -88,8 +88,9 @@ restore initial power/fault state, so future action owners must invalidate work
 across a run change rather than resume an old intervention. No maintenance action
 endpoint exists in this slice. The [public observation reader](STATION_OBSERVATION.md)
 now implements local consumer freshness, strict missing/invalid-data refusal and
-sampled publisher/clock identity checks. Native commissioning, noise confidence,
-joint local inspection and interlocked actions remain subsequent integration work.
+sampled publisher/clock identity checks. A joint machine/robot record is now
+integrated locally as described below. Native commissioning, noise confidence,
+inspection ownership and interlocked actions remain subsequent integration work.
 
 Registry drift, station identity drift, invalid clock, changed clock mode and
 publication failures propagate instead of publishing a fabricated measurement.
@@ -120,7 +121,9 @@ no native deployment, movement, world change or maintenance intervention.
 The [measured proximity and settled inspection pose query](PROXIMITY.md) now
 passes local core/adapter tests; native commissioning remains open. It combines
 fresh robot geometry with a bounded direct-odometry settling history. The separate
-public observation reader validates fresh telemetry locally. Next: join these
-observations in inspection records, then inspection and maintenance endpoints. Keep
+public observation reader validates fresh telemetry locally. The
+[joint observation reader](INSPECTION_OBSERVATION.md) now binds a selected public
+sample to exact same-time settled robot state on one observer. Camera evidence,
+inspection ownership and maintenance endpoints remain pending. Keep
 the independent collision evaluator and hidden scenario state outside planner
 inputs throughout that integration.

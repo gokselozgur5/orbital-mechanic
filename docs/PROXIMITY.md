@@ -185,13 +185,15 @@ window on actual native clocks. Then measure all three controls against
 independent simulator pose,
 keeping ground truth outside the query's input graph. Preserve the trial
 guardian for any armed movement. No native deployment, movement or maintenance
-action was performed for this delivery. Native pose/stationarity commissioning,
-fresh public observations and inspection endpoints remain open under issue #8.
+action was performed for this delivery. Native pose/stationarity commissioning
+and inspection endpoints remain open under issue #8.
 
 The separate [station observation reader](STATION_OBSERVATION.md) now validates
-public telemetry freshness locally. Its result and a separate pose query do not
-form an atomic inspection: joint source/time/robot-state capture and inspection
-ownership still need integration.
+public telemetry freshness locally. The [joint observation reader](INSPECTION_OBSERVATION.md)
+now acquires the selected telemetry and exact same-time settled pose on one live
+observer. Its local tests pass; native commissioning and inspection ownership
+remain pending. Separately stored station and pose results cannot substitute for
+that live capture.
 
 OM-046 also moves result identity/digest preparation before this query's final
 source/health/pose/map/deadline gates. An identical controlled regression fails

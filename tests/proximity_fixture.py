@@ -8,6 +8,7 @@ from types import ModuleType, SimpleNamespace as NS
 from unittest.mock import patch
 
 from orbital.machine_registry import MachineRegistry
+from orbital.machine_telemetry import MachineTelemetry
 from orbital.navigation_graph import BASE_TOPICS,NAV_TOPICS
 from orbital import ros_proximity
 from test_proximity import health,transform
@@ -32,6 +33,12 @@ class Harness:
         self.spin_hook = None
         self.call_hook = None
         self.missing_odom_publisher = False
+        self.telemetry_model = MachineTelemetry(MachineRegistry.load(self.root))
+        self.next_telemetry = 1500000000
+        self.last_telemetry = None
+        self.telemetry_hook = None
+        self.drop_telemetry = self.missing_telemetry_publisher = False
+        self.odom_delay_ns = 0
         owner = self
         parameters = {
             '/map_server':{'yaml_filename':str(self.map_path),'frame_id':'map','topic_name':'map','use_sim_time':True},
@@ -49,7 +56,7 @@ class Harness:
                                         orientation=NS(x=p['origin'][3],y=p['origin'][4],z=p['origin'][5],w=p['origin'][6]))))
         class Node:
             def create_subscription(self, kind,topic,callback,qos):
-                assert topic in ('/navigation/health','/map','/odom')
+                assert topic in ('/navigation/health','/map','/odom','/station/telemetry')
                 owner.callbacks[topic] = callback
                 if topic == '/map': callback(grid())
                 return NS(topic=topic)
@@ -75,7 +82,9 @@ class Harness:
                 owner.clients.remove(client)
             def get_publishers_info_by_topic(self,topic):
                 if topic=='/odom' and owner.missing_odom_publisher: return []
+                if topic=='/station/telemetry' and owner.missing_telemetry_publisher:return []
                 owners = NAV_TOPICS.get(topic,BASE_TOPICS.get(topic,[]))
+                if topic=='/station/telemetry':owners=[('station_telemetry','std_msgs/msg/String')]
                 return [NS(node_name=name,node_namespace='/',topic_type=kind,
                            endpoint_gid=[i+1]*(23)+[2 if owner.changed_gid else 1],
                            qos_profile=NS(durability='transient_local')) for i,(name,kind) in enumerate(owners)]
@@ -108,9 +117,17 @@ class Harness:
                     healthy=not owner.unhealthy,epoch=int(owner.changed_epoch))))
             if not owner.drop_odom and '/odom' in owner.callbacks:
                 pose = transform(owner.sim,*owner.pose).transform
-                owner.callbacks['/odom'](NS(header=NS(frame_id='odom',stamp=NS(sec=owner.sim//10**9,nanosec=owner.sim%10**9)),
+                stamp = owner.sim-owner.odom_delay_ns
+                owner.callbacks['/odom'](NS(header=NS(frame_id='odom',stamp=NS(sec=stamp//10**9,nanosec=stamp%10**9)),
                     child_frame_id='base_footprint',pose=NS(pose=NS(position=pose.translation,orientation=pose.rotation)),
                     twist=NS(twist=NS(linear=NS(x=.1 if owner.moving else 0.,y=0.,z=0.),angular=NS(x=0.,y=0.,z=0.)))))
+            if '/station/telemetry' in owner.callbacks and owner.sim>=owner.next_telemetry:
+                owner.next_telemetry = owner.sim+500000000
+                packet = owner.telemetry_model.sample(owner.sim)
+                owner.last_telemetry = copy.deepcopy(packet)
+                if owner.telemetry_hook:packet=owner.telemetry_hook(packet)
+                if not owner.drop_telemetry and packet is not None:
+                    owner.callbacks['/station/telemetry'](NS(data=json.dumps(packet)))
         def unregister(): owner.unregistered = True
         def shutdown(): owner.shutdown = True
         exports = {
