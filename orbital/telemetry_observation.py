@@ -7,6 +7,7 @@ from orbital.machine_telemetry import UNITS
 from orbital.machines import MACHINE_IDS
 from orbital.navigation_client import _json
 from orbital.proximity import Unavailable
+from orbital.station_control import control
 
 MAX_AGE_S = 1.0  # Two nominal 0.5-second publisher periods, in both clocks.
 MAX_AGE_NS = 1000000000
@@ -34,7 +35,9 @@ def decode(text, registry):
             or len(text.encode('utf-8'))>MAX_PACKET_BYTES):
         raise ValueError('invalid_telemetry')
     value = _json(text,MAX_PACKET_BYTES)
-    if (set(value)!=FIELDS or type(value['schema_version']) is not int or value['schema_version']!=1
+    version = value.get('schema_version')
+    expected_fields = FIELDS | {'control'} if version == 2 else FIELDS
+    if (set(value)!=expected_fields or type(version) is not int or version not in (1, 2)
             or value['source']!='simplified_station_model' or value['units']!=UNITS
             or canonical(value['registry'])!=canonical(registry.public())
             or not isinstance(value['run_id'],str) or re.fullmatch('[0-9a-f]{32}',value['run_id']) is None
@@ -48,6 +51,8 @@ def decode(text, registry):
                 or not number(machine['temperature_c'],low=-273.15)
                 or not number(machine['current_a']) or not number(machine['vibration_au'])):
             raise ValueError('invalid_telemetry')
+    if version == 2:
+        control(value['control'], value['stamp_ns'])
     return value
 
 

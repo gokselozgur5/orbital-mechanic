@@ -1,14 +1,16 @@
 """Run-bound inspection client; ACK, uncertain transport and terminal result differ."""
 import time
 import uuid
+from orbital import inspection_protocol
 
-from orbital.inspection_protocol import (MAX_REPLY_BYTES, action_view, canonical, command,
-                                        decode, request_digest, result, state)
+from orbital.inspection_protocol import MAX_REPLY_BYTES, canonical, decode
 
 
 class InspectionClient:
-    def __init__(self, publish, spin, authority, *, now=time.monotonic):
+    def __init__(self, publish, spin, authority, *, now=time.monotonic,
+                 protocol=inspection_protocol, family='inspection', operation='inspect'):
         self.publish, self.spin, self.authority, self.now = publish, spin, authority, now
+        self.protocol, self.family, self.operation = protocol, family, operation
         self.latest = self.received = self.pinned = self.failure = None
         self.state_count = 0
         self.pending = self.ack = self.terminal = None
@@ -18,7 +20,7 @@ class InspectionClient:
 
     def observe_state(self, text):
         try:
-            value = state(text)
+            value = self.protocol.state(text)
             if self.latest is not None:
                 if value['run_id'] != self.latest['run_id'] or value['sequence'] <= self.latest['sequence']:
                     raise ValueError('server_generation_changed')
@@ -32,11 +34,11 @@ class InspectionClient:
             self.failure = 'invalid_or_changed_server_state'
 
     def check_digest(self, value):
-        if self.pending['op'] == 'inspect' and value['request_sha256'] != request_digest(self.pending):
+        if self.pending['op'] == self.operation and value['request_sha256'] != self.protocol.request_digest(self.pending):
             raise ValueError('request_identity_mismatch')
 
     def accept_result(self, value):
-        result(value)
+        self.protocol.result(value)
         if self.matches(value):
             self.check_digest(value)
             if self.terminal is not None and self.terminal != value:
@@ -54,20 +56,19 @@ class InspectionClient:
                 return
             if (set(value) != {'schema_version', 'kind', 'run_id', 'mission_id', 'action_id', 'command_id', 'op', 'accepted', 'error_code', 'action'}
                     or type(value['schema_version']) is not int or value['schema_version'] != 1
-                    or value['kind'] != 'inspection_reply' or not self.matches(value)
+                    or value['kind'] != self.family+'_reply' or not self.matches(value)
                     or value['op'] != self.pending['op'] or type(value['accepted']) is not bool):
                 raise ValueError('invalid_reply')
             if value['accepted']:
                 if value['error_code'] is not None:
                     raise ValueError('invalid_reply')
-                action_view(value['action'])
+                self.protocol.action_view(value['action'])
                 if not self.matches(value['action']):
                     raise ValueError('invalid_reply')
                 self.check_digest(value['action'])
                 if value['action']['result'] is not None:
                     self.accept_result(value['action']['result'])
-            elif value['action'] is not None or value['error_code'] not in {
-                    'invalid_argument', 'wrong_run', 'action_conflict', 'unavailable', 'busy', 'history_full', 'unknown_action'}:
+            elif value['action'] is not None or value['error_code'] not in self.protocol.REJECTION_CODES:
                 raise ValueError('invalid_reply')
             self.ack = value
         except (ValueError, TypeError, KeyError):
@@ -93,7 +94,7 @@ class InspectionClient:
             self.spin(min(.02, deadline-self.now()))
             if self.failure: break
             if self.state_count >= 2 and self.valid(): return self.latest
-        raise ValueError('inspection_server_unavailable')
+        raise ValueError(self.family+'_server_unavailable')
 
     def receipt(self, transport, code=None):
         identity = {} if self.pending is None else {k: self.pending[k] for k in ('run_id', 'mission_id', 'action_id')}
@@ -114,15 +115,15 @@ class InspectionClient:
         return self.receipt('uncertain', 'cancellation_unconfirmed')
 
     def execute(self, value, *, wait=True):
-        value = command(canonical(value))
+        value = self.protocol.command(canonical(value))
         self.pending, self.ack, self.terminal = value, None, None
         if not self.valid() or value['run_id'] != self.latest['run_id']:
-            return self.receipt('not_sent', 'inspection_server_unavailable')
-        if value['op'] == 'inspect' and not self.latest['ready']:
-            return self.receipt('not_sent', 'inspection_server_not_ready')
+            return self.receipt('not_sent', self.family+'_server_unavailable')
+        if value['op'] == self.operation and not self.latest['ready']:
+            return self.receipt('not_sent', self.family+'_server_not_ready')
         try:
             self.publish(canonical(value))
-            budget = value['arguments']['timeout_s']+2. if value['op'] == 'inspect' else 2.
+            budget = value['arguments']['timeout_s']+2. if value['op'] == self.operation else 2.
             deadline = self.now()+budget
             while self.now() < deadline:
                 self.spin(min(.02, deadline-self.now()))
@@ -132,13 +133,25 @@ class InspectionClient:
                     if not self.ack['accepted']: return self.receipt('rejected', self.ack['error_code'])
                     if not wait or value['op'] == 'query': return self.receipt('acknowledged')
         except KeyboardInterrupt:
-            if value['op'] != 'inspect': return self.receipt('uncertain', 'interrupted')
+            if value['op'] != self.operation: return self.receipt('uncertain', 'interrupted')
         except (ValueError, RuntimeError, OSError):
             pass
-        if value['op'] == 'inspect':
+        if value['op'] == self.operation:
             try: return self.cancel_after_loss()
             except (KeyboardInterrupt, ValueError, RuntimeError, OSError): pass
         return self.receipt('uncertain', 'terminal_result_unconfirmed')
+
+
+def close_client(node, ros, outcome):
+    """Cleanup failure cannot turn a transmitted request into `not_sent`."""
+    failed = False
+    for close in ((node.destroy_node,) if node is not None else ()) + (ros.try_shutdown,):
+        try:
+            close()
+        except (KeyboardInterrupt, ValueError, RuntimeError, OSError):
+            failed = True
+    if failed and outcome is not None:
+        outcome['client_cleanup_failed'] = True
 
 
 def run_ros(op, *, machine_id=None, timeout_s=10., run_id=None, mission_id=None, action_id=None, wait=True):
@@ -149,7 +162,7 @@ def run_ros(op, *, machine_id=None, timeout_s=10., run_id=None, mission_id=None,
     from std_msgs.msg import String
     from orbital.ros_proximity import authority
     from orbital.ros_inspection import OWNER, TOPICS
-    node = None
+    node = outcome = None
     rclpy.init(args=[], signal_handler_options=SignalHandlerOptions.NO)
     try:
         node = rclpy.create_node('orbital_inspection_client_'+uuid.uuid4().hex[:12])
@@ -161,12 +174,14 @@ def run_ros(op, *, machine_id=None, timeout_s=10., run_id=None, mission_id=None,
                                 ('/inspection/result', client.observe_result)):
             node.create_subscription(String, topic, lambda msg, callback=callback: callback(msg.data), 10)
         status = client.discover()
-        if op == 'status': return status
+        if op == 'status':
+            outcome = status
+            return outcome
         value = {'schema_version': 1, 'command_id': uuid.uuid4().hex, 'op': op,
                  'run_id': run_id or status['run_id'], 'mission_id': mission_id or uuid.uuid4().hex,
                  'action_id': action_id or uuid.uuid4().hex,
                  'arguments': {'machine_id': machine_id, 'timeout_s': timeout_s} if op == 'inspect' else {}}
-        return client.execute(value, wait=wait)
+        outcome = client.execute(value, wait=wait)
+        return outcome
     finally:
-        if node is not None: node.destroy_node()
-        rclpy.try_shutdown()
+        close_client(node, rclpy, outcome)

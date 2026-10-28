@@ -10,6 +10,8 @@ MAX_COMMAND_BYTES = 4096
 MAX_REPLY_BYTES = 16384
 MAX_ACTIONS = 64
 TERMINAL = frozenset(('succeeded', 'failed', 'cancelled', 'timed_out'))
+REJECTION_CODES = frozenset(('invalid_argument', 'wrong_run', 'action_conflict', 'unavailable',
+                             'busy', 'history_full', 'unknown_action'))
 
 
 def canonical(value):

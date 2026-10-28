@@ -1,6 +1,6 @@
 # Tool and scenario contracts — draft v0.1
 
-These are design contracts with an implemented inspection subset. The same tools
+These are design contracts with implemented inspection and isolation subsets. The same tools
 are intended for scripted and LLM planners; a complete planner gateway is not yet implemented.
 
 The read-only [station observation CLI](STATION_OBSERVATION.md) now implements
@@ -14,8 +14,10 @@ It uses typed bounded JSON on String topics, not a generated ROSIDL action type.
 
 The [maintenance action contract](MAINTENANCE_ACTIONS.md) specifies required
 transitions, effect evidence and cancellation ownership. Its public recovery
-checker is implemented and used by the ROS-free baseline; mutating ROS endpoints
-and their native acceptance remain pending.
+checker is implemented and used by the ROS-free baseline. The
+[isolation endpoint](MAINTENANCE_ENDPOINT.md) now serializes an owned effect on
+the published station behind an acknowledged guard hold, resolved navigation,
+fresh pose and live capture. Reset/restore and native acceptance remain pending.
 
 ## Common envelope
 

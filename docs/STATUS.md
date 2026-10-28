@@ -11,7 +11,41 @@ original localization branch; six migrated commits do not count as new deliverie
 [Draft PR #16](https://github.com/gokselozgur5/orbital-mechanic/pull/16) links #6/#7,
 which remain open until full live localization/navigation acceptance and review.
 
-**OM-051: maintenance contract and public recovery postcondition implemented locally.**
+**OM-052: owned isolation on the published station passes local controls.**
+The [isolation endpoint](MAINTENANCE_ENDPOINT.md) joins the actual telemetry
+model, a non-expiring exact guard hold, resolved navigation ownership and new
+live camera inspection. Guard reset/new navigation cannot bypass the hold.
+After artifact I/O the parent rechecks source, settled pose and unchanged
+200 ms freshness gates before one serialized isolation. Schema-2 telemetry
+records the exact applied effect and revision; a newer same-run observed pair
+must confirm target power/current/vibration before exact hold release.
+
+Cancellation before commitment prevents the effect and still waits for child
+reap. Cancellation after commitment reports the verified applied isolation and
+never restores power. Unknown effects or lost evidence retain nonterminal
+ownership. The CLI supports status/isolate/query/cancel and never blindly
+retransmits isolation. Legacy schema-1 telemetry remains readable; reset/restore
+are refused by the new command parser. Restart reconciliation is still pending.
+
+Composed local tests run the actual station, guard, navigation supervisor,
+separate capture worker and artifact reader. The child receives actual parent
+station publications. A shared test clock isolates child teardown from freshness
+timing, then resumes for post-effect observations; production keeps real
+monotonic time. These controls are not native DDS/timing or physical acceptance.
+Thor SSH still closes before authentication; no native deployment occurred.
+OM-053 needs independently retained/native isolation acceptance without counting
+this verifier again. Reset/restore and the complete maintenance mission remain open.
+
+All 523 local tests pass (50 new), plus the model baseline, 168 Python AST files,
+17 shell scripts and two XML sources. Source bytes stayed unchanged throughout
+final validation. Three isolated negative controls fail the intended assertions
+when final freshness, unknown-effect ownership or held-guard reset refusal is
+disabled. These are test-sensitivity controls, not historical production bugs.
+An earlier candidate falsely classified its own acknowledged release as hold
+loss; the retained failing test passes after tracking the release request.
+Evidence: `reviews/orbital-delivery-20261028/om052` in the operator workspace.
+
+**OM-051: maintenance contract and public recovery postcondition implemented locally (preceding delivery).**
 The [maintenance action contract](MAINTENANCE_ACTIONS.md) defines allowed
 isolate/reset/restore transitions, drive-hold and fresh-observation requirements,
 effect confirmation, cancellation and unresolved ownership for #9. The actual
@@ -25,7 +59,7 @@ public station measurements, with every machine powered, bus voltage at least
 measurements discard the window; malformed input/run changes fail the reader.
 The ROS-free baseline uses this checker rather than hidden `Station.recovered`.
 Its synthetic geometry and synchronous calls remain prototype-only; no mutating
-ROS endpoint, hold or native maintenance acceptance is claimed. This work is
+ROS endpoint, hold or native maintenance acceptance was claimed for OM-051. This work is
 isolated on `codex/maintenance-actions`, stacked on `codex/machine-integration`.
 
 All 473 local tests pass (12 new), plus the model baseline, 154 Python AST files,

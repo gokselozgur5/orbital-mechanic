@@ -4,14 +4,16 @@ OM-051 defines the contract for issue #9 and implements its public station
 recovery checker in `orbital/maintenance_observation.py`.
 
 The ROS-free baseline uses that checker instead of the model's hidden
-`Station.recovered` oracle. Mutating ROS endpoints, their ownership/hold protocol
-and native maintenance acceptance are still unimplemented. The inspection
+`Station.recovered` oracle. OM-052 now implements an
+[owned isolation endpoint](MAINTENANCE_ENDPOINT.md), exact guard inhibition and
+versioned applied-effect telemetry. Reset/restore and native maintenance
+acceptance remain unimplemented. The inspection
 endpoint supplies observations; its cached success grants no maintenance rights.
 
 ## Ownership and admission
 
-The existing `MachineTelemetry` owns one causal `Station`. The future actuator
-must mutate that exact instance, serialized with sampling and clock reset.
+The existing `MachineTelemetry` owns one causal `Station`. The isolation actuator
+mutates that exact instance, serialized with sampling and clock reset.
 Starting a second model in the inspection process would change a private copy
 and cannot satisfy an operation on the published station.
 
@@ -38,7 +40,8 @@ Before each effect, the executor must independently establish:
   operation preconditions below. Revalidate after I/O and immediately before the
   serialized mutation; neither an old file nor a successful ACK renews freshness.
 
-These are requirements for OM-052 onward, not claims about the current prototype.
+OM-052 implements these gates for isolation and tests their local composition.
+The same gates remain requirements for future reset/restore operations.
 The pure `Station.intervene` caller-supplied geometry checks are insufficient for
 ROS admission. The hold must compose with the existing motion supervisor and
 drive guard; adding an unrelated boolean in the maintenance process is not enough.
@@ -99,8 +102,10 @@ telemetry sequence/stamp from the pinned station run and revision. An unrelated
 revision, an admission reply or a zero-current measurement alone cannot confirm
 its reset. A complete trace needs retained source samples and the action record,
 not merely a hash or caller-supplied identifier. The new wire schema, actuator
-record/replay storage and atomic reset/publication semantics are pending work;
-schema 1 and the existing inspection readers are unchanged in OM-051.
+record/replay storage are implemented for isolation in OM-052. Telemetry schema 2
+adds `control.revision` and the exact `control.last_applied` record; strict
+readers also accept legacy schema 1 for read-only observation. Reset/publication
+semantics remain pending. The endpoint requires schema 2 for its live inspection.
 
 The simplified model's power switch and current represent simulated isolation.
 They do not prove physical electrical isolation or absence of residual energy on
@@ -108,7 +113,7 @@ hardware. The shared bus can remain at 28 V while a single target is isolated.
 
 ## Public recovery checker
 
-`RecoveryEvidence` consumes the existing strict schema-1 station telemetry via
+`RecoveryEvidence` consumes strict schema-1 or schema-2 station telemetry via
 `TelemetryEvidence`. It pins the complete three-machine catalog and registry,
 one station run, ordered sequence/stamps, model-time consistency and receipt plus
 simulation ages below one second. The live adapter must also keep the source
@@ -170,8 +175,11 @@ ownership. Client transport loss can return `uncertain` while the owner remains
 active. A final result must retain both the requested terminal status and known
 effect disposition (`not_applied`, `applied` or `unknown`) with evidence references.
 Failure/cancellation after a real effect must never masquerade as a mutation-free
-rejection. The future lifecycle implementation must test every boundary, restart,
-replay and loss path. Schema/state names here are requirements, not a deployed API.
+rejection. The isolation implementation retains unknown effects as nonterminal
+`unresolved` ownership; it emits no terminal result until a known disposition
+and exact hold release are verified. Restart never adopts that old action.
+Reset/restore require their own boundary and loss controls. The current API is
+documented separately.
 
 ## Acceptance and remaining work
 
@@ -185,9 +193,11 @@ healthy / repaired / escalated with 0 / 3 / 0 interventions.
 Run `python3 -m unittest discover -s tests -v` and
 `python3 scripts/run-machine-baseline.py` from the repository root.
 
-OM-052–060 still require the actual station-owner endpoint, drive hold, versioned
-effect telemetry, isolation/reset/restore verification, cancellation/replay/loss
-behavior and native sequence acceptance. Reuse this postcondition checker in
+OM-052 implements the station-owner isolation endpoint, drive hold, versioned
+effect telemetry and local isolation verification/cancellation/replay controls.
+OM-053 must add independently retained/native isolation acceptance; it must not
+count the same verifier implementation again. Reset/restore, reconciliation and
+native sequence acceptance remain open through OM-060. Reuse this checker in
 that integration; do not count its implementation twice. The full mission needs
 independent evaluation of causality, collisions, unnecessary interventions and
 safe escalation as well as this observation result. Thor access and preceding

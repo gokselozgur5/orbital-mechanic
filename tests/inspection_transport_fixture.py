@@ -31,10 +31,11 @@ class SharedClock:
     def advance(self, seconds, force=False):
         if force or not self.memory[8]: self.memory[:8] = struct.pack('d', self.now()+seconds)
     def freeze(self): self.memory[8] = 1
+    def unfreeze(self): self.memory[8] = 0
     def close(self): self.memory.close(); self.file.close()
 
 
-def transport(root, origin, clock=None, writer=False):
+def transport(root, origin, clock=None, writer=False, external_telemetry=False):
     prepared = MapSnapshot.prepare(MachineRegistry.load(root))
     case = NS(root=root, directory=prepared.yaml_path.parent, payload=prepared.bundle()['grid'])
     harness = Harness(case)
@@ -47,6 +48,18 @@ def transport(root, origin, clock=None, writer=False):
     # boundary, with its nearest camera frame legitimately preceding settling.
     harness.next_telemetry = (harness.sim//500000000+3)*500000000
     harness.next_camera = ((harness.sim-50000000)//200000000+1)*200000000+50000000
+    station_callback = None
+    last_station = None
+    def deliver_station():
+        nonlocal last_station
+        path = root/'runtime/endpoint-test-telemetry.json'
+        if station_callback is None or not path.exists(): return
+        text = path.read_text()
+        if text == last_station: return
+        packet = json.loads(text)
+        if not 0 <= harness.sim-packet['stamp_ns'] < 1000000000: return
+        last_station = text
+        station_callback(NS(data=text))
     def spin(node, timeout_sec):
         if clock is None:
             time.sleep(timeout_sec)
@@ -58,6 +71,7 @@ def transport(root, origin, clock=None, writer=False):
         # Sensors publish only on a new clock tick, including 1 ms storage polls.
         stamp = 10**9 + (round((wall-origin)*1e9)//20000000)*20000000
         if stamp <= harness.sim:
+            if external_telemetry: deliver_station()
             return
         harness.wall = wall-timeout_sec
         harness.sim = stamp-round(timeout_sec*1e9)
@@ -67,12 +81,17 @@ def transport(root, origin, clock=None, writer=False):
             harness.next_telemetry = (harness.sim//500000000+1)*500000000
         if harness.next_camera != previous_camera:
             harness.next_camera = ((harness.sim-50000000)//200000000+1)*200000000+50000000
+        if external_telemetry: deliver_station()
     harness.modules['rclpy'].spin_once = spin
     create = harness.modules['rclpy'].create_node
     def node(*args, **kwargs):
         value = create(*args, **kwargs)
         subscribe = value.create_subscription
         def subscription(kind, topic, callback, qos):
+            nonlocal station_callback
+            if topic == '/station/telemetry' and external_telemetry:
+                station_callback = callback
+                return NS(topic=topic)
             if topic == '/station/telemetry':
                 # Bind provider startup to subscription, not map-preparation CPU time.
                 stamp = 10**9+round((now()-origin)*1e9)
@@ -91,7 +110,8 @@ if __name__ == '__main__':
     # Test-selected executable installs transport stand-ins, then executes the
     # actual private worker including input, lifeline, context and result logic.
     clock = SharedClock(Path.cwd()) if os.environ.get('ORBITAL_TEST_SHARED_CLOCK') == '1' else None
-    harness = transport(Path.cwd(), float(os.environ['ORBITAL_TEST_ORIGIN']), clock)
+    harness = transport(Path.cwd(), float(os.environ['ORBITAL_TEST_ORIGIN']), clock,
+                        external_telemetry=os.environ.get('ORBITAL_TEST_STATION_PUBLICATIONS') == '1')
     from orbital import ros_proximity
     trace = []
     def telemetry(packet):

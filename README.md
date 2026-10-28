@@ -132,5 +132,8 @@ and three-machine acceptance remain open.
 [Maintenance transitions and postconditions](docs/MAINTENANCE_ACTIONS.md) define
 the required isolate/reset/restore evidence and ownership. A public recovery
 checker now drives the ROS-free baseline's outcome using ten seconds of fresh
-healthy station samples. Mutating ROS endpoints and native maintenance remain
-pending.
+healthy station samples. An [owned isolation endpoint](docs/MAINTENANCE_ENDPOINT.md)
+now joins the actual station model, guard inhibition, navigation quiescence and
+live camera inspection. It confirms the exact effect through newer telemetry
+before releasing its hold. Local controlled-transport checks pass; reset/restore
+and native maintenance acceptance remain pending.

@@ -90,6 +90,10 @@ and telemetry-time robot fields remain, with a `camera` object containing:
 - URDF/bridge source hashes; the outer record retains world/map identities.
 - Image filename, media type, byte count, whole-file SHA-256 and pixel SHA-256.
 
+OM-052's nested telemetry schema 2 adds `telemetry_source.control_revision`.
+This does not change the outer capture schema or grant maintenance permission;
+the maintenance owner validates its exact station revision again before acting.
+
 The ignored directory `runtime/inspection/<observation_id>/` holds `image.ppm`
 and `observation.json`. P6 PPM stores the RGB bytes losslessly with a short
 header; no image library, conversion, crop or annotation changes the pixels.

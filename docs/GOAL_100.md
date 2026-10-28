@@ -111,7 +111,7 @@ All items below start pending except the goal-contract commit itself. Dependenci
 | --- | --- | --- |
 | OM-051 | Maintenance action contract | Define allowed transitions and observable postconditions. |
 | OM-052 | Power-isolation integration | Require verified proximity/stationarity before isolation. |
-| OM-053 | Isolation verification | An acknowledgment alone cannot establish electrical isolation. |
+| OM-053 | Independent isolation acceptance | Retain source observations and native fault/cancellation proof; do not recount OM-052's implemented post-effect verifier. Simulated power-off is not hardware electrical-isolation proof. |
 | OM-054 | Bounded reset integration | Reset only eligible isolated recoverable machine states. |
 | OM-055 | Power-restoration integration | Restore only after action preconditions and inspection pass. |
 | OM-056 | Maintenance cancellation | Cancellation leaves a defined safe machine state. |

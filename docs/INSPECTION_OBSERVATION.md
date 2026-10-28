@@ -89,6 +89,10 @@ Successful JSON has outer `schema_version: 1`, `valid: true` and
 `telemetry_source.time_s` remains elapsed model time, not the absolute sample
 clock. Its `sample_sha256` hashes the full canonical public wire packet, while
 this record intentionally returns only the selected machine's measurements.
+When its nested `schema_version` is 2, `telemetry_source` also includes the
+selected packet's `control_revision`. The outer camera-free schema remains 1
+and the camera extension remains 2; the nested version identifies this addition.
+The full applied-operation record stays in the public station packet.
 The hash supports correlation with a retained original packet; it cannot be
 recomputed from the target-only subset and is not an authenticity proof.
 Returned nested objects cannot mutate the observer's cached evidence.

@@ -120,7 +120,7 @@ class TelemetryObservationTests(RegistryFixture):
 
     def test_catalog_units_source_and_header_cannot_be_substituted(self):
         original=self.model.sample(10**9)
-        for key,replacement in (('schema_version',True),('schema_version',2),('run_id','not-a-run'),
+        for key,replacement in (('schema_version',True),('schema_version',3),('run_id','not-a-run'),
                                 ('sequence',True),('sequence',0),('sequence',2**63),
                                 ('stamp_ns',1e9),('stamp_ns',2**63),('time_s',True),
                                 ('source','other'),('units',{}),('registry',{'identity':self.registry.identity})):

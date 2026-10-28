@@ -21,6 +21,8 @@ from orbital.navigation_command import CommandGate
 from orbital.ros_health_interlock import HealthInterlock
 from orbital.ros_navigation_action import NavigationActionSession
 from orbital.inspection_geometry import ARRIVAL_XY_TOLERANCE_M, ARRIVAL_YAW_TOLERANCE_RAD
+from orbital.inspection_protocol import decode
+from orbital.maintenance_hold import state as hold_state
 
 
 class NavigationSupervisor(HealthInterlock):
@@ -33,6 +35,8 @@ class NavigationSupervisor(HealthInterlock):
         self.session=NavigationActionSession(self,self.policy,waypoints,lambda:self.lease.invalidate('navigation_stop'))
         self.goal_timeout=goal_timeout
         self.guard_state=None;self.guard_at=0.
+        self.maintenance_hold=None;self.maintenance_guard_run=None;self.maintenance_error=False
+        self.maintenance_sequence=0
         self.arm_future=None;self.arm_target=None;self.arm_at=0.
         self.dispatch_stamp=None;self.last_velocity_stamp=None
         self.last_reply=None;self.last_completion=None
@@ -50,11 +54,32 @@ class NavigationSupervisor(HealthInterlock):
 
     def on_guard(self,msg):
         try:
-            state=json.loads(msg.data)
+            state=decode(msg.data)
             if type(state.get('latched')) is not bool:raise ValueError('invalid guard state')
+            maintenance = hold_state(state['maintenance']) if 'maintenance' in state else None
+            previous = self.maintenance_hold
+            if previous is not None:
+                if maintenance is None or maintenance['guard_run_id'] != self.maintenance_guard_run:
+                    raise ValueError('maintenance_guard_generation_lost')
+                if maintenance['active'] != previous and maintenance['last_released'] != previous:
+                    raise ValueError('maintenance_hold_disappeared')
+            current = None if maintenance is None else maintenance['active']
+            if current is not None and not state['latched']:
+                raise ValueError('maintenance_guard_not_latched')
+            self.maintenance_hold=current
+            if maintenance is not None:
+                self.maintenance_guard_run=maintenance['guard_run_id']
+            if current is not None and current != previous:
+                self.lease.invalidate('maintenance_hold')
+                self.policy.cancel('maintenance_hold')
+                if self.session.current is not None:
+                    self.session.cancel(self.session.current, 'maintenance_hold')
             self.guard_state=state;self.guard_at=time.monotonic()
         except (ValueError,TypeError,AttributeError):
             self.guard_state=None
+            if self.maintenance_hold is not None:
+                self.maintenance_error=True
+                self.lease.invalidate('maintenance_guard_lost')
 
     def guard_fresh(self):
         return self.guard_state is not None and time.monotonic()-self.guard_at<.3
@@ -101,6 +126,10 @@ class NavigationSupervisor(HealthInterlock):
             if not self.command_authority_clear():raise ValueError('Competing command authority')
             command=self.commands.decode(msg.data)
             op=command['op'];accepted=False
+            if op!='cancel' and (self.maintenance_hold is not None or self.maintenance_error):
+                self.last_reply={'sequence':command['sequence'],'accepted':False,'op':op,
+                                 'error':'maintenance_hold'}
+                return
             if op!='cancel' and not self.lease.tick(time.monotonic()):
                 self.last_reply={'sequence':command['sequence'],'accepted':False,'op':op}
                 return
@@ -127,7 +156,8 @@ class NavigationSupervisor(HealthInterlock):
         target=self.session.current
         now=time.monotonic()
         self.lease.tick(now)
-        if (target is None or self.lease.stop_required or not self.session.motion_permitted(target)
+        if (self.maintenance_hold is not None or self.maintenance_error
+                or target is None or self.lease.stop_required or not self.session.motion_permitted(target)
                 or not self.guard_fresh() or self.guard_state['latched']):return
         if not self.command_authority_clear():
             self.lease.invalidate('command_authority_ambiguous')
@@ -180,6 +210,7 @@ class NavigationSupervisor(HealthInterlock):
                 try:success=self.arm_future.result().success
                 except Exception:success=False
                 valid=(success and target==self.session.current and self.session.state=='waiting_for_arm'
+                       and self.maintenance_hold is None and not self.maintenance_error
                        and self.policy.armed and self.lease.healthy and self.lease.stationary
                        and not self.lease.stop_required and now-self.arm_at<.5)
                 if valid and self.guard_fresh() and not self.guard_state['latched'] and self.guard_at>=self.arm_at:
@@ -204,6 +235,12 @@ class NavigationSupervisor(HealthInterlock):
             if outcome=='nav2_succeeded_unverified':outcome='arrived' if measured and measured['within_tolerance'] else 'arrival_not_verified'
             self.last_completion={'target':asdict(target),'outcome':outcome,'measured':measured}
             self.session.release(target,stationary=True,stop_latched=True)
+        self.maintenance_sequence+=1
+        hold_quiet=(self.maintenance_hold is not None and not self.maintenance_error
+                    and self.arm_future is None and self.session.current is None and self.session.state=='idle'
+                    and self.policy.target is None and self.policy.cancel_pending is None
+                    and self.guard_fresh() and self.guard_state['latched']
+                    and self.lease.healthy and not self.lease.stop_required and self.lease.stationary)
         self.nav_state_pub.publish(String(data=json.dumps({
             'run_id':self.policy.run_id,'command_sequence':self.commands.sequence,
             'sim_stamp_ns':self.get_clock().now().nanoseconds,
@@ -211,6 +248,9 @@ class NavigationSupervisor(HealthInterlock):
             'target':asdict(self.session.current) if self.session.current else None,
             'action_state':self.session.state,'healthy':self.lease.healthy and not self.lease.stop_required,
             'guard_latched':self.guard_state['latched'] if self.guard_fresh() else None,
+            'maintenance_hold':self.maintenance_hold,'maintenance_guard_run_id':self.maintenance_guard_run,
+            'maintenance_quiescent':hold_quiet,'maintenance_state_sequence':self.maintenance_sequence,
+            'maintenance_error':self.maintenance_error,
             'last_reply':self.last_reply,'last_completion':self.last_completion,'forwarded_commands':self.forwarded})))
 
     def destroy_node(self):

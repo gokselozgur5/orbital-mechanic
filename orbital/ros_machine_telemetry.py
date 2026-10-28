@@ -1,18 +1,21 @@
-"""Publish source-bound public machine measurements; no maintenance endpoints."""
+"""Publish the causal station and serialize maintenance on that same instance."""
 import json
+import time
 
 from orbital.machine_registry import MachineRegistry
 from orbital.machine_telemetry import MachineTelemetry
 from orbital.machines import Fault
 
 
-def run(root):
+def run(root, *, stop_requested=lambda:False, now=time.monotonic):
     registry = MachineRegistry.load(root)  # Refuse bad bindings before joining ROS.
     import rclpy
+    from rclpy.signals import SignalHandlerOptions
     from std_msgs.msg import String, Float32
+    from orbital.ros_maintenance import StationMaintenance
 
-    node = None
-    rclpy.init()
+    node = maintenance = None
+    rclpy.init(signal_handler_options=SignalHandlerOptions.NO)
     try:
         node = rclpy.create_node('station_telemetry')
         def require_sim_time():
@@ -23,6 +26,7 @@ def run(root):
         model = MachineTelemetry(registry, Fault(node.get_parameter('scenario').value))
         telemetry = node.create_publisher(String, '/station/telemetry', 5)
         voltage = node.create_publisher(Float32, '/station/bus_voltage', 5)
+        maintenance = StationMaintenance(root, node, model, now=now)
 
         def update():
             require_sim_time()
@@ -32,11 +36,17 @@ def run(root):
                 voltage.publish(Float32(data=value['voltage_v']))
 
         node.create_timer(.5, update)
-        rclpy.spin(node)
+        while rclpy.ok() and not stop_requested():
+            rclpy.spin_once(node, timeout_sec=.01)
+            maintenance.tick()
     except KeyboardInterrupt:
         pass
     finally:
-        if node is not None:
-            node.destroy_node()
-        if rclpy.ok():
-            rclpy.shutdown()
+        try:
+            if maintenance is not None:
+                maintenance.close()
+        finally:
+            if node is not None:
+                node.destroy_node()
+            if rclpy.ok():
+                rclpy.shutdown()

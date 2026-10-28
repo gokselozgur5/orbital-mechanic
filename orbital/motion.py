@@ -3,6 +3,7 @@
 This is a simulator command guard, not a certified collision avoidance controller.
 """
 import math
+from orbital.maintenance_hold import GuardHold
 
 
 class MotionGuard:
@@ -12,6 +13,7 @@ class MotionGuard:
     MAX_ANGULAR = 0.5
 
     def __init__(self):
+        self.maintenance = GuardHold()
         self.latched = True
         self.reason = 'startup'
         self.feedback_at = None
@@ -46,6 +48,9 @@ class MotionGuard:
                 and 0 <= now - self.feedback_at < self.FEEDBACK_TIMEOUT)
 
     def reset(self, now):
+        if self.maintenance.active is not None:
+            self.stop('maintenance_hold')
+            return False
         if not self._fresh(now):
             self.stop('feedback_timeout')
             return False
@@ -83,9 +88,21 @@ class MotionGuard:
         return True
 
     def output(self, now):
+        if self.maintenance.active is not None:
+            self.stop('maintenance_hold')
         if not self.latched:
             if not self._fresh(now):
                 self.stop('feedback_timeout')
             elif self.command_at is not None and not 0 <= now - self.command_at < self.COMMAND_TIMEOUT:
                 self.stop('command_timeout')
         return (0.0, 0.0) if self.latched else self.velocity
+
+    def maintenance_command(self, text, now):
+        stationary = (self.latched and self._fresh(now)
+                      and abs(self.speed[0]) <= .01 and abs(self.speed[1]) <= .02)
+        reply = self.maintenance.handle(text, stationary=stationary)
+        if self.maintenance.active is not None or (reply['accepted'] and reply['status'] == 'released'):
+            # Release never arms. A new explicit reset and post-reset command
+            # are still required after exact maintenance ownership ends.
+            self.stop('maintenance_hold' if self.maintenance.active else 'maintenance_released')
+        return reply
