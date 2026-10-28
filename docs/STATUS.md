@@ -11,6 +11,29 @@ original localization branch; six migrated commits do not count as new deliverie
 [Draft PR #16](https://github.com/gokselozgur5/orbital-mechanic/pull/16) links #6/#7,
 which remain open until full live localization/navigation acceptance and review.
 
+**OM-027: sampled collision evaluation passes locally; native contact/route acceptance is pending.**
+The evaluator covers the body box, caster sphere and both finite wheel cylinders
+against every declared static obstacle box at observed poses. The recorder now
+uses the full Gazebo pose stream, captures actual link/static-model poses and
+binds a supported SDF geometry snapshot to the verified deployment. Missing or
+changed entities/frames/geometry refuse complete evidence. Cylinder boundary
+uncertainty, normal floor support, body-floor contact and leaving the floor are
+reported separately; sampled clearance never claims continuous collision freedom.
+
+All 244 local tests pass, including 40 new cases and 300 analytic cylinder oracle
+controls. The actual recorder adapter's controlled-transport artifact passes the
+independent evaluator; moved-obstacle wheel contact, rotated geometry, tipping,
+tampered/rehashed traces and missing data produce their required adverse outcomes.
+An identical TF deadline regression fails on `5ff3a8e` and passes after a late
+available transform is refused beyond the recorder's 0.5-second wait.
+
+Thor SSH still times out. No native source, process, world or obstacle changed;
+live deployment remains last verified at OM-017. Full scene capture, collision
+controls, physical loss/recovery and route acceptance remain open. The evaluator
+cannot by itself establish the mission's no-collision requirement. See
+[COLLISION_EVALUATION.md](COLLISION_EVALUATION.md) for the geometry/coverage contract
+and [TRAJECTORY.md](TRAJECTORY.md) for the updated recorder and native gates.
+
 **OM-023: independent trajectory recording passes local tests; native capture is pending.**
 The read-only recorder samples Gazebo model truth directly, looks up localization
 at each truth timestamp and records exact supervisor target/command identities.

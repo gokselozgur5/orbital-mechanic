@@ -1,8 +1,10 @@
 # Independent navigation trajectory evidence
 
 OM-023 implements a read-only evaluator that records simulator truth, localization
-at the same simulation timestamp and exact supervisor command identities. Local
-tests pass. Native Gazebo Python bindings, DDS transport and moving-robot capture
+at the same simulation timestamp and exact supervisor command identities. OM-027
+extends it with observed link/obstacle poses and a versioned geometry snapshot for
+[sampled collision evaluation](COLLISION_EVALUATION.md). Local tests pass.
+Native Gazebo Python bindings, DDS transport and moving-robot capture
 have **not** been commissioned; Thor access is currently unavailable. This does
 not accept a route, machine arrival, collision result or physical stopping test.
 
@@ -10,7 +12,7 @@ not accept a route, machine arrival, collision result or physical stopping test.
 
 | Stream | Source | Meaning |
 | --- | --- | --- |
-| Truth | Gazebo `/world/maintenance/dynamic_pose/info`, `gz.msgs.Pose_V` | The exact `maintenance_robot` model pose, entity ID and simulation timestamp. Includes XYZ and the full quaternion. |
+| Truth | Gazebo `/world/maintenance/pose/info`, `gz.msgs.Pose_V` | Robot model, actual robot links and static model/link poses at one simulation timestamp, with entity IDs and full XYZ/quaternions. |
 | Localization | TF `map -> base_footprint` | Interpolated lookup at each truth sample's exact simulation timestamp. Never uses latest TF or wheel odometry as ground truth. |
 | State | ROS `/navigation/state` | Supervisor run, target, action state, health, guard observation, command/audit/forwarded counters and source simulation time. |
 | Audit | ROS `/navigation/audit` | Each command callback result and each forwarded velocity, with the exact target, source stamp and ordered counters. |
@@ -22,12 +24,20 @@ observability choice, not a bound on all native middleware publication latency.
 The publisher/subscriber pair follows the
 [ROS 2 QoS compatibility contract](https://github.com/ros2/ros2_documentation/blob/jazzy/source/Concepts/Intermediate/About-Quality-of-Service-Settings.rst).
 
-The world already loads SceneBroadcaster. Its dynamic-pose output contains model
-and link entries, so the observer selects the exact model name and pins its entity
-ID. The reviewed upstream implementation stamps pose batches with simulation time
-and advertises the dynamic-pose topic. See the pinned
+The world already loads SceneBroadcaster. The full pose output includes models,
+links, visuals and lights. The observer checks the complete declared name multiset
+and pins entity generations; it preserves all collision-bearing model/link poses.
+Unexpected, missing or replaced scene entities invalidate capture. The reviewed
+upstream implementation stamps each batch with simulation time. See the pinned
 [SceneBroadcaster source](https://github.com/gazebosim/gz-sim/blob/43d9baf13eac134914ebbd826de800724fca0a87/src/systems/scene_broadcaster/SceneBroadcaster.cc).
 These source observations do not establish the version of Thor's loaded binary.
+
+Robot link poses are relative to their parent model; top-level model poses are
+world-relative. The composition follows the reviewed
+[physics pose update](https://github.com/gazebosim/gz-sim/blob/43d9baf13eac134914ebbd826de800724fca0a87/src/systems/physics/Physics.cc#L3390).
+Static models may move/rotate and their observed poses are retained. Static links
+must retain their declared relative transforms; a moving floor invalidates the
+current support policy. The source geometry is fixed during a capture.
 
 The adapter uses Harmonic's `gz.transport13` and `gz.msgs10.pose_v_pb2` bindings;
 subscription, unsubscribe and publisher discovery follow the reviewed
@@ -90,7 +100,11 @@ snapshots or proof that a velocity reached the guard or actuator.
 
 `summary.json` records file hash, byte/record counts, source/service/binding
 identities before and after, the declared audit counter window, sample counts and
-maximum truth sampling gaps. Completion requires:
+maximum truth sampling gaps. It also stores the bounded SDF source and SHA used
+for collision geometry, checked against the verified navigation startup manifest.
+The supported scene parser rejects ambiguous/unsupported geometry and frame
+semantics. File/topology observations do not prove loaded collision geometry in
+physics memory. Completion requires:
 
 - One advancing truth entity, one supervisor run and no clock/counter regression.
 - Consecutive audit events after the declared baseline, exact target tokens and
@@ -98,7 +112,8 @@ maximum truth sampling gaps. Completion requires:
 - At least two capture samples, fresh navigation state at each truth receipt and
   no simulation or receipt gap greater than 250 ms during capture.
 - Exact-time TF for every capture truth sample; interpolation can wait at most
-  0.5 seconds before recording an explicit missing sample and failing.
+  0.5 seconds before recording an explicit missing sample and failing. An executor
+  delay cannot make a late but now-available transform acceptable.
 - Unchanged observed service invocations, navigation source/installed artifact
   identity and loaded binding-file hashes across the run.
 
@@ -133,7 +148,7 @@ world; the existing deployment and TF checks remain necessary.
 
 ## Local acceptance and remaining native gate
 
-The 204-test local suite passes. New tests exercise the production supervisor's
+The 244-test local suite passes. Tests exercise the production supervisor's
 request, held arm, forwarding and cancellation callbacks; an audit publication
 failure preserves cancellation and makes subsequent state explicitly unsuitable
 for complete evidence. Recorder tests cover clock/entity changes, missing/duplicate
@@ -142,10 +157,18 @@ callbacks, concurrency/overflow, bounded output, tampering and interrupted captu
 The actual native adapter is executed with controlled ROS/Gazebo transports and
 proves it creates no control publisher or service client.
 
+The strict TF wait regression fails on `5ff3a8e` and passes after the OM-027
+correction. The old code could accept a successful lookup after its declared wait
+when the observer executor resumed late. The evaluator also replays timestamps,
+sample references and the original protocol counters before accepting a report.
+Legacy model-only traces remain readable by the integrity verifier, but lack the
+link/world evidence required for collision evaluation; recapture with this source.
+
 Those doubles do not establish native ABI, transport QoS, delivery rate or moving
 robot accuracy. Next native acceptance must verify installed Python bindings,
 capture an idle control with independent endpoint comparison, then a guarded
 bounded movement with measured displacement and exact target audit. Preserve a
 negative run with unavailable/wrong-time TF and prove its failure. Only after that
 should this recorder supply physical-loss stopping and three-machine arrival
-evidence. Collision evaluation remains OM-027.
+evidence. OM-027 geometry evaluation is implemented locally; native collision and
+complete route acceptance remain pending.

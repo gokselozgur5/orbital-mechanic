@@ -185,6 +185,15 @@ class TrajectoryTests(unittest.TestCase):
         self.trace.truth(self.now+1, truth_from_message(truth_message(self.now+1)))
         self.assertTrue(self.trace.start(self.now+1))
 
+    def test_late_available_transform_cannot_escape_the_capture_wait_bound(self):
+        self.begin()
+        at = self.now+20000000
+        self.trace.truth(at, truth_from_message(truth_message(at)))
+        # A delayed executor must not accept a transform after the declared wait
+        # simply because lookup happens to succeed on its first resumed callback.
+        with self.assertRaisesRegex(ValueError, 'Localization missing'):
+            self.trace.match(lambda stamp: POSE, at+500000000)
+
     def test_warmup_requires_idle_latched_and_no_command_activity(self):
         self.trace.state(self.now, state(guard_latched=False))
         self.trace.truth(self.now, truth_from_message(truth_message(self.now)))

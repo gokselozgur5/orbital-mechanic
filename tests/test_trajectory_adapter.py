@@ -5,6 +5,7 @@ Python bindings, DDS delivery and moving simulation acceptance remain separate.
 """
 from contextlib import redirect_stderr, redirect_stdout
 import importlib.util
+import hashlib
 from io import StringIO
 import json
 import os
@@ -16,8 +17,10 @@ import unittest
 from unittest.mock import patch
 
 from orbital import ros_trajectory
+from orbital.collision_evaluation import evaluate_trace
 from orbital.trajectory import Inbox, TraceWriter, TRUTH_TOPIC, verify_trace
 import test_trajectory as fixture
+from collision_fixture import scene_message
 
 ROOT = Path(__file__).resolve().parents[1]
 SPEC = importlib.util.spec_from_file_location('trajectory_cli_test', ROOT/'scripts/record-navigation-trajectory.py')
@@ -31,6 +34,15 @@ class TrajectoryAdapterTests(unittest.TestCase):
         self.tmp = tempfile.TemporaryDirectory(dir=ROOT/'runtime')
         self.addCleanup(self.tmp.cleanup)
         self.root = Path(self.tmp.name)
+        self.world_data = (ROOT/'worlds/maintenance.sdf').read_bytes()
+        (self.root/'worlds').mkdir()
+        (self.root/'worlds/maintenance.sdf').write_bytes(self.world_data)
+        self.world_hash = hashlib.sha256(self.world_data).hexdigest()
+        self.runtime_identity = {'manifest_identity': 'a'*64, 'world_sha256': self.world_hash,
+                                 'service_invocations': {n: 'b'*32 for n in (
+                                     'orbital-demo.service', 'orbital-localization.service', 'orbital-navigation.service')}}
+        self.binding_identity = {n: {'path': '/fixture/'+n, 'sha256': 'c'*64} for n in (
+            'gz.transport13', 'gz.transport13._transport', 'gz.msgs10.pose_v_pb2')}
         self.clock = 1000000000
         self.callbacks = {}
         self.qos = {}
@@ -45,6 +57,7 @@ class TrajectoryAdapterTests(unittest.TestCase):
         self.missing_transform = False
         self.bad_truth = False
         self.no_truth = False
+        self.missing_scene_link = False
         self.drop_audit = False
         self.delay_tf = False
         self.interrupt_at = None
@@ -107,9 +120,11 @@ class TrajectoryAdapterTests(unittest.TestCase):
                 fields = {'command_sequence': 1, 'audit_sequence': 1}
             self.callbacks['/navigation/state'](NS(data=fixture.state(self.clock, **fields)))
             if self.truth_enabled and not self.no_truth and self.polls % 2 == 0:
-                msg = fixture.truth_message(self.clock)
+                msg = scene_message(self.world_data, self.clock)
+                if self.missing_scene_link:
+                    msg.pose = [p for p in msg.pose if p.name != 'left_wheel']
                 if self.bad_truth:
-                    msg.pose[0].position.x = float('nan')
+                    next(p for p in msg.pose if p.name == 'maintenance_robot').position.x = float('nan')
                 self.truth_callback(msg)
 
         def unregister():
@@ -136,8 +151,8 @@ class TrajectoryAdapterTests(unittest.TestCase):
             modules[name] = ModuleType(name)
             modules[name].__dict__.update(attributes)
         for context in (patch.dict(sys.modules, modules),
-                        patch.object(ros_trajectory, 'runtime_snapshot', return_value={'identity': 'fixed'}),
-                        patch.object(ros_trajectory, 'binding_sources', return_value={'gz': 'fixed'}),
+                        patch.object(ros_trajectory, 'runtime_snapshot', return_value=self.runtime_identity),
+                        patch.object(ros_trajectory, 'binding_sources', return_value=self.binding_identity),
                         patch.object(ros_trajectory, 'Inbox', lambda: Inbox(now=lambda: self.clock))):
             context.start()
             self.addCleanup(context.stop)
@@ -174,6 +189,30 @@ class TrajectoryAdapterTests(unittest.TestCase):
         self.assertEqual(code, 0, result)
         stamps = [stamp for parent, child, stamp in self.lookups]
         self.assertGreater(len(stamps), len(set(stamps)))
+
+    def test_actual_recorder_artifact_replays_through_independent_collision_evaluator(self):
+        result, code = self.invoke()
+        self.assertEqual(code, 0, result)
+        evaluation = evaluate_trace(self.output)
+        self.assertTrue(evaluation['sampled_clear'])
+        self.assertEqual(evaluation['trace_sha256'], result['sha256'])
+        self.assertEqual(evaluation['samples'], result['observation']['capture_samples'])
+        self.assertIsNone(evaluation['continuous_collision_free'])
+
+    def test_missing_robot_link_is_not_replaced_by_its_declared_static_pose(self):
+        self.missing_scene_link = True
+        result, code = self.invoke()
+        self.assertEqual(code, 1)
+        self.assertIn('topology differs', result['error'])
+        self.assertFalse((self.output/'ready.json').exists())
+
+    def test_world_snapshot_must_match_verified_startup_source(self):
+        with patch.object(ros_trajectory, 'runtime_snapshot', return_value={
+                **self.runtime_identity, 'world_sha256': '0'*64}):
+            result, code = self.invoke()
+        self.assertEqual(code, 1)
+        self.assertIn('world source differs', result['error'])
+        self.assertEqual(self.callbacks, {})
 
     def test_missing_truth_times_out_without_ready_marker(self):
         self.no_truth = True
@@ -219,7 +258,9 @@ class TrajectoryAdapterTests(unittest.TestCase):
         self.assertIn('Ambiguous evaluator publisher', result['error'])
 
     def test_runtime_identity_change_invalidates_otherwise_complete_trace(self):
-        with patch.object(ros_trajectory, 'runtime_snapshot', side_effect=[{'identity': 'before'}, {'identity': 'after'}]):
+        with patch.object(ros_trajectory, 'runtime_snapshot', side_effect=[
+                {'identity': 'before', 'world_sha256': self.world_hash},
+                {'identity': 'after', 'world_sha256': self.world_hash}]):
             result, code = self.invoke()
         self.assertEqual(code, 1)
         self.assertFalse(result['complete'])

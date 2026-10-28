@@ -91,3 +91,7 @@ commissioning and route acceptance remain pending.
 [Independent trajectory recording](docs/TRAJECTORY.md) measures Gazebo truth,
 same-time localization and exact command identities without publishing controls.
 Local observer tests pass; native capture and physical route acceptance are pending.
+
+[Sampled collision evaluation](docs/COLLISION_EVALUATION.md) checks observed body,
+wheel and support geometry against the recorded world. Local tests pass; this
+does not establish continuous collision freedom or native route acceptance.

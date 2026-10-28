@@ -21,7 +21,7 @@ MAX_BYTES = 64 * 1024 * 1024
 MAX_RECORDS = 100000
 MAX_LINE = 65536
 MAX_GAP_NS = 250000000
-TRUTH_TOPIC = '/world/maintenance/dynamic_pose/info'
+TRUTH_TOPIC = '/world/maintenance/pose/info'
 
 
 def integer(value, name, minimum=0):
@@ -48,7 +48,7 @@ def pose_values(position, orientation):
     return values
 
 
-def truth_from_message(message):
+def truth_from_message(message, scene=None):
     if message.ByteSize() > 1024*1024:
         raise ValueError('Truth message exceeds 1 MiB')
     if not message.HasField('header') or not message.header.HasField('stamp'):
@@ -59,9 +59,12 @@ def truth_from_message(message):
     pose = matches[0]
     if not pose.HasField('position') or not pose.HasField('orientation'):
         raise ValueError('Truth pose fields missing')
-    return {'sim_stamp_ns': stamp_ns(message.header.stamp),
-            'entity_id': integer(pose.id, 'entity id', 1),
-            'pose': pose_values(pose.position, pose.orientation)}
+    value = {'sim_stamp_ns': stamp_ns(message.header.stamp),
+             'entity_id': integer(pose.id, 'entity id', 1),
+             'pose': pose_values(pose.position, pose.orientation)}
+    if scene is not None:
+        value.update(scene.observe(message))
+    return value
 
 
 def transform_at(message, requested_ns):
@@ -175,8 +178,12 @@ class TraceWriter:
         return result
 
 
-def verify_trace(path):
-    """Check bounded file integrity, not authenticity or mission acceptance."""
+def verify_trace(path, visit=None):
+    """Check the exact consumed bytes; a visitor must defer results until return.
+
+    Integrity is not authenticity or mission acceptance. A visitor sees records
+    before the final hash check and must not publish an accepted result early.
+    """
     path = Path(path)
     for name in ('summary.json', 'events.jsonl'):
         if (path/name).is_symlink():
@@ -201,6 +208,8 @@ def verify_trace(path):
             if record.get('kind') not in ('state', 'audit', 'truth', 'sample', 'boundary'):
                 raise ValueError('Unknown trace record')
             digest.update(raw)
+            if visit is not None:
+                visit(record, summary)
     if not count or (count, size, digest.hexdigest()) != (summary.get('records'), summary.get('bytes'), summary.get('sha256')):
         raise ValueError('Trace integrity mismatch')
     return summary
@@ -296,6 +305,8 @@ class Trajectory:
             old_at, old = self.last_truth
             if value['entity_id'] != old['entity_id'] or value['sim_stamp_ns'] <= old['sim_stamp_ns']:
                 raise ValueError('Truth entity changed or simulation time did not advance')
+            if value.get('entity_signature') != old.get('entity_signature'):
+                raise ValueError('Scene entity generation changed')
             if self.started_ns is not None:
                 self.max_sim_gap_ns = max(self.max_sim_gap_ns, value['sim_stamp_ns']-old['sim_stamp_ns'])
                 self.max_wall_gap_ns = max(self.max_wall_gap_ns, at-old_at)
@@ -316,12 +327,13 @@ class Trajectory:
         while self.pending:
             item = self.pending[0]
             stamp = item['truth']['sim_stamp_ns']
-            try:
-                pose = lookup(stamp)
-            except LookupError:
-                if now-item['received_ns'] < 500000000:
-                    break
+            if now-item['received_ns'] >= 500000000:
                 pose = None
+            else:
+                try:
+                    pose = lookup(stamp)
+                except LookupError:
+                    break
             self.pending.popleft()
             self.writer.append('sample', now, {
                 'truth_record': item['truth_record'], 'state_record_at_truth_receipt': item['state_record'],
@@ -335,18 +347,23 @@ class Trajectory:
                 self.last_matched_ns = item['received_ns']
                 self.capture_samples += int(item['capture'])
 
-    def start(self, now):
+    def idle_baseline(self, now):
         self.now = now
         state = self.client.state
         if (not self.client.fresh() or not state['healthy'] or state['action_state'] != 'idle'
-                or state['guard_latched'] is not True or self.last_matched_ns is None
-                or now-self.last_matched_ns > MAX_GAP_NS):
+                or state['guard_latched'] is not True):
             return False
         if (state['audit_sequence'] != self.baseline['audit_sequence']
                 or self.audit_sequence != self.baseline['audit_sequence']
                 or state['command_sequence'] != self.baseline['command_sequence']
                 or state['forwarded_commands'] != self.baseline['forwarded_commands']):
             raise ValueError('Command activity during recorder warmup; retry while idle/latched')
+        return True
+
+    def start(self, now):
+        if (not self.idle_baseline(now) or self.last_matched_ns is None
+                or now-self.last_matched_ns > MAX_GAP_NS):
+            return False
         self.started_ns = now
         boundary = {'phase': 'capture_start', 'run_id': self.client.run_id, 'baseline': self.baseline}
         self.writer.append('boundary', now, boundary)
@@ -360,10 +377,7 @@ class Trajectory:
         if (self.started_ns is None or self.capture_samples < 2 or self.pending or not self.client.fresh()
                 or self.last_truth is None or ended_ns-self.last_truth[0] > MAX_GAP_NS):
             raise ValueError('Incomplete observation window')
-        state = self.client.state
-        if (state['audit_sequence'], state['command_sequence'], state['forwarded_commands']) != (
-                self.audit_sequence, self.command_sequence, self.forwarded):
-            raise ValueError('Unobserved audit tail or state has not confirmed the audit tail')
+        self.audit_fence()
         self.writer.append('boundary', now, {'phase': 'capture_end', 'state_record': self.state_ref,
                                             'truth_cutoff_monotonic_ns': ended_ns})
         return {'run_id': self.client.run_id, 'entity_id': self.last_truth[1]['entity_id'],
@@ -373,3 +387,9 @@ class Trajectory:
                 'started_monotonic_ns': self.started_ns, 'truth_cutoff_monotonic_ns': ended_ns,
                 'finished_monotonic_ns': now,
                 'max_sim_gap_ns': self.max_sim_gap_ns, 'max_wall_gap_ns': self.max_wall_gap_ns}
+
+    def audit_fence(self):
+        state = self.client.state
+        if state is None or (state['audit_sequence'], state['command_sequence'], state['forwarded_commands']) != (
+                self.audit_sequence, self.command_sequence, self.forwarded):
+            raise ValueError('Unobserved audit tail or state has not confirmed the audit tail')
