@@ -17,7 +17,10 @@ from orbital import inspection_owner, ros_machine_telemetry, ros_maintenance
 from orbital.inspection_artifacts import read_capture
 from orbital.inspection_protocol import canonical
 from orbital.maintenance_protocol import result, state
+from orbital.isolation_trace import IsolationTrace, TOPICS as TRACE_TOPICS, verify_isolation
+from orbital.trajectory import TraceWriter
 from inspection_transport_fixture import SharedClock, transport
+from test_isolation_trace import sources as trace_sources
 import test_map_binding as map_fixture
 import test_supervisor_arm as nav_fixture
 
@@ -30,7 +33,7 @@ class MaintenanceEndpointTests(unittest.TestCase):
         for name in ('config/robot.urdf', 'config/bridge.yaml'):
             shutil.copyfile(ROOT/name, self.root/name)
 
-    def run_endpoint(self, mode='success'):
+    def run_endpoint(self, mode='success', *, retained=False):
         host_started = time.monotonic()
         clock = SharedClock(self.root, create=True)
         self.addCleanup(clock.close)
@@ -40,6 +43,8 @@ class MaintenanceEndpointTests(unittest.TestCase):
         base = base_create()
         callbacks, services, publishers, outputs, timers = {}, {}, {}, {}, []
         station = None
+        trace = trace_writer = None
+        mission_id, action_id = uuid.uuid4().hex, uuid.uuid4().hex
         workers = []
         request = None
         cancelled = False
@@ -48,6 +53,10 @@ class MaintenanceEndpointTests(unittest.TestCase):
         real_station = ros_maintenance.StationMaintenance
 
         def deliver(topic, message):
+            if trace is not None and topic in TRACE_TOPICS:
+                trace.receive(topic, round(now()*1e9), h.sim, message.data)
+                if trace.ready_at is None:
+                    trace.ready(round(now()*1e9), h.sim)
             for callback in list(callbacks.get(topic, [])): callback(message)
 
         class Node(type(base)):
@@ -133,8 +142,15 @@ class MaintenanceEndpointTests(unittest.TestCase):
             return value
 
         def station_owner(*args, **kw):
-            nonlocal station
+            nonlocal station, trace, trace_writer
             station = real_station(*args, **kw)
+            if retained:
+                registry = station.owner.model.registry
+                trace_writer = TraceWriter(self.root, 'composed-isolation')
+                self.addCleanup(lambda:trace_writer.stream.close() if not trace_writer.closed else None)
+                trace = IsolationTrace(registry, {'run_id': station.owner.run_id,
+                    'mission_id': mission_id, 'action_id': action_id, 'machine_id': 'pump'}, writer=trace_writer)
+                trace.begin(round(now()*1e9), h.sim, trace_sources(registry))
             return station
 
         def launch(args, **kwargs):
@@ -154,10 +170,11 @@ class MaintenanceEndpointTests(unittest.TestCase):
                     if timer.name == 'station_telemetry' and now() >= timer.next:
                         timer.callback(); timer.next = now()+timer.period
             statuses = outputs.get('/maintenance/state', [])
-            if statuses and request is None and statuses[-1]['ready']:
+            if (statuses and request is None and statuses[-1]['ready']
+                    and (trace is None or trace.ready_at is not None)):
                 status = statuses[-1]
-                request = {'schema_version': 1, 'run_id': status['run_id'], 'mission_id': uuid.uuid4().hex,
-                    'action_id': uuid.uuid4().hex, 'command_id': uuid.uuid4().hex, 'op': 'isolate',
+                request = {'schema_version': 1, 'run_id': status['run_id'], 'mission_id': mission_id,
+                    'action_id': action_id, 'command_id': uuid.uuid4().hex, 'op': 'isolate',
                     'arguments': {'machine_id': 'pump', 'station_run_id': status['station_run_id'],
                                   'control_revision': status['control_revision'], 'timeout_s': 15.}}
                 deliver('/maintenance/command', NS(data=canonical(request)))
@@ -192,7 +209,12 @@ class MaintenanceEndpointTests(unittest.TestCase):
                 guard = motion.GuardNode()
                 supervisor = navigation.NavigationSupervisor({'pump': (2., 1.8, 0.)}, map_config_sha256=h.config_hash)
                 ros_machine_telemetry.run(self.root, now=now,
-                    stop_requested=lambda:bool(outputs.get('/maintenance/result')))
+                    stop_requested=lambda:bool(outputs.get('/maintenance/result')) and (
+                        trace is None or trace.assess(round(now()*1e9), h.sim) is not None))
+                if trace is not None:
+                    value = trace.end(round(now()*1e9), h.sim, trace_sources(station.owner.model.registry))
+                    trace_writer.finish(True, {'observation': value})
+                    self.retained_path = trace_writer.path
                 supervisor.destroy_node(); guard.destroy_node()
         finally:
             for child in workers:
@@ -241,3 +263,24 @@ class MaintenanceEndpointTests(unittest.TestCase):
         self.assertEqual(terminal['status'], 'failed')
         self.assertEqual(terminal['state_change']['disposition'], 'not_applied')
         self.assertTrue(all(p['machines']['pump']['powered'] for p in outputs['/station/telemetry']))
+
+    def test_independent_retention_of_actual_camera_hold_and_station_flow(self):
+        terminal, outputs = self.run_endpoint(retained=True)
+        value = verify_isolation(self.root, self.retained_path)['observation']
+        self.assertEqual(terminal['status'], 'succeeded')
+        self.assertTrue(value['verified_isolation'])
+        self.assertEqual(value['station_run_id'], outputs['/station/telemetry'][-1]['run_id'])
+
+    def test_independent_retention_after_actual_effect_cancellation(self):
+        terminal, _ = self.run_endpoint('cancel_after_effect', retained=True)
+        value = verify_isolation(self.root, self.retained_path)['observation']
+        self.assertEqual(value['server_status'], terminal['status'])
+        self.assertEqual(value['server_status'], 'cancelled')
+        self.assertTrue(value['verified_isolation'])
+
+    def test_independent_retention_of_cancellation_before_effect(self):
+        terminal, _ = self.run_endpoint('cancel', retained=True)
+        value = verify_isolation(self.root, self.retained_path)['observation']
+        self.assertEqual(value['server_status'], terminal['status'])
+        self.assertFalse(value['verified_isolation'])
+        self.assertTrue(value['sampled_unchanged'])

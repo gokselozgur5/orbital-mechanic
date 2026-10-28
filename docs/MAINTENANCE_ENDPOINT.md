@@ -123,7 +123,8 @@ and `state_change`. An applied change includes the exact effect plus newer
 telemetry run/sequence/stamp, control revision, public sample digest and measured
 isolated values. `not_applied` has no effect or verification. Unknown effects
 produce no terminal result. The digest is a reference, not a retained complete
-trace; independent recorder/native acceptance remains OM-053 work.
+trace. The [independent recorder](ISOLATION_EVIDENCE.md) now retains source packets
+for offline replay; native isolation acceptance remains OM-053 work.
 
 ## Startup, shutdown and validation
 

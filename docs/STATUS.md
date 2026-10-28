@@ -11,6 +11,28 @@ original localization branch; six migrated commits do not count as new deliverie
 [Draft PR #16](https://github.com/gokselozgur5/orbital-mechanic/pull/16) links #6/#7,
 which remain open until full live localization/navigation acceptance and review.
 
+**OM-053: retained isolation evidence passes local controls; native acceptance pending.**
+The [read-only recorder](ISOLATION_EVIDENCE.md) retains exact command/state/result
+and station wire packets under a bounded exclusive trace. Offline replay checks
+integrity, source/registry/run/request/effect bindings and two fresh consecutive
+post-effect power-off/current-zero/vibration-zero measurements. The terminal
+digest must resolve to an actual retained packet; an ACK or success claim alone
+cannot verify isolation. Cancellation before/after the effect remains distinct.
+
+This adds independently retained postcondition evidence, not another owner
+verifier or maintenance action. It creates no control publisher or service
+client. Source loss, missing results, timeouts, bounds and cleanup failure retain
+incomplete evidence. A full trace proves a sampled model state, not continuous
+health, independent camera/pose/hold-release acceptance or electrical isolation.
+The composed real capture-child flow and the production observer over controlled
+transport pass locally; native DDS/timing and three-machine acceptance remain open.
+All 560 local tests pass (36 new recorder controls plus one CLI correction),
+with the causal baseline, 173 Python AST files, 17 shell scripts and two XML
+sources. Source bytes remain unchanged through validation. Two deliberate
+mutations fail the intended tests when source measurement or runtime binding
+checks are removed; these are sensitivity controls, not historical defects.
+Evidence: `reviews/orbital-delivery-20261028/om053` in the operator workspace.
+
 **OM-052: owned isolation on the published station passes local controls.**
 The [isolation endpoint](MAINTENANCE_ENDPOINT.md) joins the actual telemetry
 model, a non-expiring exact guard hold, resolved navigation ownership and new

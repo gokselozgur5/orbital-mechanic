@@ -92,6 +92,10 @@ commissioning and route acceptance remain pending.
 same-time localization and exact command identities without publishing controls.
 Local observer tests pass; native capture and physical route acceptance are pending.
 
+[Retained isolation observations](docs/ISOLATION_EVIDENCE.md) record exact
+maintenance identities and actual public station packets for offline replay.
+Local tests pass; native commissioning and independent hold/camera acceptance remain pending.
+
 [Sampled collision evaluation](docs/COLLISION_EVALUATION.md) checks observed body,
 wheel and support geometry against the recorded world. Local tests pass; this
 does not establish continuous collision freedom or native route acceptance.
