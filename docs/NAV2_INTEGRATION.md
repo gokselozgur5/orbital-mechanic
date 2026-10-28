@@ -29,9 +29,37 @@ agree that `enable_stamped_cmd_vel` defaults to false. Explicitly set it true;
 the supervisor requires TwistStamped and preserves input age. Never introduce
 an adapter that stamps old unstamped commands as fresh.
 
+## Controller configuration trial (OM-003)
+
+`config/nav2-controller.yaml` configures Regulated Pure Pursuit, pose-based
+progress, stopped-goal acceptance and a rolling 2D obstacle/inflation costmap.
+The footprint radius is 0.37 m, matching the known-map contract. Desired forward
+speed is 0.15 m/s; rotate-to-heading speed is 0.4 rad/s. That rotation parameter
+is not a universal angular-output clamp: the supervisor still rejects every
+command outside its 0.2 m/s and 0.5 rad/s limits. Actual route tuning remains open.
+
+In an empty localhost-only domain 84, run these inside Thor tmux orbital-work
+with the Jazzy environment loaded (do not source the domain-42 project helper):
+
+```bash
+export ROS_DOMAIN_ID=84 ROS_AUTOMATIC_DISCOVERY_RANGE=LOCALHOST
+/usr/bin/python3 scripts/check-nav2-controller.py
+/usr/bin/python3 scripts/check-nav2-controller.py --unstamped-control
+```
+
+The first must exit 0; the deliberate unstamped control must exit 1 specifically
+with `Unstamped controller output rejected`. Both results were observed on Thor
+on 2026-10-28. The actual controller, goal/progress checkers and obstacle/inflation
+plugins configured successfully. The controller remained inactive. DDS discovery
+showed exactly one stamped output publisher and no controller publisher on the
+raw drive/guard-input/guard-output topics checked by the probe. Each child process
+was reaped, and native logs recorded plugin cleanup. No world, route or movement
+was started. These results prove this configuration and output interface, not
+collision avoidance, measured speed tracking or the production graph.
+
 ## Next gates
 
-1. Configure the controller/local costmap with footprint and bounded speeds.
+1. Controller/local-costmap inactive configuration is verified above; validate actual motion after full composition.
 2. Configure the known-map planner/global costmap and navigation behavior tree.
 3. Configure actual lifecycle nodes in an empty private domain, inspect their
    graph and parameters, and verify the real stamped publisher type.
