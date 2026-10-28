@@ -188,6 +188,17 @@ guardian for any armed movement. No native deployment, movement or maintenance
 action was performed for this delivery. Native pose/stationarity commissioning,
 fresh public observations and inspection endpoints remain open under issue #8.
 
+The separate [station observation reader](STATION_OBSERVATION.md) now validates
+public telemetry freshness locally. Its result and a separate pose query do not
+form an atomic inspection: joint source/time/robot-state capture and inspection
+ownership still need integration.
+
+OM-046 also moves result identity/digest preparation before this query's final
+source/health/pose/map/deadline gates. An identical controlled regression fails
+ten cases on the `24860f4` ROS adapter (distance and settled modes) and passes
+after the correction: source, publisher or clock-mode changes and elapsed time
+during result preparation cannot bypass the final checks.
+
 The nominal-heading validator changes the generated map revision from
 `1c58f56cf5246735` to `f02e11a9cb0e4f2f` even though the occupancy image is
 unchanged. Two generations agree byte-for-byte and current source rejects the

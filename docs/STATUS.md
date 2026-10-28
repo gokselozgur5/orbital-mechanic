@@ -11,6 +11,34 @@ original localization branch; six migrated commits do not count as new deliverie
 [Draft PR #16](https://github.com/gokselozgur5/orbital-mechanic/pull/16) links #6/#7,
 which remain open until full live localization/navigation acceptance and review.
 
+**OM-046: fresh public telemetry reading passes locally; native integration remains pending.**
+The existing OM-041 public projection is reused rather than reimplemented for
+OM-045 credit. `observe-station.py` and its production reader accept only the exact
+source-bound public schema and require two advancing samples in one run. Both
+receipt and simulation age must be below one second. Gaps/expiry discard the
+pair; replay, run/clock regression, malformed/missing/future data and changed
+publisher identity refuse the query. Model elapsed time remains distinct from
+the absolute simulator timestamp. Invalid input cannot be erased by a later
+valid packet, and input text is not reflected into decoder error messages.
+
+The reader pins the clock and telemetry publishers before subscribing, then
+rechecks source files, clock mode, generations, age and deadline before returning.
+No control publisher/client, hidden fault field, diagnosis or action permission
+is introduced. Numerically valid noisy values are retained without model-based
+correction; causal diagnosis and noise confidence remain subsequent work.
+
+All 361 local tests pass, including 29 new tests. Baseline, shell/AST/XML and
+whitespace checks pass. The shipped publisher and reader/CLI run with controlled ROS
+transport, covering normal samples, malformed/schema/source/time/order failures,
+final-read races and cleanup. Review reproduced five station-reader and ten
+existing proximity-adapter acceptance failures during result preparation. The
+same tests pass after ID/digest work moves before the final validity checks;
+proximity's old adapter is loaded directly from `24860f4` with unchanged runtime
+dependencies. A fresh Thor SSH attempt timed out (exit 255); no
+native source/process changed. Joint robot/telemetry inspection records, camera
+capture, inspection endpoints and all native gates remain open under issue #8.
+Contract: [STATION_OBSERVATION.md](STATION_OBSERVATION.md).
+
 **OM-044: settled inspection preconditions pass locally; native inspection remains pending.**
 The production `read_inspection_state` reader and CLI `--require-settled-pose`
 mode require the accepted inspection pose and direct stopped odometry spanning

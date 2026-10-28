@@ -10,6 +10,7 @@ import unittest
 from unittest.mock import patch
 
 from proximity_fixture import Harness
+from orbital import ros_proximity
 import test_map_binding as map_fixture
 from test_proximity import health
 from types import SimpleNamespace as NS
@@ -92,6 +93,27 @@ class ProximityAdapterTests(unittest.TestCase):
         harness = Harness(self)
         harness.clock_mode_changed = True
         with self.assertRaisesRegex(ValueError,'clock_mode'): harness.run()
+
+    def test_result_identity_work_cannot_bypass_pose_validity_checks(self):
+        original=ros_proximity.uuid.uuid4
+        path=self.root/'worlds/maintenance.sdf';source=path.read_bytes()
+        for settled in (False,True):
+            for kind in ('gid','mode','age','deadline','source'):
+                harness=Harness(self)
+                def identity():
+                    if harness.lookups:
+                        if kind=='gid':harness.changed_gid=True
+                        elif kind=='mode':harness.clock_mode_changed=True
+                        elif kind=='age':harness.wall+=.51
+                        elif kind=='deadline':harness.wall+=3.
+                        else:path.write_bytes(source+b'\n')
+                    return original()
+                try:
+                    with patch.object(ros_proximity.uuid,'uuid4',identity), \
+                            self.subTest(kind=kind,settled=settled),self.assertRaises(ValueError):
+                        harness.run(require_settled=settled)
+                    self.assertTrue(harness.destroyed and harness.unregistered and harness.shutdown)
+                finally:path.write_bytes(source)
 
 
 class ProximityCliTests(unittest.TestCase):

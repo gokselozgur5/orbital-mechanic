@@ -100,6 +100,11 @@ does not establish continuous collision freedom or native route acceptance.
 measurement to configured scene identities, source revisions and simulation time.
 Local integration tests pass; native commissioning remains pending.
 
+[Fresh public station observations](docs/STATION_OBSERVATION.md) read the existing
+telemetry through strict schema, source, sequence and dual-clock freshness checks.
+The CLI returns measurements without inferring a diagnosis. Local publisher-to-reader
+tests pass; native transport and joint robot/inspection integration remain pending.
+
 [Measured machine proximity and inspection pose](docs/PROXIMITY.md) combine
 registered control geometry, verified map binding, localization health and
 exact-time robot TF. The query can require the measured inspection position,

@@ -98,7 +98,7 @@ All items below start pending except the goal-contract commit itself. Dependenci
 | OM-042 | Trusted proximity calculation | Inspection eligibility uses fresh measured robot pose. |
 | OM-043 | Inspection orientation constraint | Reject observations from outside the valid viewing/control pose. |
 | OM-044 | Stationary inspection interlock | Inspection cannot run while moving or before settling. |
-| OM-045 | Public telemetry projection | Expose permitted observations while withholding injected fault truth. |
+| OM-045 | Public telemetry projection acceptance | Reuse OM-041's projection; commission the actual native publisher/inspection consumer across scenarios and prove injected truth stays absent. |
 | OM-046 | Telemetry freshness semantics | Unknown/stale samples cannot support an intervention. |
 | OM-047 | Inspection observation records | Bind observations to source time, machine and robot pose. |
 | OM-048 | Camera evidence capture | Capture bounded timestamped observations locally without committing media. |

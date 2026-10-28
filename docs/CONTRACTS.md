@@ -2,6 +2,10 @@
 
 These are design contracts, not implemented endpoints. The same tools serve scripted and LLM planners.
 
+The read-only [station observation CLI](STATION_OBSERVATION.md) now implements
+fresh public telemetry consumption. It does not yet expose this common mission
+envelope, combine robot inspection state or provide maintenance endpoints.
+
 ## Common envelope
 
 Every tool request includes schema_version, run_id, mission_id, action_id and validated arguments. A request may carry an observation_id precondition. Results contain status, typed error_code, started/finished simulation times, wall duration, observation references and any state change. Allowed statuses: succeeded, rejected, failed, cancelled, timed_out. A transport acknowledgement is not task success.
@@ -52,4 +56,4 @@ A successful repair requires the correct machine and intervention, a sustained h
 
 Reset requires isolation, temperature at most 40 °C and an unused reset attempt. Only a latched controller fault clears on reset. Recovery requires all machines powered at normal load and bus voltage at least 27 V continuously for 10 seconds. These constants are illustrative and uncalibrated.
 
-The pure model receives distance/speed/timestamps from its caller. In future ROS integration these must come from trusted robot state, never planner arguments. This library is not an independently secured gateway. Run IDs, sensor noise, unknown faults, navigation and camera-based diagnosis remain unimplemented. A persistent jam may be re-energized by the model to demonstrate continued failure; the scripted policy instead escalates upon its vibration evidence.
+The pure model receives distance/speed/timestamps from its caller. In future ROS integration these must come from trusted robot state, never planner arguments. This library is not an independently secured gateway. Telemetry run IDs and fresh public reading now exist; mission/action run ownership, sensor noise, unknown faults and integrated navigation/camera diagnosis remain unimplemented. A persistent jam may be re-energized by the model to demonstrate continued failure; the scripted policy instead escalates upon its vibration evidence.

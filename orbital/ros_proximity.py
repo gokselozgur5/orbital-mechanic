@@ -14,9 +14,10 @@ from orbital.proximity import ProximityEvidence, Unavailable
 MAP_MAX_AGE_S = .5
 
 
-def authority(node):
-    expected = {name:BASE_TOPICS[name] for name in ('/tf','/tf_static','/clock','/map','/odom')}
-    expected['/navigation/health'] = NAV_TOPICS['/navigation/health']
+def authority(node, expected=None):
+    if expected is None:
+        expected = {name:BASE_TOPICS[name] for name in ('/tf','/tf_static','/clock','/map','/odom')}
+        expected['/navigation/health'] = NAV_TOPICS['/navigation/health']
     snapshot = []
     for topic, owners in expected.items():
         peers = node.get_publishers_info_by_topic(topic)
@@ -120,6 +121,8 @@ def run(root, machine_id, *, timeout=10., now=time.monotonic, require_settled=Fa
                     Time(nanoseconds=requested,clock_type=ClockType.ROS_TIME))
             except (Unavailable,TransformException):
                 continue
+            identity = {'observation_id':uuid.uuid4().hex,
+                'authority_identity':hashlib.sha256(json.dumps(initial,separators=(',',':')).encode()).hexdigest()}
             registry.verify_current()
             prepared.verify_current(root,mapping['map_yaml'])
             # A successful lookup can finish after discovery, clock mode or map
@@ -129,15 +132,13 @@ def run(root, machine_id, *, timeout=10., now=time.monotonic, require_settled=Fa
                 result = evidence.measure(requested,node.get_clock().now().nanoseconds,observed_at,transform)
             except Unavailable:
                 continue
-            remaining()
             if require_settled:
                 if evidence.stationary.generation!=settled_generation:
                     raise Unavailable('stationarity_changed_during_query')
                 if not result['within_settled_inspection_pose']:
                     raise Unavailable('settled_inspection_pose_required')
-            result.update(observation_id=uuid.uuid4().hex, map_binding=mapping['binding'],
-                          map_observed_age_s=observed_at-bound_at,
-                          authority_identity=hashlib.sha256(json.dumps(initial,separators=(',',':')).encode()).hexdigest())
+            result.update(**identity,map_binding=mapping['binding'],map_observed_age_s=observed_at-bound_at)
+            remaining()
             return result
     finally:
         if listener is not None:
