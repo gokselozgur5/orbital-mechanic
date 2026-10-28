@@ -87,3 +87,7 @@ Read [AGENTS.md](AGENTS.md) and [docs/STATUS.md](docs/STATUS.md). The status fil
 [Named navigation commands](docs/NAVIGATION_CLIENT.md) provide explicit target
 request, arm and cancel operations. Their local protocol/CLI tests pass; native
 commissioning and route acceptance remain pending.
+
+[Independent trajectory recording](docs/TRAJECTORY.md) measures Gazebo truth,
+same-time localization and exact command identities without publishing controls.
+Local observer tests pass; native capture and physical route acceptance are pending.

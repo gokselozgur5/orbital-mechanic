@@ -92,6 +92,7 @@ def load_production():
         'rclpy.node': {'Node': Node},
         'rclpy.clock': {'Clock': lambda **kwargs: NS(), 'ClockType': NS(STEADY_TIME=1, ROS_TIME=2)},
         'rclpy.time': {'Time': Message},
+        'rclpy.qos': {'QoSProfile': Message, 'ReliabilityPolicy': NS(BEST_EFFORT='best_effort')},
         'rclpy.parameter': {'Parameter': lambda *args, **kwargs: NS()},
         'rclpy.action': {'ActionClient': lambda *args: Client()},
         'rcl_interfaces.msg': {'ParameterDescriptor': Message},

@@ -9,6 +9,7 @@ import math
 import time
 from rclpy.clock import ClockType
 from rclpy.time import Time
+from rclpy.qos import QoSProfile, ReliabilityPolicy
 from rcl_interfaces.msg import ParameterDescriptor
 from geometry_msgs.msg import TwistStamped
 from std_msgs.msg import String
@@ -36,9 +37,12 @@ class NavigationSupervisor(HealthInterlock):
         self.dispatch_stamp=None;self.last_velocity_stamp=None
         self.last_reply=None;self.last_completion=None
         self.forwarded=0
+        self.audit_sequence=0;self.audit_error=None
         self.arm_client=self.create_client(Trigger,'/motion/reset_stop')
         self.request_pub=self.create_publisher(TwistStamped,'/motion/request',1)
         self.nav_state_pub=self.create_publisher(String,'/navigation/state',10)
+        self.audit_pub=self.create_publisher(String,'/navigation/audit',
+            QoSProfile(depth=100,reliability=ReliabilityPolicy.BEST_EFFORT))
         self.raw_sub=self.create_subscription(TwistStamped,'/navigation/raw_cmd_vel',self.on_velocity,1)
         self.command_sub=self.create_subscription(String,'/navigation/command',self.on_command,10)
         self.guard_sub=self.create_subscription(String,'/motion/state',self.on_guard,10)
@@ -76,7 +80,23 @@ class NavigationSupervisor(HealthInterlock):
             if self.lease.stop_required and self.session.current is not None:
                 self.session.cancel(self.session.current,'localization_invalid')
 
+    def audit(self,event,**fields):
+        """Observation of this callback, not guard application or physical motion."""
+        self.audit_sequence+=1
+        try:
+            self.audit_pub.publish(String(data=json.dumps({
+                'schema_version':1,'run_id':self.policy.run_id,'sequence':self.audit_sequence,
+                'sim_stamp_ns':self.get_clock().now().nanoseconds,'event':event,
+                'command_sequence':self.commands.sequence,'forwarded_commands':self.forwarded,
+                'target':asdict(self.session.current) if self.session.current else None,
+                **fields},allow_nan=False)))
+        except Exception as error:
+            # Observation must not interrupt a stop/cancel callback. The sticky
+            # failure and sequence gap make the evaluator refuse a complete trace.
+            self.audit_error=type(error).__name__
+
     def on_command(self,msg):
+        command=None
         try:
             if not self.command_authority_clear():raise ValueError('Competing command authority')
             command=self.commands.decode(msg.data)
@@ -100,6 +120,8 @@ class NavigationSupervisor(HealthInterlock):
             self.last_reply={'sequence':command['sequence'],'accepted':accepted,'op':op}
         except (ValueError,TypeError,KeyError) as exc:
             self.last_reply={'accepted':False,'error':str(exc)}
+        finally:
+            self.audit('command_reply',command=command,reply=self.last_reply)
 
     def on_velocity(self,msg):
         target=self.session.current
@@ -125,6 +147,9 @@ class NavigationSupervisor(HealthInterlock):
             self.session.cancel(target,'invalid_controller_velocity');return
         out=TwistStamped();out.header=msg.header;out.header.frame_id='base_link';out.twist=msg.twist
         self.request_pub.publish(out);self.last_velocity_stamp=stamp;self.forwarded+=1
+        self.audit('velocity_forwarded',target=asdict(target),
+                   velocity_stamp_ns=msg.header.stamp.sec*1000000000+msg.header.stamp.nanosec,
+                   frame_id=out.header.frame_id,velocity=list(values))
 
     def arrival(self,target):
         try:
@@ -181,6 +206,8 @@ class NavigationSupervisor(HealthInterlock):
             self.session.release(target,stationary=True,stop_latched=True)
         self.nav_state_pub.publish(String(data=json.dumps({
             'run_id':self.policy.run_id,'command_sequence':self.commands.sequence,
+            'sim_stamp_ns':self.get_clock().now().nanoseconds,
+            'audit_sequence':self.audit_sequence,'audit_ok':self.audit_error is None,
             'target':asdict(self.session.current) if self.session.current else None,
             'action_state':self.session.state,'healthy':self.lease.healthy and not self.lease.stop_required,
             'guard_latched':self.guard_state['latched'] if self.guard_fresh() else None,

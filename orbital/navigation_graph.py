@@ -24,6 +24,7 @@ NAV_TOPICS = {
     '/navigation/raw_cmd_vel': [('controller_server',STAMPED)],
     '/motion/request': [('orbital_navigation_supervisor',STAMPED)],
     '/navigation/state': [('orbital_navigation_supervisor',STRING)],
+    '/navigation/audit': [('orbital_navigation_supervisor',STRING)],
     '/navigation/interlock': [('orbital_navigation_supervisor',STRING)],
     '/navigation/health': [('orbital_localization_monitor',STRING)],
 }

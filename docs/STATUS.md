@@ -11,6 +11,28 @@ original localization branch; six migrated commits do not count as new deliverie
 [Draft PR #16](https://github.com/gokselozgur5/orbital-mechanic/pull/16) links #6/#7,
 which remain open until full live localization/navigation acceptance and review.
 
+**OM-023: independent trajectory recording passes local tests; native capture is pending.**
+The read-only recorder samples Gazebo model truth directly, looks up localization
+at each truth timestamp and records exact supervisor target/command identities.
+New supervisor audit events distinguish command replies from forwarded velocity;
+neither implies physical movement. Ordered counters expose missing audit records.
+Unique run output retains normalized events, receipt/source times, interpolation
+results and a bounded hash/count summary, with service/source/binding fences.
+
+All 204 local tests pass, including 40 new evaluator/audit tests. Production
+supervisor callbacks and the actual recorder adapter run through controlled
+transports. Missing TF/audit data, resets, changed identity, queue/output limits,
+malformed callbacks, interruption and tampered artifacts fail visibly. The initial
+test combined two negative scenarios on an already-invalid trace; they are now
+independent cases. No native binding, DDS or moving-trajectory acceptance is claimed.
+
+Thor SSH remains unavailable; the last verified live deployment is still OM-017.
+Next native: commission OM-018/022, coordinate the revised map/localization reload,
+deploy the reviewed observer/audit source and prove stationary then guarded moving
+capture before physical-loss and route acceptance. The recorder never commands a
+stop or cancels a goal; armed trials retain the independent guardian. See
+[TRAJECTORY.md](TRAJECTORY.md) for capture timing, artifacts and evidence limits.
+
 **OM-022: bounded navigation commands pass local tests; native DDS is pending.**
 `scripts/orbital-navigate.py` observes status or sends one request, explicit arm
 or exact-target cancel. It pins supervisor run/sequence, rejects stale targets
@@ -28,7 +50,7 @@ publishers. Deadline, restart, sequence, malformed input, local lock and input
 boundary tests pass. No native process was changed: Thor SSH still times out.
 Next: native isolated CLI commissioning alongside OM-018, then the coordinated
 OM-021 map reload, physical loss/recovery gates and measured tour. Independent
-next delivery is the trajectory recorder (OM-023). See
+trajectory recording is implemented locally as OM-023 above. See
 [NAVIGATION_CLIENT.md](NAVIGATION_CLIENT.md) for the operator/receipt contract.
 
 **OM-021: inspection-pose geometry is accepted offline; deployment is pending.**
