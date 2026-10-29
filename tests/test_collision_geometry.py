@@ -157,6 +157,41 @@ class SceneGeometryTests(unittest.TestCase):
             with self.subTest(mutation=mutation), self.assertRaises(ValueError):
                 truth_from_message(msg, self.scene)
 
+    def test_gazebo_generated_light_visual_is_required_in_complete_scene(self):
+        msg = scene_message(WORLD, 10**9, robot_pose=IDENTITY)
+        self.assertEqual(len(msg.pose), 35)
+        self.assertEqual(sum(p.name == 'sunVisual' for p in msg.pose), 1)
+        truth = truth_from_message(msg, self.scene)
+        self.assertEqual(self.scene.evaluate(truth)['events'], [])
+        for mutation in ('missing', 'duplicate', 'renamed'):
+            changed = copy.deepcopy(msg)
+            visual = next(p for p in changed.pose if p.name == 'sunVisual')
+            if mutation == 'missing':
+                changed.pose.remove(visual)
+            elif mutation == 'duplicate':
+                extra = copy.deepcopy(visual); extra.id = 999
+                changed.pose.append(extra)
+            else:
+                visual.name = 'unrelatedVisual'
+            with self.subTest(mutation=mutation), self.assertRaisesRegex(ValueError, 'topology'):
+                truth_from_message(changed, self.scene)
+
+    def test_each_declared_light_requires_its_own_generated_visual(self):
+        tree = ET.fromstring(WORLD)
+        light = copy.deepcopy(tree.find('world/light')); light.set('name', 'deck_light')
+        tree.find('world').append(light)
+        source = ET.tostring(tree); scene = Scene(source)
+        message = scene_message(source, 10**9, robot_pose=IDENTITY)
+        self.assertEqual(sum(p.name == 'deck_lightVisual' for p in message.pose), 1)
+        self.assertEqual(scene.evaluate(truth_from_message(message, scene))['events'], [])
+
+    def test_generated_light_visual_cannot_alias_a_collision_model(self):
+        tree = ET.fromstring(WORLD)
+        model = copy.deepcopy(tree.find("world/model[@name='cooler']"))
+        model.set('name', 'sunVisual'); tree.find('world').append(model)
+        with self.assertRaisesRegex(ValueError, 'Model/robot link names must be unique'):
+            Scene(ET.tostring(tree))
+
     def test_static_link_changes_and_moving_floor_refuse_supported_contract(self):
         msg = scene_message(WORLD, 10**9)
         next(p for p in msg.pose if p.name == 'body').position.x = .1

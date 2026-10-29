@@ -2,8 +2,10 @@
 
 `scripts/orbital-navigate.py` provides `status`, `request`, `arm` and `cancel`
 through the supervisor's existing run/sequence and exact-target protocol. OM-022
-passes local and native DDS protocol tests. Live deployment remains pending;
-no route, physical stop or machine arrival is accepted by these client tests.
+passes local and native DDS protocol tests. The client is installed in the
+[coordinated live deployment](NAVIGATION.md#coordinated-native-deployment), where
+its read-only status command passes. These checks do not accept a route, physical
+stop or machine arrival.
 
 ## Operating sequence
 
@@ -139,5 +141,6 @@ service with `KillMode=control-group` and a 90-second runtime limit. It requires
 an unused `runtime/navigation-cli-proof` directory and retains every child log;
 do not remove earlier trial evidence to reuse that path.
 
-Live source deployment, explicit revised-map loading, readiness and independently
-measured motion remain separate gates in [#30](https://github.com/gokselozgur5/orbital-mechanic/issues/30).
+Live source deployment, explicit revised-map loading and guarded readiness now
+pass. Independently measured motion, stopping and route acceptance remain open
+in [#30](https://github.com/gokselozgur5/orbital-mechanic/issues/30).

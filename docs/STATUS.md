@@ -26,12 +26,39 @@ native navigation acceptance is now tracked in
 [#30](https://github.com/gokselozgur5/orbital-mechanic/issues/30). Phase 2 remains
 open. Issues #8/#9/#11 also remain open for native acceptance despite their
 implementation merges. Earlier delivery notes below retain their historical
-validation counts; [TRACKING.md](TRACKING.md) records the updated handoff.
+validation counts and deployment snapshots; [TRACKING.md](TRACKING.md) records
+the updated handoff. The following paragraph is the current live deployment.
 
-SSH access returned on 2026-10-29. Native domain-84 arm and CLI protocol proofs
-pass with synthetic feedback, while the last verified live deployment remains
-OM-017. Next: review the deployed source delta and explicitly load the revised
-map/localization before live arming, measured stopping and route trials.
+On 2026-10-29, source `91f9096` was deployed through a deliberate new-world restart.
+All 161 packaged source files match; navigation records 160 startup source pins
+under identity `6ef1b01db8ae73976f572d6887f072fdf5d512b24fc5d2588f3f0892463ec3cb`.
+Revised map `f02e11a9cb0e4f2f`, sensors/frames, unseeded refusal, explicit origin
+seed, guarded Nav2 activation, native TF attribution, CLI status and fresh public
+station observations pass. Independent stationary error is 0.00809 m / 0.01144 rad.
+The new durable station generation has zero missions/actions; the supervisor is
+healthy, idle and latched, with zero command/audit/forwarded counters. This does
+not commission maintenance effects or a route. The installed recorder now passes
+idle capture and negative time controls. Next: guarded moving capture, live arm
+and loss-stop measurements, then the three-machine tour.
+See [the rollout evidence](NAVIGATION.md#coordinated-native-deployment).
+
+The first live recorder attempt refused Gazebo's generated `sunVisual` entity.
+The [light-visual correction](TRAJECTORY.md#native-light-visual-regression--2026-10-29)
+passes 79 focused tests and the same five retained native messages that the old
+parser rejects. An explicitly identified observer candidate captured 278 idle
+samples with exact-time TF and no sampled geometry event. After the separate
+installed rollout, a repeatable native driver passes normal capture (110 samples),
+wrong-time TF refusal and unavailable-time refusal. Both negative traces stay
+incomplete with no ready marker and fail integrity acceptance. Local replay of
+the positive trace also passes. The trial creates no command publisher; live
+identities remain unchanged. Guarded moving-capture acceptance remains open.
+
+The [native station startup proof](DURABLE_MAINTENANCE.md#native-startup-proof)
+now passes six controls across nine actual CLI children on isolated Jazzy domain
+84: unprepared startup, fresh public telemetry, consumed-generation restart
+refusal, explicit fresh-fixture identity, clock regression and unavailable-source
+observation. Its synthetic clock does not establish live-world or maintenance
+acceptance. All staged source pins and live service identities stayed unchanged.
 
 **OM-066: persistent scripted gateway implemented; native acceptance pending.**
 [Mission runtime](MISSION_RUNTIME.md) now uses one ROS session for the public
@@ -794,7 +821,7 @@ map binding and readiness; an already-loaded old revision is intentionally
 rejected. No native process or simulation was changed. OM-018/019/020 and the
 measured tour remain pending; SSH access to the configured Thor is unresolved.
 
-**OM-018: arm callback races pass native protocol tests; live deployment is pending.**
+**OM-018: arm fix deployed in guarded standby; physical arming is pending.**
 The command callback now expires the health lease before admitting a request or
 arm. If moving feedback arrives while a guard-arm response is pending, that
 target is invalidated even when stationary feedback returns before the next tick.
@@ -813,11 +840,18 @@ Disposable proof cgroups exited; the live service identities and selected source
 hashes stayed unchanged. [NAV2_INTEGRATION.md](NAV2_INTEGRATION.md) records exact
 source/driver identities, the retained setup failure and the evidence manifest.
 
-This used synthetic health/odometry in empty-checked domain 84, without a world or
-drive connection. The live deployment remains at OM-017. Next: commission the
-actual navigation CLI, deploy the reviewed source with explicit map/localization
-checks, then verify live stationary arming and physical-loss stopping. Remaining
-native acceptance is tracked in [#30](https://github.com/gokselozgur5/orbital-mechanic/issues/30).
+The native comparison used synthetic health/odometry in empty-checked domain 84.
+The original fix at `24df24d` then passed the same seven cases with the OM-017
+dependencies. A backed-up, one-file deployment restarted only navigation. Fresh
+guarded readiness, map binding, native TF and independent pose checks pass;
+all 94 source pins match the new startup manifest. The supervisor is healthy,
+idle and latched with no target or forwarded motion; Gazebo pose stayed unchanged
+at the reported precision. Exact source/service identities and the 46-file
+evidence manifest are in [NAV2_INTEGRATION.md](NAV2_INTEGRATION.md).
+
+The live root retains OM-017 plus this supervisor fix. Later CLI/map/maintenance
+deployment and live stationary arming/physical-loss stopping remain under
+[#30](https://github.com/gokselozgur5/orbital-mechanic/issues/30).
 
 **OM-017: map revision binding is deployed and accepted.**
 Startup validates the loaded map-server revision and artifacts; readiness also

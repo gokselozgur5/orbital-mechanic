@@ -135,3 +135,34 @@ Controlled partial writes, sync failures, path/link/permission changes, capacity
 Composed station/guard/navigation tests also verify that results from separate actual camera children match retained terminal records.
 
 These are local process-crash and controlled-transport checks, not native DDS, surviving-world recovery, filesystem-snapshot rollback resistance, physical power-loss guarantees, electrical isolation or full mission acceptance.
+
+## Native startup proof
+
+On 2026-10-29, `scripts/check-station-lifecycle.py` passed six controls on Thor
+ARM64, ROS 2 Jazzy and Python 3.12.3. Nine real telemetry, observer and journal
+CLI children used an empty-checked localhost domain 84 and a synthetic clock:
+
+- An unprepared generation exits before publishing station measurements.
+- A prepared station supplies two fresh public schema-2 samples with the actual
+  registry identity, no applied action and no hidden fault/scenario fields.
+- A graceful station-only restart refuses the consumed generation, preserving
+  journal bytes and publishing no new measurements.
+- An explicitly prepared fresh fixture uses new station/scenario identities
+  while retaining both generations and zero mission/action records.
+- A five-second backward clock jump terminates the actual station.
+- The real observer then refuses to return a fresh measurement.
+
+Each preparation represents a new isolated model fixture, not a surviving Gazebo
+world. The bounded disposable user-service cgroup exits; all 159 staged source
+pins and the live demo/localization/navigation inventory remain unchanged. This
+proves native startup and observation behavior, not maintenance effects, physical
+stopping, route acceptance or recovery of a running world.
+
+Evidence: operator workspace
+`reviews/orbital-navigation-rollout-20261029/station-lifecycle-evidence`.
+Its 30-file manifest SHA-256 is
+`2352761c5cfe5dbe6ef28d24db597721f175814fce64560e3a50e913cde2245e`;
+the driver SHA-256 is
+`30c50b6047c1c256e991786a29ee66ef012b29eef660fae288ae269c290315a0`.
+Use a fresh staged checkout under the owned runtime root and a bounded cgroup;
+the driver requires domain 84/LOCALHOST and refuses an existing proof directory.

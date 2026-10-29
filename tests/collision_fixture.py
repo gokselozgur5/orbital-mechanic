@@ -27,5 +27,7 @@ def scene_message(data, stamp, *, robot_pose=None, link_poses=None, model_poses=
     for visual in world.findall('.//visual'):
         append(visual.get('name'), sdf_pose(visual))
     for light in world.findall('.//light'):
+        # SdfEntityCreator creates an identity-pose visual under every light.
+        append(light.get('name')+'Visual', IDENTITY)
         append(light.get('name'), sdf_pose(light))
     return Proto(header=Proto(stamp=Proto(sec=stamp//10**9, nsec=stamp % 10**9)), pose=rows)

@@ -250,6 +250,8 @@ class Scene:
             self.models[name] = {'pose': Transform.pose(sdf_pose(model)), 'links': links, 'parts': parts}
         for light in world.findall('.//light'):
             self.entries[self.name(light)] += 1
+            # Gazebo creates this child visual even when it is absent from SDF.
+            self.entries[self.name(light)+'Visual'] += 1
         required = {'maintenance_robot', 'floor', 'north', 'south', 'east', 'west', 'pump', 'cooler', 'power_unit'}
         if not required <= self.models.keys():
             raise ValueError('Maintenance world model missing')

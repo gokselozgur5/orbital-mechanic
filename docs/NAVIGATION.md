@@ -1,6 +1,49 @@
 # Known-map navigation contract — preparation
 
-This is the Phase 2 contract for issues #6/#7. Known-map AMCL has passed initial commissioning on the corrected physical model. Named-pose navigation, action cancellation and route/collision acceptance remain incomplete. The health observer and guard-stop connection have separate isolated ROS evidence; they are not yet integrated into the shared simulator.
+This is the Phase 2 contract originally tracked by issues #6/#7. The owner merged
+their implementation; remaining native acceptance is tracked in #30. Known-map
+AMCL and integrated guarded Nav2 standby are commissioned on the corrected
+physical model. The complete route, failure-stopping and collision gates remain open.
+
+## Coordinated native deployment
+
+On 2026-10-29, committed source `0373a75686dbefd16eaa66162c280c6558c10ade`
+replaced the OM-017 plus arm-fix deployment during one explicit new-world restart.
+The three old owned cgroups finished cleanup before source replacement. Previous
+sources and runtime reports were retained; old map artifacts remain intact.
+The package contains 161 files: 15 existing sources changed and 66 were installed.
+
+The new map revision is `f02e11a9cb0e4f2f`. Sensor/frame checks, active-but-unseeded
+AMCL, explicit fresh-origin seeding, independent stationary pose, loaded-map
+binding, guarded Nav2 activation, native TF ownership and the actual navigation
+status CLI all pass. Final independent error is 0.00809 m / 0.01144 rad; Gazebo
+endpoint XY/yaw stayed at the fresh origin throughout the measured standby checks.
+
+The station publishes fresh schema-2 telemetry from one new durable scenario,
+with zero mission/action records. Navigation is healthy/idle/latched, owns no
+target and reports zero command, audit and forwarded-velocity counters. No
+maintenance effect or armed route was requested. Source installation and standby
+readiness do not establish physical stopping, arrival or maintenance acceptance.
+
+Navigation startup identity:
+`e07200d7b7cad39bf8b762eb9cffe20560b75dc009b9eba555295aacf7c84634`.
+Operator evidence is retained in
+`reviews/orbital-navigation-rollout-20261029/rollout-evidence`; its 188-file manifest
+SHA-256 is `c72ea2239201dcaba58304d897a22f356de631c081f5e10dc6ca4f8077a34790`.
+That initial rollout is retained as historical evidence. The subsequent current
+rollout at `91f90966d4c050c05a85217ec37e14231a3bd124` changes only
+`orbital/collision_geometry.py` for Gazebo's generated light visual. It uses
+another explicit new world, preserving the first durable scenario record and
+avoiding adoption of old maintenance authority. All readiness checks above pass
+again with the same map revision and stationary error bounds. Current navigation
+identity is `6ef1b01db8ae73976f572d6887f072fdf5d512b24fc5d2588f3f0892463ec3cb`.
+
+The second rollout's 255-file evidence manifest is
+`2282330ef8ab139399abce2d6551576e4e9612dc7a274869cea6ff6beb860150`, under operator
+`reviews/orbital-observer-fix-deployment-20261029/rollout-evidence`.
+Installed idle recording and negative time controls now pass as described in
+[TRAJECTORY.md](TRAJECTORY.md); guarded moving capture and physical failure trials
+remain next.
 
 ## Map and coordinates
 
@@ -61,8 +104,8 @@ CLI refusal, dependency identity and tampered report checks also pass.
 This is static geometry acceptance. It neither measures localization error nor
 proves actual arrival, observation orientation or collision-free execution.
 Maintenance still requires fresh independently measured distance and stationary
-feedback; navigation success alone cannot authorize it. Native deployment and
-the three-machine tour remain pending.
+feedback; navigation success alone cannot authorize it. The coordinated native
+deployment above loads the revised contract; the three-machine tour remains pending.
 
 ## Transform and localization ownership
 
