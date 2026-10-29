@@ -10,7 +10,8 @@ from orbital.planner_schema import (ERRORS, MAX_REQUEST_BYTES, MAX_RESULT_BYTES,
 
 class PlannerError(ValueError):
     def __init__(self, code):
-        if code not in {'invalid_argument', 'wrong_run', 'stale_observation', 'unavailable', 'invalid_result'}:
+        if code not in {'invalid_argument', 'wrong_run', 'stale_observation', 'unavailable', 'invalid_result',
+                        'busy', 'action_conflict', 'unresolved', 'budget_exhausted', 'precondition_failed'}:
             code = 'unavailable'
         self.code = code
         super().__init__(code)

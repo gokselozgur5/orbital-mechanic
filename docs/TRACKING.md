@@ -92,7 +92,11 @@ Issue [#13](https://github.com/gokselozgur5/orbital-mechanic/issues/13) now has 
 [wire contract and public observation preflight](PLANNER_CONTRACT.md) on
 `codex/planner-contract`, stacked on `codex/mission-evaluation`.
 
-Nine tools have bounded input/result schemas; no command executor or provider is connected.
+Nine tools have bounded input/result schemas.
 
-Durable duplicate handling, cancellation integration, same-contract scripted
-compatibility and complete prerequisites remain open.
+Child `codex/planner-executive` adds [durable owned execution](PLANNER_EXECUTION.md),
+exact replay, cancellation and a same-contract scripted baseline, with local
+actual station/capture and process-death checks.
+
+Issue #13 stays In Progress: provider integration, OS separation, native
+commissioning and complete earlier prerequisites remain open.

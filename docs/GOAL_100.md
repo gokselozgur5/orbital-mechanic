@@ -155,7 +155,7 @@ All items below start pending except the goal-contract commit itself. Dependenci
 | ID | Deliverable | Acceptance gate |
 | --- | --- | --- |
 | OM-081 | Versioned planner tool schemas | Nine bounded request/result schemas, strict decoding, effect uncertainty and fresh public-observation preflight implemented locally. No command dispatch, provider integration, replay protection or full #13 acceptance; one coherent delivery only. |
-| OM-082 | Tool validation boundary | Reject malformed, extra, nonfinite and out-of-range arguments. |
+| OM-082 | Durable tool executive and scripted compatibility | Replaces argument validation already covered by OM-081: actual owned dispatch, fsynced logical/native binding and results, exact replay, retained uncertainty, bounded calls/deadlines and persistent operator-reset stop. Local composed profiles and process cuts; provider/native/OS acceptance remains open. One coherent delivery, no duplicate OM-081/083/086/088 credit. |
 | OM-083 | Planner observation boundary | Send only public fresh observations and permitted machine metadata. |
 | OM-084 | Provider adapter interface | Separate provider transport from deterministic execution and policy. |
 | OM-085 | Recorded-response replay adapter | Exercise realistic tool turns without network or paid inference. |

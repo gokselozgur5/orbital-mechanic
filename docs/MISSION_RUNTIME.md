@@ -6,6 +6,11 @@ ROS session. It does not start prerequisites, inject scenarios or read hidden
 fault labels. Native mission acceptance remains open; OM-080 adds
 [independent retained mission evaluation](MISSION_EVALUATION.md).
 
+OM-082 adds `run --tool-contract` for the same scripted policy through the
+[durable planner tools](PLANNER_EXECUTION.md). Both modes refuse an unfinished
+mission or a latched tool stop; only the separate explicit operator reset can
+clear a closed mission's planner admission latch.
+
 ## Admission and execution
 
 The gateway acquires the private `runtime/mission-service` owner lock, validates

@@ -103,7 +103,7 @@ class MissionPolicy:
             raise ValueError('policy_source_or_control_changed')
         return [p for p,at in pair]
 
-    def next_machine(self):
+    def next_machine(self, machine_id=None):
         pair = self._current_pair('inspect')
         if sum(self.visits.values()) >= MAX_INSPECTIONS:
             raise ValueError('policy_inspection_budget_exhausted')
@@ -116,6 +116,9 @@ class MissionPolicy:
             -latest['voltage_v']*latest['machines'][name]['current_a'],
             name in self.healthy_inspections, self.visits[name], MACHINE_IDS.index(name)))
         target = self.retry if self.retry in available else ordered[0]
+        if machine_id is not None:
+            if machine_id not in available:raise ValueError('policy_inspection_budget_exhausted')
+            target = machine_id
         self.plan = {'policy_version':POLICY_VERSION, 'machine_id':target,
                      'mission_id':self.mission.mission_id, 'registry_identity':self.registry.identity,
                      'station_run_id':latest['run_id'], 'control':copy.deepcopy(latest['control']),

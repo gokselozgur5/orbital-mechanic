@@ -154,7 +154,8 @@ class RosMissionTransport:
         return not failed
 
 
-def run(root, *, mission_id=None, timeout_s=600., now=time.monotonic, transport_factory=RosMissionTransport):
+def run(root, *, mission_id=None, timeout_s=600., now=time.monotonic, transport_factory=RosMissionTransport,
+        tool_contract=False):
     """Run one explicit bounded mission; never start/restart a prerequisite."""
     deadline=finite(now(),0.,float('inf'))+finite(timeout_s,1.,600.)
     mission_id=identifier(uuid.uuid4().hex if mission_id is None else mission_id)
@@ -173,6 +174,7 @@ def run(root, *, mission_id=None, timeout_s=600., now=time.monotonic, transport_
         journal=MissionJournal(lock)
         if journal.active is not None:
             raise ValueError('unfinished_mission_requires_reconciliation')
+        if journal.tools.stop_owner is not None:raise ValueError('planner_operator_reset_required')
         before=witness_runtime(root)
         remaining=deadline-now()
         if remaining<1.:raise ValueError('mission_startup_deadline')
@@ -184,7 +186,11 @@ def run(root, *, mission_id=None, timeout_s=600., now=time.monotonic, transport_
         transport.attach_witness(witness)
         remaining=deadline-now()
         if remaining<1.:raise ValueError('mission_startup_deadline')
-        driver=MissionRuntime(registry,transport,journal,mission_id=mission_id,timeout_s=remaining,
+        driver_type=MissionRuntime
+        if tool_contract:
+            from orbital.planner_runtime import PlannerRuntime
+            driver_type=PlannerRuntime
+        driver=driver_type(registry,transport,journal,mission_id=mission_id,timeout_s=remaining,
             stop_requested=lambda:stopping)
         report=driver.run()
         if report['complete']:

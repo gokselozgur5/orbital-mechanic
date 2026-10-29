@@ -8,6 +8,7 @@ import copy
 import hashlib
 import os
 import stat
+import uuid
 
 from orbital.inspection_artifacts import FILE_FLAGS
 from orbital.inspection_protocol import canonical, decode, identifier
@@ -16,13 +17,15 @@ from orbital.maintenance_protocol import integer
 from orbital import inspection_protocol, maintenance_protocol
 from orbital.navigation_client import NavigationClient
 from orbital.station_control import control
+from orbital.planner_history import ToolHistory, KINDS as TOOL_KINDS
 
 NAME = 'events.jsonl'
 MAX_BYTES = 32*1024*1024
 MAX_EVENTS = 16384
 MAX_MISSIONS = 64
 MAX_EVENT_BYTES = 65536
-KINDS = frozenset(('start','command','receipt','telemetry','decision','error','cancel_intent','terminal'))
+KINDS = frozenset(('start','command','receipt','telemetry','decision','error','cancel_intent','terminal',
+                   'operator_tool_reset')) | TOOL_KINDS
 
 
 class MissionJournal:
@@ -34,6 +37,7 @@ class MissionJournal:
         self.active = None
         self.context = None
         self.missions = set()
+        self.tools = ToolHistory()
         try:
             lock.verify()
             parent = os.fstat(lock.directory_fd)
@@ -97,10 +101,16 @@ class MissionJournal:
         identifier(mission_id)
         if kind not in KINDS or not isinstance(data,dict):
             raise ValueError('invalid_mission_journal_event')
+        if kind == 'operator_tool_reset':
+            if self.active is not None or mission_id in self.missions:
+                raise ValueError('unfinished_mission_requires_reconciliation')
+            self.tools = self.tools.operator_reset(mission_id,data)
+            return
         if kind=='start':
             if self.active is not None:
                 raise ValueError('unfinished_mission_requires_reconciliation')
-            if mission_id in self.missions or len(self.missions)>=MAX_MISSIONS:
+            if self.tools.stop_owner is not None:raise ValueError('planner_operator_reset_required')
+            if mission_id in self.missions or mission_id in self.tools.audit_ids or len(self.missions)>=MAX_MISSIONS:
                 raise ValueError('mission_identity_reused_or_history_full')
             if set(data)!={'registry_identity','station_run_id','policy_version','baseline','started_wall_s','started_sim_ns','deadline_wall_s'}:
                 raise ValueError('invalid_mission_start_record')
@@ -120,6 +130,7 @@ class MissionJournal:
         else:
             if self.active!=mission_id:
                 raise ValueError('mission_journal_has_no_matching_owner')
+            self.tools = self.tools.advance(mission_id,kind,data,self.context)
             if kind=='terminal':
                 if (set(data)!={'outcome','reason','control','pending','quiescence'} or data['pending'] is not None
                         or data['outcome'] not in ('healthy','recovered','escalated','cancelled','timed_out','failed')
@@ -179,7 +190,7 @@ class MissionJournal:
         except BaseException:
             self.broken=True
             raise
-        self.active,self.missions,self.context=trial.active,trial.missions,trial.context
+        self.active,self.missions,self.context,self.tools=trial.active,trial.missions,trial.context,trial.tools
         self.sequence,self.previous=event['sequence'],digest
         return digest
 
@@ -187,3 +198,13 @@ class MissionJournal:
         if self.fd is not None:
             os.close(self.fd)
             self.fd=None
+
+    def reset_planner_stop(self):
+        """Explicit operator-only storage action; never resume an unfinished mission."""
+        self.verify()
+        stopped = self.tools.stop_owner
+        if stopped is None or self.active is not None:raise ValueError('planner_stop_reset_unavailable')
+        audit = uuid.uuid4().hex
+        digest = self.append(audit,'operator_tool_reset',{'stop_mission_id':stopped,'operator_requested':True})
+        return {'schema_version':1,'cleared':True,'stop_mission_id':stopped,'audit_id':audit,
+                'journal_sha256':digest,'scope':'Explicit planner admission reset; no actuator or guard reset.'}

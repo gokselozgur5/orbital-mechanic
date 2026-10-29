@@ -76,3 +76,14 @@ class PlannerObservation:
             if self.view()['observation_id'] != issued:
                 raise PlannerError('stale_observation')
         return value
+
+    def current(self, observation_id):
+        """Final in-memory packet/age check; source I/O must already be finished."""
+        try:
+            if self.failure or observation_id != self.observation_id:
+                raise ValueError
+            measured = self.reader.measure(self.now(), self.sim_ns())
+            digest = hashlib.sha256(canonical(measured['telemetry']).encode()).hexdigest()
+            if self.last_digest != digest:raise ValueError
+        except (Unavailable, ValueError, TypeError, OverflowError):
+            raise PlannerError('stale_observation') from None

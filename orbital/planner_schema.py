@@ -100,10 +100,22 @@ def result_schema(tool):
     })}
 
 
+def pending_stop_schema():
+    return {'$schema': DIALECT, **object_schema({
+        'schema_version': {'type': 'integer', 'const': VERSION},
+        'kind': {'type': 'string', 'const': 'planner_tool_pending'},
+        'run_id': identifier_schema(), 'mission_id': identifier_schema(), 'action_id': identifier_schema(),
+        'request_sha256': identifier_schema(64),
+        'reason': {'type': 'string', 'const': 'cancellation_requested'},
+        'terminal': {'type': 'boolean', 'const': False}, 'durable': {'type': 'boolean', 'const': False},
+    })}
+
+
 def catalog():
     """Fresh copies; no arbitrary provider extensions or private configuration."""
     return copy.deepcopy({'schema_version': VERSION, 'kind': 'planner_tool_catalog',
         'request_max_utf8_bytes': MAX_REQUEST_BYTES, 'result_max_utf8_bytes': MAX_RESULT_BYTES,
+        'pending_stop_schema': pending_stop_schema(),
         'tools': [{'name': name, 'requires_fresh_observation': name in FRESH_TOOLS,
                    'input_schema': request_schema(name), 'result_schema': result_schema(name)} for name in TOOLS],
         'scope': 'Wire contracts only; validation is not execution, authorization or independent outcome evidence.'})

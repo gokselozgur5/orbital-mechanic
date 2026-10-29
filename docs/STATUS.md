@@ -11,6 +11,58 @@ original localization branch; six migrated commits do not count as new deliverie
 [Draft PR #16](https://github.com/gokselozgur5/orbital-mechanic/pull/16) links #6/#7,
 which remain open until full live localization/navigation acceptance and review.
 
+**OM-082: durable tools connected to the existing owned executive.**
+
+The [planner executive](PLANNER_EXECUTION.md) dispatches the nine bounded tools
+through the actual mission clients and runs the existing scripted policy through
+that contract with `run --tool-contract`.
+
+Fsynced logical intent and native binding precede publication; the original
+public observation is rechecked after I/O, and results become replies only after
+durable recording.
+
+Exact replay retains original evidence without repeating effects; changed call
+identity is refused and unresolved effects remain owned.
+
+Calls and deadlines are bounded, with one reserved stop slot; a concurrent stop
+requests exact cancellation and returns a clearly nonterminal/nondurable pending
+acknowledgement before its eventual persisted result.
+
+A durable stop survives process restart and blocks new missions until explicit
+operator acknowledgement of a closed mission; it never resets the motion guard.
+
+Local regression coverage includes real station/capture profiles, unknown-result
+retention, fsync failures, concurrent stop, explicit reset and three owned-process
+SIGKILL cuts before publication, after isolation and after result persistence.
+
+All 959 local tests pass, including 30 new tests, plus the causal baseline,
+246 Python AST files, 17 shell scripts and 2 XML sources.
+
+All 265 executable source pins remained unchanged throughout validation.
+
+Four deliberate mutants fail the intended original-packet, replay-identity,
+reported-effect and stop-before-transport assertions.
+
+Five retained tool-driven station/adapter runs reopen 10 actual image bundles;
+the stopped run's evaluation remains identical after explicit operator reset.
+
+Three retained owned child SIGKILL cuts preserve unfinished admission, including
+the cut after a logical result was already persisted.
+
+Evidence: operator workspace `reviews/orbital-delivery-20261028/om082`.
+
+Branch `codex/planner-executive` is stacked on `codex/planner-contract`, refs #13.
+
+OM-082 replaces validation already covered by OM-081 with this missing execution
+integration; this is one coherent delivery, with no extra OM-083/086/088 credit.
+
+The diagnosis remains the scripted public-measurement policy, with controlled
+transport/robot peers in local tests; there is no provider or external tool server.
+
+Native commissioning, independent pose/interlock evidence, OS/planner isolation,
+real blocked/noisy and held-out inputs, interrupted reconciliation, full cancellation
+containment/final isolation, the 25-trial freeze and full MVP acceptance remain open.
+
 **OM-081: bounded planner wire contracts and public-observation preflight.**
 
 The [planner contract](PLANNER_CONTRACT.md) defines nine versioned tools, strict
@@ -47,9 +99,9 @@ Evidence: operator workspace `reviews/orbital-delivery-20261028/om081`.
 Branch `codex/planner-contract` is stacked on `codex/mission-evaluation`; this is
 one coherent prototype delivery for #13, with no extra OM-082/083 credit.
 
-Command dispatch, durable call replay, pending-action limits, referenced evidence
-verification, same-contract scripted compatibility, provider integration and
-OS/planner isolation remain open.
+The original OM-081 delivery did not dispatch commands; OM-082 above adds owned
+dispatch, replay, bounded references and scripted compatibility, while provider
+integration and OS/planner isolation remain open.
 
 Wire validation is not execution, source authentication or independent outcome
 acceptance; earlier phase gates and #12 remain incomplete.
