@@ -73,6 +73,7 @@ Include a healthy scenario and an unrecoverable fault so success cannot mean bli
 
 - [Agreed phases](docs/PHASES.md)
 - [GitHub phase and issue tracking](docs/TRACKING.md)
+- [Kanban board and delivery workflow](docs/DELIVERY.md)
 
 - [Hardware/software requirements](docs/REQUIREMENTS.md)
 - [Operations and Mac viewing](docs/OPERATIONS.md)

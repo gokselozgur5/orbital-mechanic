@@ -63,9 +63,10 @@ class MaintenanceEndpointTests(unittest.TestCase):
         last_tick = None
         sequence = ('isolate', 'reset', 'restore') if restore else ('isolate', 'reset') if reset else ('isolate',)
         target_operation = sequence[-1]
-        # This host watchdog bounds the whole fixture, not any ROS action. The
-        # three-capture scenario and the extra recovery window add real work.
-        host_budget = 20.+10.*max(0, len(sequence)-2)+(30. if recovery else 0.)+(20. if cancel_isolate else 0.)
+        # Bound host scheduling/storage separately from each 15 s ROS action.
+        # CI needs 10-12 real seconds per capture even while the shared test
+        # clock waits for the child. Budget every capture, including compensation.
+        host_budget = 30.*(len(sequence)+int(cancel_isolate))+(30. if recovery else 0.)
         self.telemetry_receipts = []
         real_popen = subprocess.Popen
         real_station = ros_maintenance.StationMaintenance
@@ -176,6 +177,11 @@ class MaintenanceEndpointTests(unittest.TestCase):
 
         def launch(args, **kwargs):
             self.assertEqual(Path(args[1]).name, 'inspection-worker.py')
+            if mode == 'slow_startup' and len(workers) == 1:
+                # Host scheduling does not advance the controlled ROS clocks.
+                before = now()
+                time.sleep(21.)
+                self.assertEqual(now(), before)
             kwargs['env'].update(ORBITAL_TEST_ORIGIN=str(origin), ORBITAL_TEST_SHARED_CLOCK='1',
                                  ORBITAL_TEST_STATION_PUBLICATIONS='1', ORBITAL_TEST_EXIT_DELAY='.05',
                                  ORBITAL_TEST_STORAGE_DELAY='.35' if mode == 'slow_storage' else '0')
@@ -405,6 +411,18 @@ class MaintenanceEndpointTests(unittest.TestCase):
         record, image = read_capture(self.root, ref['observation_id'], ref['manifest_sha256'])
         self.assertEqual(record['telemetry_source']['control_revision'], 1)
         self.assertEqual(record['inspection_action']['action_id'], terminal['action_id'])
+        self.assertGreater(len(image), 900000)
+
+    def test_reset_allows_slow_host_startup_without_extending_action_deadline(self):
+        terminal, output = self.run_endpoint('slow_startup', reset=True)
+        self.assertEqual(terminal['status'], 'succeeded', self.endpoint_diagnostic)
+        self.assertEqual(output['/station/telemetry'][-1]['control']['revision'], 2)
+        for completed in output['/maintenance/result']:
+            self.assertLess(completed['wall_duration_s'], 15.)
+        ref = terminal['observation']
+        record, image = read_capture(self.root, ref['observation_id'], ref['manifest_sha256'])
+        self.assertEqual(record['inspection_action']['action_id'], terminal['action_id'])
+        self.assertEqual(record['telemetry_source']['control_revision'], 1)
         self.assertGreater(len(image), 900000)
 
     def test_reset_real_capture_cancel_retains_isolation_without_pulse(self):
