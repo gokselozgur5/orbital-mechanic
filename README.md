@@ -111,8 +111,13 @@ strict request/result validation and fresh public-observation preconditions.
 
 Print the catalog with `python3 scripts/planner-tools.py`.
 
-This local interface does not dispatch commands or call a model; scripted-runtime
-integration, replay-safe execution and provider support remain open.
+[Durable tool execution](docs/PLANNER_EXECUTION.md) now connects this contract to
+the existing owned clients with fsynced call identity, exact replay, retained
+uncertainty and an operator-reset stop latch.
+
+`scripts/run-scripted-mission.py run --tool-contract` runs the same scripted
+policy through these tools. Local composed station/capture tests pass; provider
+integration, native commissioning and OS isolation remain open.
 
 [Retained mission evaluation](docs/MISSION_EVALUATION.md) independently compares
 the claimed terminal time with actual station state, raw gateway publication

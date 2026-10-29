@@ -2,7 +2,8 @@
 
 OM-081 implements a provider-neutral, versioned request/result vocabulary and a public telemetry projection.
 
-It is a local library and catalog CLI, not a command executor or a running LLM mission.
+The wire library and catalog remain independent of ROS; OM-082 adds a separate
+[durable executive](PLANNER_EXECUTION.md) and same-contract scripted baseline.
 
 ## Inspect the contract
 
@@ -42,7 +43,7 @@ The executor must derive owner run IDs, action envelopes and interlock inputs fr
 
 Every request has exactly `schema_version`, `kind`, `run_id`, `mission_id`, `action_id`, `tool`, `observation_id` and `arguments`.
 
-`run_id` identifies the future executive session, not the station or maintenance owner; the host supplies expected run/mission IDs to `request()`.
+`run_id` identifies the executive session, not the station or maintenance owner; the host supplies expected run/mission IDs to `request()`.
 
 An observation precondition is required for the six action/verification tools and explicitly null for observe, stop and report.
 
@@ -82,7 +83,7 @@ Only the latest issued packet is retained; reading a view does not refresh its r
 
 `validate()` rechecks source files, then clocks, and rejects a missing, invented, old or expired reference.
 
-A planner that responds after this strict freshness window must obtain a new observation; a future executor must not silently replace its precondition.
+A planner that responds after this strict freshness window must obtain a new observation; the executive also rechecks the original packet after binding I/O, immediately before publication.
 
 Stop and outcome-claim parsing remain available after observation failure; parsing a stop does not prove that cancellation or physical stopping occurred.
 
@@ -94,8 +95,12 @@ Public-observation tests use the actual causal station model and an actual isola
 
 These are local library/model tests, not a ROS/native robot trial or a provider call.
 
-There is no command dispatch, durable planner-call replay cache, pending-action budget, evidence-reference store, provider adapter, camera input or OS/planner isolation yet.
+The separate executive now supplies command dispatch, durable call replay, pending-call budgets, bounded public evidence and owned inspection results.
 
-The existing scripted runtime does not call this interface, so same-contract baseline compatibility remains unverified.
+Its catalog additionally describes the nonterminal, nondurable pending acknowledgement for a stop requested during another call.
+
+The existing scripted runtime can opt into the same contract; local composed tests include actual station and camera artifacts.
+
+Provider transport, model image input, process/OS isolation and native commissioning remain open.
 
 Issue #13 stays open, and earlier phase acceptance/#12 remain prerequisites for complete planner acceptance.

@@ -5,8 +5,11 @@ subsets. The [scripted runtime](MISSION_RUNTIME.md) now uses their persistent RO
 gateway.
 
 The [planner wire contract](PLANNER_CONTRACT.md) now implements bounded request/result
-schemas and public-observation preflight; command dispatch, provider integration
-and native acceptance remain open.
+schemas and public-observation preflight. [Durable execution](PLANNER_EXECUTION.md)
+now connects those tools to the existing clients and scripted policy, with
+exact replay, unresolved-call refusal and a persistent operator-reset stop latch.
+
+Provider integration, process isolation and native acceptance remain open.
 
 [Retained mission evaluation](MISSION_EVALUATION.md) joins actual gateway attempts,
 terminal observations, private station state and capture bundles at the claimed

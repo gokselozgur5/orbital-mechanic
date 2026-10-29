@@ -13,13 +13,18 @@ from orbital.inspection_protocol import finite,identifier
 
 def parse_args(argv=None):
     parser=argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('operation',choices=['run'])
+    parser.add_argument('operation',choices=['run','reset-tool-stop'])
     parser.add_argument('--timeout',type=float,default=600.)
     parser.add_argument('--mission-id')
+    parser.add_argument('--tool-contract',action='store_true',help='Execute the scripted policy through the durable planner tools')
+    parser.add_argument('--acknowledge-stop',action='store_true',help='Explicit operator acknowledgement for reset-tool-stop only')
     args=parser.parse_args(argv)
     try:
         finite(args.timeout,1.,600.)
         if args.mission_id is not None:identifier(args.mission_id)
+        if args.operation=='reset-tool-stop' and (not args.acknowledge_stop or args.mission_id or args.tool_contract):
+            raise ValueError('reset_requires_explicit_operator_acknowledgement_without_run_options')
+        if args.operation=='run' and args.acknowledge_stop:raise ValueError('acknowledgement_requires_reset_operation')
     except ValueError as error:parser.error(str(error))
     return args
 
@@ -32,12 +37,25 @@ def main(argv=None):
             raise ValueError('requires_localhost_Orbital_domain_42_or_isolated_fixture_84')
         if domain=='42' and (not os.environ.get('TMUX') or str(ROOT)!='/home/jensen/.goske/codex/orbital-mechanic'):
             raise ValueError('run_in_Thor_orbital_work_tmux_from_Orbital_workspace')
-        from orbital.ros_mission import run
-        report=run(ROOT,mission_id=args.mission_id,timeout_s=args.timeout)
+        if args.operation=='reset-tool-stop':
+            from orbital.inspection_worker import OwnerLock
+            from orbital.mission_journal import MissionJournal
+            lock=OwnerLock(ROOT,service='mission-service')
+            journal=None
+            try:
+                journal=MissionJournal(lock)
+                report={'schema_version':1,'complete':True,'operator_reset':journal.reset_planner_stop()}
+            finally:
+                if journal is not None:journal.close()
+                lock.close()
+        else:
+            from orbital.ros_mission import run
+            report=run(ROOT,mission_id=args.mission_id,timeout_s=args.timeout,tool_contract=args.tool_contract)
     except (ValueError,RuntimeError,OSError,KeyboardInterrupt) as error:
         report={'schema_version':1,'complete':False,'error':str(error),'error_type':type(error).__name__}
     print(json.dumps(report,indent=2,allow_nan=False))
-    return 0 if report['complete'] and report.get('mission',{}).get('outcome') in ('healthy','recovered','escalated') else 1
+    return 0 if report['complete'] and (report.get('operator_reset',{}).get('cleared') is True or
+        report.get('mission',{}).get('outcome') in ('healthy','recovered','escalated')) else 1
 
 
 if __name__=='__main__':raise SystemExit(main())

@@ -39,6 +39,7 @@ class MissionRuntime:
         self.clients={'inspection':self.inspection,'maintenance':self.maintenance}
         if journal.active is not None:
             raise ValueError('unfinished_mission_requires_reconciliation')
+        if journal.tools.stop_owner is not None:raise ValueError('planner_operator_reset_required')
         transport.install({
             '/station/telemetry':self._telemetry,'/navigation/state':self._navigation,
             **{f'/{family}/{kind}':getattr(client,'observe_'+kind)
@@ -46,6 +47,15 @@ class MissionRuntime:
 
     def _record(self, kind, data):
         return self.journal.append(self.mission_id,kind,data)
+
+    def _before_command(self, family, command):
+        """Optional logical-call binding, before all final source/freshness gates."""
+
+    def _before_publish(self, family, command):
+        """Optional in-memory precondition; must perform no I/O."""
+
+    def _navigation_client(self):
+        return NavigationClient(self.now)
 
     def _telemetry(self, text):
         wall,sim=self.now(),self.sim_ns()
@@ -126,6 +136,7 @@ class MissionRuntime:
                 raise ValueError('gateway_command_changed_or_repeated')
             self.registry.verify_current()
             self.transport.fence()
+            self._before_publish(family,value)
             self._fresh_sources()
             self.telemetry.measure(self.now(),self.sim_ns())
             self.mission.tick()
@@ -169,9 +180,10 @@ class MissionRuntime:
         self.started=True
         self._wait(lambda:len(self.policy.samples)>=2,min(self.deadline,self.now()+2.))
 
-    def _nav_command(self, operation, *, machine=None, target=None):
-        client=self.command_client=NavigationClient(self.now)
+    def _nav_command(self, operation, *, machine=None, target=None, deadline_wall=None):
+        client=self.command_client=self._navigation_client()
         deadline=min(self.deadline,self.now()+5.) if operation!='cancel' else self.now()+2.
+        if operation!='cancel' and deadline_wall is not None:deadline=min(deadline,deadline_wall)
         try:
             while not client.fresh() and self.now()<deadline:
                 self._poll(cleanup_family='navigation' if operation=='cancel' else None)
@@ -189,9 +201,11 @@ class MissionRuntime:
                 if operation!='cancel':raise
                 self.failure=self.failure or 'gateway_journal_unavailable'
             if operation!='cancel':
+                self._before_command('navigation',request)
                 self.registry.verify_current()
             self.transport.fence('navigation' if operation=='cancel' else None)
             if operation!='cancel':
+                self._before_publish('navigation',request)
                 self.mission.tick()
                 if self.mission.stop_reason or self.stop_requested() or self.now()>=deadline:
                     raise ValueError('gateway_mission_stopping')
@@ -220,11 +234,11 @@ class MissionRuntime:
             raise ValueError('gateway_navigation_command_unconfirmed')
         return receipt
 
-    def navigate(self, machine):
+    def navigate(self, machine, *, timeout_s=120.):
         self.cancellation_attempted=False
-        receipt=self._nav_command('request',machine=machine)
-        self._nav_command('arm',target=receipt['target'])
-        deadline=min(self.deadline,self.now()+120.)
+        deadline=min(self.deadline,self.now()+finite(timeout_s,.1,120.))
+        receipt=self._nav_command('request',machine=machine,deadline_wall=deadline)
+        self._nav_command('arm',target=receipt['target'],deadline_wall=deadline)
         while self.mission.pending is not None and self.now()<deadline:
             self._poll()
             if self.mission.stop_reason:break
@@ -233,13 +247,19 @@ class MissionRuntime:
             self.mission.fail('navigation_step_deadline_or_cancellation')
             raise ValueError('gateway_navigation_unresolved')
 
-    def action(self, operation, machine):
+    def action(self, operation, machine, *, timeout_s=None, ready_only=False):
         family='inspection' if operation=='inspect' else 'maintenance'
         client=self.clients[family]
-        self._wait(lambda:client.valid() and client.latest['ready'],min(self.deadline,self.now()+3.))
+        if ready_only:
+            if not client.valid() or not client.latest['ready']:
+                raise ValueError('gateway_action_not_ready')
+        else:
+            self._wait(lambda:client.valid() and client.latest['ready'],min(self.deadline,self.now()+3.))
         left=self.deadline-self.now()-2.
         if left<.1:raise ValueError('gateway_action_budget_exhausted')
-        args={'machine_id':machine,'timeout_s':min(5. if operation=='inspect' else 30.,left)}
+        budget=5. if operation=='inspect' else 30.
+        if timeout_s is not None:budget=finite(timeout_s,.1,10. if operation=='inspect' else 30.)
+        args={'machine_id':machine,'timeout_s':min(budget,left)}
         if family=='maintenance':
             args.update(station_run_id=self.mission.station_run,control_revision=self.mission.control['revision'])
             field={'reset':'isolation_action_id','restore':'reset_action_id'}.get(operation)
@@ -248,6 +268,7 @@ class MissionRuntime:
             'action_id':uuid.uuid4().hex,'command_id':uuid.uuid4().hex,'op':operation,'arguments':args}
         self.mission.begin_action(request)
         self._record('command',{'family':family,'command':request})
+        self._before_command(family,request)
         self.cancellation_attempted=self.cancelling=False
         receipt=client.execute(request)
         if not self.mission.pending['possibly_sent']:
@@ -308,25 +329,28 @@ class MissionRuntime:
                 'observed_wall_s':wall,'observed_sim_ns':sim,
                 'scope':'fresh owner idle/guard-latched reports, not independent physical stopping'}
 
+    def drive(self):
+        while self.mission.outcome is None:
+            self._poll()
+            if self.mission.stop_reason:break
+            phase=self.mission.phase
+            if phase=='inspect':
+                machine=self.policy.next_machine()['machine_id']
+                self.navigate(machine)
+                if self.mission.phase=='inspect':self.action('inspect',machine)
+            elif phase=='diagnose':self._record('decision',self.policy.apply())
+            elif phase=='intervene':self.action(self.mission.next_operation,self.mission.arrival)
+            elif phase=='verify':
+                if self.policy.high_vibration:self.mission.fail('verification_vibration_contradiction')
+                else:self.mission.verify()
+            elif phase=='escalate':self.mission.escalate()
+            else:raise ValueError('gateway_unresolved_transition')
+
     def run(self):
         complete=False
         try:
             self.start()
-            while self.mission.outcome is None:
-                self._poll()
-                if self.mission.stop_reason:break
-                phase=self.mission.phase
-                if phase=='inspect':
-                    machine=self.policy.next_machine()['machine_id']
-                    self.navigate(machine)
-                    if self.mission.phase=='inspect':self.action('inspect',machine)
-                elif phase=='diagnose':self._record('decision',self.policy.apply())
-                elif phase=='intervene':self.action(self.mission.next_operation,self.mission.arrival)
-                elif phase=='verify':
-                    if self.policy.high_vibration:self.mission.fail('verification_vibration_contradiction')
-                    else:self.mission.verify()
-                elif phase=='escalate':self.mission.escalate()
-                else:raise ValueError('gateway_unresolved_transition')
+            self.drive()
         except (ValueError,RuntimeError,OSError,KeyboardInterrupt) as error:
             self.failure=self.failure or 'gateway_mission_failed'
             if self.mission is not None:self.mission.fail(self.failure)
