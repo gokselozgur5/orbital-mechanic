@@ -7,6 +7,7 @@ from orbital.inspection_protocol import canonical, MAX_COMMAND_BYTES
 from orbital.inspection_worker import OwnerLock, CaptureProcess
 from orbital.maintenance_interlock import HoldEvidence
 from orbital.maintenance_owner import MaintenanceOwner
+from orbital.maintenance_journal import Journal, JournalUnavailable
 from orbital.ros_inspection import LiveGuard
 from orbital.ros_proximity import authority, proximity_sources
 
@@ -63,11 +64,13 @@ class StationMaintenance:
         self.node, self.now, self.String = node, now, String
         self.lock = OwnerLock(root, service='station-service')
         self.listener = self.owner = None
+        self.journal = None
         self.pinned = None
         self.broken = False
         self.queue = deque()
         self.next_state = 0.
         try:
+            self.journal = Journal(self.lock)
             self.publishers = {name:node.create_publisher(String, name, QoSProfile(depth=10)) for name in TOPICS}
             hold_pub = node.create_publisher(String, '/motion/maintenance', QoSProfile(depth=8))
             self.holds = HoldEvidence(now=now, sim_ns=lambda:node.get_clock().now().nanoseconds,
@@ -80,6 +83,7 @@ class StationMaintenance:
                 lambda payload:CaptureProcess(root, self.lock.fd, payload, now()), now=now,
                 sim_ns=lambda:node.get_clock().now().nanoseconds,
                 authority=self.authority,
+                journal=self.journal,
                 on_result=lambda result:self.publish('/maintenance/result', result))
             node.create_subscription(String, '/maintenance/command', self.receive, QoSProfile(depth=16))
             node.create_subscription(String, '/motion/state', lambda msg:self.holds.on_guard(msg.data), 10)
@@ -95,6 +99,11 @@ class StationMaintenance:
         if self.broken:
             raise ValueError('maintenance_authority_changed')
         self.lock.verify()
+        try:
+            self.journal.verify()
+        except JournalUnavailable:
+            self.broken = True
+            raise ValueError('maintenance_journal_unavailable') from None
         expected = {'/motion/state': [('motion_guard', 'std_msgs/msg/String')],
                     '/navigation/state': [('orbital_navigation_supervisor', 'std_msgs/msg/String')],
                     '/station/telemetry': [(OWNER, 'std_msgs/msg/String')],
@@ -153,4 +162,5 @@ class StationMaintenance:
                 self.live.end()
         finally:
             if self.listener is not None: self.listener.unregister()
+            if self.journal is not None: self.journal.close()
             self.lock.close()

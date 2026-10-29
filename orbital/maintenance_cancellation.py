@@ -24,6 +24,7 @@ class Cancellation:
         self.after = None
         self.pair = []
         self.evidence_failed = False
+        self.persistence_failed = False
 
     @property
     def args(self): return self.request['arguments']
@@ -47,6 +48,9 @@ class Cancellation:
 
     def guard(self):
         owner = self.owner
+        if owner.journal is not None and owner.journal.broken:
+            self.evidence_failed = True
+            self.stop('failed', 'journal_unavailable')
         if owner.now() < self.started or owner.sim_ns() < self.started_sim:
             self.evidence_failed = True
             self.stop('failed', 'clock_regressed')
@@ -146,6 +150,7 @@ class Cancellation:
             self.phase = 'isolating'
 
     def tick(self):
+        if self.persistence_failed: return
         # Even after our deadline, an unresolved original/child effect is still
         # owned. Telemetry alone cannot turn an unknown call into a known result.
         if self.target.result is None or (self.child is not None and self.child.result is None):
@@ -192,6 +197,10 @@ class Cancellation:
             'isolation_rejection':self.child_rejection, 'final_state':final_state,
             'verification':verification, 'hold_released':True}
         cancellation_protocol.result(value)
+        if not self.owner.persist_result(value):
+            self.persistence_failed, self.phase = True, 'unresolved'
+            self.stop('failed', 'journal_unavailable')
+            return
         self.result, self.phase = value, 'terminal'
         self.owner.cancellation = None
         self.owner.last_result = copy.deepcopy(value)
@@ -233,6 +242,8 @@ def admit(owner, request):
     else:
         raise ValueError('unavailable')
     cancellation = Cancellation(owner, request, target, child_id)
+    persistence_error = owner.persist_admission(request, child_id=child_id)
+    if persistence_error is not None: raise ValueError(persistence_error)
     owner.cancellations[request['action_id']] = owner.cancellation = cancellation
     owner.reservations[child_id] = request['action_id']
     if target.result is None:

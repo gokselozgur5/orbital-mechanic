@@ -115,7 +115,7 @@ All items below start pending except the goal-contract commit itself. Dependenci
 | OM-054 | Bounded reset integration | Local endpoint uses retained eligible powered evidence, owned isolation, cooldown, a new inspection and one reserved attempt; exact post-effect pair precedes release. Native acceptance remains pending. |
 | OM-055 | Power-restoration integration | Local endpoint requires exact verified reset, current cooldown, a new inspection and one reserved attempt. Paired new telemetry confirms energization; recovery and native sequence acceptance remain separate. |
 | OM-056 | Maintenance cancellation | Explicit cancel-isolate resolves the owned action, admits one fresh interlocked isolation if needed and verifies a new final pair. Unknown outcomes remain owned; native acceptance is pending. Existing ordinary cancellation controls are reused without duplicate credit. |
-| OM-057 | Intervention idempotency | Duplicate action IDs cannot repeat a physical state transition. |
+| OM-057 | Durable intervention identity | Local scenario claims and retained mission/action/attempt boundaries fence station restart and reused IDs, including real process-crash cuts. New worlds require new mission/action IDs; no state adoption. Existing same-run replay is reused without duplicate credit; native acceptance remains pending. |
 | OM-058 | Persistent-fault refusal | A jam or unrecoverable fault cannot be cleared by a generic reset. |
 | OM-059 | Observation-loss intervention stop | Lost pose/telemetry validity prevents further maintenance effects. |
 | OM-060 | Maintenance sequence acceptance | Verify isolate/reset/restore outcomes through fresh observations. |

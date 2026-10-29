@@ -15,10 +15,13 @@ UNITS = {'stamp_ns': 'simulation_nanoseconds', 'time_s': 'model_seconds',
 class MachineTelemetry:
     def __init__(self, registry, fault=Fault.NONE):
         self.registry, self.fault = registry, fault
+        self.journal = None  # The live station owner attaches its durable claim.
         self.previous = None
         self.reset()
 
     def reset(self):
+        if self.journal is not None:
+            raise ValueError('station_reset_requires_new_scenario')
         self.station = Station(self.fault)
         self.run_id = uuid.uuid4().hex
         self.sequence = 0
@@ -47,6 +50,7 @@ class MachineTelemetry:
         return True
 
     def sample(self, stamp_ns):
+        if self.journal is not None: self.journal.verify()
         self.registry.verify_current()
         if not self._advance(stamp_ns):
             return None
@@ -87,6 +91,7 @@ class MachineTelemetry:
         A replay returns history without another effect or renewed freshness.
         """
         fields = {'owner_run_id', 'mission_id', 'action_id', 'request_sha256', 'machine_id'}
+        intent_recorded = False
         try:
             if not isinstance(context, dict) or set(context) != fields:
                 raise ValueError('invalid_effect_context')
@@ -126,6 +131,10 @@ class MachineTelemetry:
                 if (prior is None or prior[1]['operation'] != 'reset'
                         or any(prior[1][k] != context[k] for k in ('owner_run_id', 'mission_id', 'machine_id'))):
                     raise ValueError('owned_reset_required')
+            if self.journal is not None:
+                self.journal.intent(operation, context, expected_run, expected_revision,
+                                    isolation_action_id, reset_action_id)
+                intent_recorded = True
             self.registry.verify_current()
             live = admission()  # All file/manifest work precedes this final gate.
             stamp = live['stamp_ns']
@@ -146,6 +155,7 @@ class MachineTelemetry:
             # These bounded values are prepared before the synchronous mutation.
             distance, speed = finite(live['distance_m']), finite(live['speed_mps'])
         except (ValueError, KeyError, TypeError, OSError, RuntimeError) as error:
+            if intent_recorded: self.journal.outcome(context['action_id'])
             raise EffectRejected(str(error)) from None
         if operation == 'reset':
             # Reserve before the pulse: an unexpected actuator exception cannot
@@ -157,10 +167,12 @@ class MachineTelemetry:
             self.station.intervene(context['owner_run_id']+context['action_id'], operation, context['machine_id'],
                                    distance_m=distance, speed_mps=speed, observed_at_s=self.station.time_s)
         except Rejected as error:
+            if intent_recorded: self.journal.outcome(context['action_id'])
             if operation == 'reset': del self.reset_attempts[context['machine_id']]
             if operation == 'restore': del self.restore_attempts[context['machine_id']]
             raise EffectRejected(str(error)) from None
         self.control_revision = effect['control_revision']
         self.last_applied = effect
         self.effects[key] = history
+        if intent_recorded: self.journal.outcome(context['action_id'], receipt)
         return copy.deepcopy(receipt)

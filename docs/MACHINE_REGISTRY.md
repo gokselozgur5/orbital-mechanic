@@ -86,18 +86,18 @@ The existing demo launcher already passes that setting. The upstream
 declares and responds to this parameter; checking only startup would miss a later
 mode change. These source observations do not commission Thor's installed binary.
 
-A zero or repeated clock produces no new sample. A backward clock or forward gap
-greater than ten seconds resets the model, preserving the old prototype's reset
-policy, but now rotates `run_id` and restarts the sequence. A gap of exactly ten
-seconds advances the model in bounded one-second steps. Restarting the model can
-restore initial power/fault state, so future action owners must invalidate work
-across a run change rather than resume an old intervention. The
-[isolation endpoint](MAINTENANCE_ENDPOINT.md) now does this on the same model.
+A zero or repeated clock produces no new sample. A gap of exactly ten seconds
+advances the model in bounded one-second steps. With OM-057's
+[durable owner](DURABLE_MAINTENANCE.md), a backward clock or larger forward gap
+stops the station instead of resetting its power/fault state and attempt budgets.
+The standalone ROS-free model retains its prototype reset/run-rotation semantics.
+An explicit full-demo start prepares a new world generation; a station-only
+restart cannot reclaim a consumed generation or renew an old mission.
 The [public observation reader](STATION_OBSERVATION.md)
 now implements local consumer freshness, strict missing/invalid-data refusal and
 sampled publisher/clock identity checks. A joint machine/robot record is now
 integrated locally as described below. Native commissioning, noise confidence,
-reset/restore and native interlocked actions remain subsequent integration work.
+and native interlocked actions remain subsequent commissioning work.
 
 Registry drift, station identity drift, invalid clock, changed clock mode and
 publication failures propagate instead of publishing a fabricated measurement.
@@ -135,6 +135,7 @@ public observation reader validates fresh telemetry locally. The
 sample to exact same-time settled robot state on one observer. Optional
 [camera capture](CAMERA_OBSERVATIONS.md) adds bounded timestamped image evidence
 locally. Inspection ownership and isolation endpoints now pass local checks;
-native camera/maintenance acceptance and reset/restore remain pending. Keep
+native camera/maintenance acceptance remains pending; owned reset/restore are
+implemented locally. Keep
 the independent collision evaluator and hidden scenario state outside planner
 inputs throughout that integration.

@@ -23,6 +23,7 @@ class OwnerLock:
             parent = os.open(self.root, DIRECTORY_FLAGS); self.fds.append(parent)
             for name in ('runtime', self.service):
                 parent = directory(parent, name, True); self.fds.append(parent)
+            self.directory_fd = parent
             self.fd = os.open('owner.lock', os.O_RDWR | os.O_CREAT | FILE_FLAGS, 0o600, dir_fd=parent)
             self.fds.append(self.fd)
             info = os.fstat(self.fd)

@@ -11,6 +11,47 @@ original localization branch; six migrated commits do not count as new deliverie
 [Draft PR #16](https://github.com/gokselozgur5/orbital-mechanic/pull/16) links #6/#7,
 which remain open until full live localization/navigation acceptance and review.
 
+**OM-057: durable scenario/action ownership implemented; native acceptance pending.**
+[Retained maintenance history](DURABLE_MAINTENANCE.md) now joins the actual station,
+owner and full-demo launcher. The explicit new-world start prepares one opaque
+scenario; the station consumes it once. Station-only restart refuses publication,
+and old mission/action IDs remain refused even in a new explicit scenario.
+Clock discontinuities stop the durable station rather than silently rebuilding it.
+The pure ROS-free model keeps its separate prototype reset semantics.
+
+Admission is persisted before hold acquisition; cancellation reserves its child
+before stopping the original. Effect intent precedes final live interlocks and
+mutation. Known applied/rejected outcomes and decision-time terminal history are
+retained without granting freshness, state adoption or resumed ownership.
+Partial/failed/ambiguous storage preserves uncertainty and blocks further effects;
+no implicit truncation, eviction or budget renewal is offered.
+
+A retained before-source controlled-core reproduction allowed the same mission
+another reset after reconstructing its station/owner. Five real Python process
+crash cuts now cover admission, intent, actual mutation before outcome metadata,
+applied outcome and terminal record before publication. All refuse station-only
+restart and old mission/action reuse; new explicit scenarios with new IDs work.
+This is not a native surviving-world or physical power-loss proof.
+
+Two prepublication regressions exposed terminal decisions after hold-release I/O:
+a crossed deadline could persist success, and expired verification could be
+misclassified as storage failure. Identical tests fail before and pass after final
+deadline/current-postcondition checks. Terminal disk delay retains the original
+completed-decision timestamps; it never renews the measured state.
+
+All 688 local tests pass (25 new), with the causal baseline, 184 Python AST files,
+17 shell scripts and two XML sources. Pinned executable bytes remain unchanged
+through validation. Four isolated deliberate mutations are detected by their
+intended tests: old-mission binding, exclusive scenario claim, effect-intent
+persistence and freshness after persistence. These sensitivity controls are
+separate from the historical core reproduction and two candidate regressions.
+Source-bound evidence is in operator workspace
+`reviews/orbital-delivery-20261028/om057`.
+
+Native commissioning, independent composite sequence replay, mission recovery and
+full maintenance acceptance remain open. The previously reported GitHub Actions
+account payment/spending-limit block is unresolved; no remote CI pass is claimed.
+
 **OM-056: cancellation with observed isolation implemented; native acceptance pending.**
 The explicit [cancel-isolate workflow](CANCELLATION_OPERATION.md) stops an exact
 owned maintenance action and waits for its known result, capture reap and hold
@@ -63,9 +104,10 @@ mutations are detected again, and pinned executable source bytes remain unchange
 
 This adds the missing server-owned workflow, reusing existing cancellation,
 isolation and idempotency controls without duplicate delivery credit. Holds are
-sequential, not one continuous mission token. Native DDS/timing, independent
-composite replay, durable reconciliation, mission recovery and full acceptance
-remain open. The independent isolation recorder does not certify this workflow.
+sequential, not one continuous mission token. OM-057 adds local durable history
+and restart refusal. Native DDS/timing, independent composite replay, live mission
+recovery and full acceptance remain open. The independent isolation recorder does
+not certify this workflow.
 
 **OM-055: owned power restoration implemented; native acceptance pending.**
 The [restore endpoint](RESTORE_OPERATION.md) requires the same owner's verified

@@ -10,6 +10,12 @@ ROS packages: `ros-jazzy-desktop`, `ros-jazzy-ros-gz`, `ros-jazzy-foxglove-bridg
 
 Run `bash scripts/launch-thor.sh` from the project root. It creates a transient user service named `orbital-demo` whose cgroup owns every Gazebo descendant, including processes that start separate sessions. It does not enable boot startup. It uses display `:42`, ROS domain `42`, software rendering and localhost-only VNC `5942` / Foxglove `8765`. It terminates its child processes when interrupted or when a required process exits. Do not run two copies; existing display/port conflicts should fail rather than replace another session.
 
+Each explicit full-demo start prepares one new [durable station scenario](DURABLE_MAINTENANCE.md) before spawning components.
+
+A station-only restart cannot reuse a claimed generation, and old mission/action IDs stay refused across new scenarios.
+
+Use `python3 scripts/maintenance-journal.py status` for retained history; it is not live permission or a recovery command.
+
 To probe sensor delivery in a second shell:
 
 ```bash

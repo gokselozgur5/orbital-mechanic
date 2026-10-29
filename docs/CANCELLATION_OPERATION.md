@@ -107,7 +107,9 @@ truthful energized/unverified result once all owned children and holds resolve.
 Unknown original or child effects stay nonterminal with ownership retained,
 including after the deadline. Shutdown reaps the current child without inventing
 a result or releasing an unresolved hold. Restart does not adopt this workflow,
-its files or old identities. Durable reconciliation remains open.
+its files or old identities. [Durable history](DURABLE_MAINTENANCE.md) now retains
+these boundaries, fences station-only restart and refuses reused mission/action
+IDs in a new explicit scenario. Live mission recovery remains open.
 
 ## Validation scope
 

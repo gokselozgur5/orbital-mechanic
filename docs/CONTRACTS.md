@@ -17,7 +17,9 @@ transitions, effect evidence and cancellation ownership. Its public recovery
 checker is implemented and used by the ROS-free baseline. The
 [isolation endpoint](MAINTENANCE_ENDPOINT.md) now serializes an owned effect on
 the published station behind an acknowledged guard hold, resolved navigation,
-fresh pose and live capture. Reset/restore and native acceptance remain pending.
+fresh pose and live capture. Owned reset/restore and explicit cancel-isolate are
+implemented locally; durable scenario/action history now fences restart and reused
+mission IDs. Native acceptance and complete mission recovery remain pending.
 
 ## Common envelope
 

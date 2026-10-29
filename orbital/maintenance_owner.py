@@ -13,6 +13,7 @@ from orbital.station_control import EffectRejected
 from orbital.telemetry_observation import TelemetryEvidence
 from orbital.reset_evidence import ResetEvidence, MAX_RESET_TEMPERATURE_C
 from orbital.maintenance_cancellation import admit as admit_cancellation
+from orbital.maintenance_journal import JournalUnavailable
 
 
 class InspectionGuard:
@@ -70,12 +71,18 @@ class Action:
 
 class MaintenanceOwner:
     def __init__(self, root, model, live, hold, worker, *, now, sim_ns, on_result=lambda _: None,
-                 inspection_factory=InspectionOwner, load=load_result, authority=lambda: None):
+                 inspection_factory=InspectionOwner, load=load_result, authority=lambda: None, journal=None):
         self.root, self.model, self.live, self.hold, self.worker = root, model, live, hold, worker
         self.now, self.sim_ns, self.on_result = now, sim_ns, on_result
         self.inspection_factory, self.load = inspection_factory, load
         self.authority = authority
         self.run_id = uuid.uuid4().hex
+        self.journal = journal
+        if journal is not None:
+            journal.claim(self.run_id, model.run_id, model.registry.identity)
+            model.journal = journal
+        elif model.journal is not None:
+            raise ValueError('station_journal_required')
         self.actions, self.missions = {}, {}
         self.active = self.last_result = None
         self.cancellations, self.reservations = {}, {}
@@ -92,10 +99,33 @@ class MaintenanceOwner:
 
     def _ready(self, *, reserved=False):
         try:
-            return (not self.closing and self.active is None and (self.capacity() > 0 or reserved)
+            return (not self.closing and (self.journal is None or not self.journal.broken)
+                    and self.active is None and (self.capacity() > 0 or reserved)
                     and self.model.sequence > 0 and self.live.ready() and self.hold.available())
         except (ValueError, OSError, RuntimeError):
             return False
+
+    def persist_admission(self, request, **identities):
+        if self.journal is None: return None
+        try:
+            self.journal.admit(request, **identities)
+        except ValueError as error:
+            if str(error) in ('mission_reused', 'action_reused', 'journal_full', 'history_full'):
+                return str(error)
+            self.journal.broken = True
+            return 'journal_unavailable'
+        except JournalUnavailable:
+            return 'journal_unavailable'
+        return None
+
+    def persist_result(self, result):
+        if self.journal is None: return True
+        try:
+            self.journal.terminal(result)
+        except (JournalUnavailable, ValueError):
+            self.journal.broken = True
+            return False
+        return True
 
     def handle(self, text):
         try:
@@ -183,6 +213,10 @@ class MaintenanceOwner:
                     action.reset_basis = copy.deepcopy(prior.reset_basis)
                     if request['op'] == 'reset': action.isolation = copy.deepcopy(prior.result)
                     else: action.reset = copy.deepcopy(prior.result)
+                persistence_error = self.persist_admission(request,
+                    parent_action_id=cancellation.request['action_id'] if internal else None)
+                if persistence_error is not None:
+                    return reject(persistence_error)
                 # Record ownership before publication: a transport exception is
                 # not proof that the guard could not receive this acquire.
                 self.actions[request['action_id']] = self.active = action
@@ -380,6 +414,8 @@ class MaintenanceOwner:
         action = self.active
         if action is None:
             return
+        if self.journal is not None and self.journal.broken:
+            self.stop('failed', 'journal_unavailable')
         if self.now() < action.started or self.sim_ns() < action.started_sim:
             self.stop('failed', 'clock_regressed')
         if self.now() >= action.deadline:
@@ -427,6 +463,17 @@ class MaintenanceOwner:
         self.finish(action)
 
     def finish(self, action):
+        # Exact hold release can perform I/O after the tick's initial checks.
+        # Decide against the current clocks before freezing a historical result.
+        if self.now() >= action.deadline:
+            self.stop('timed_out', 'deadline_exceeded')
+        if action.effect is not None:
+            self._verify(action)
+            if (action.verification is None or self.model.run_id != action.args['station_run_id']
+                    or self.model.control_revision != action.effect['control_revision']
+                    or self.model.last_applied != action.effect):
+                action.verification, action.phase = None, 'unresolved'
+                return
         status, code = action.stop_reason or ('succeeded', None)
         result = {'schema_version': {'isolate':1, 'reset':2, 'restore':3}[action.operation],
                   'kind': 'maintenance_result', **action.identity(),
@@ -440,6 +487,12 @@ class MaintenanceOwner:
         if action.operation == 'reset':
             result.update(isolation=copy.deepcopy(action.isolation), eligibility=copy.deepcopy(action.reset_basis))
         if action.operation == 'restore': result['reset'] = copy.deepcopy(action.reset)
+        # The recorded times describe this completed decision. Disk I/O and
+        # later query/publication never renew its observation freshness.
+        if not self.persist_result(result):
+            action.unknown, action.phase = True, 'unresolved'
+            self.stop('failed', 'journal_unavailable')
+            return
         action.result, action.phase = result, 'terminal'
         self.last_result = copy.deepcopy(result)
         self.active = None

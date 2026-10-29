@@ -17,6 +17,7 @@ from orbital import inspection_owner, ros_machine_telemetry, ros_maintenance
 from orbital.inspection_artifacts import read_capture
 from orbital.inspection_protocol import canonical
 from orbital.maintenance_protocol import result, state
+from orbital.maintenance_journal import prepare_scenario, read_history
 from orbital.maintenance_observation import RecoveryEvidence
 from orbital.machine_registry import MachineRegistry
 from orbital.isolation_trace import IsolationTrace, TOPICS as TRACE_TOPICS, verify_isolation
@@ -38,6 +39,7 @@ class MaintenanceEndpointTests(unittest.TestCase):
     def run_endpoint(self, mode='success', *, retained=False, reset=False, restore=False, recovery=False,
                      cancel_isolate=False):
         self.assertFalse(cancel_isolate and (retained or recovery))
+        prepare_scenario(self.root)
         host_started = time.monotonic()
         clock = SharedClock(self.root, create=True)
         self.addCleanup(clock.close)
@@ -275,6 +277,10 @@ class MaintenanceEndpointTests(unittest.TestCase):
             'worker': diagnostic.read_text() if diagnostic.exists() else None,
             'guard_failure': station.holds.failure}
         self.assertTrue(outputs['/maintenance/reply'][0]['accepted'])
+        history = read_history(self.root)
+        for value in outputs['/maintenance/result']:
+            self.assertEqual(history.actions[value['action_id']]['result'], value)
+        self.assertEqual(history.status()['unresolved_count'], 0)
         return terminal, outputs
 
     def test_cancel_isolate_after_energization_uses_fourth_real_capture(self):

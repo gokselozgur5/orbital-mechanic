@@ -8,7 +8,9 @@ powered observations, cooldown and a second live inspection. OM-055 adds
 [owned power restoration](RESTORE_OPERATION.md) after verified reset and a third
 inspection. OM-056 adds an explicit [cancel-isolate workflow](CANCELLATION_OPERATION.md)
 which resolves the original and, when needed, admits one new interlocked
-isolation. Recovery and restart reconciliation remain separate work.
+isolation. OM-057 adds [durable claims and historical reconciliation](DURABLE_MAINTENANCE.md).
+Station-only restart and old mission/action reuse are refused; no live state is adopted.
+Mission recovery orchestration remains separate work.
 
 Local controls execute the actual station adapter, motion guard, navigation
 supervisor, separate capture process and artifact reader with controlled ROS
@@ -108,8 +110,10 @@ a permanent cancellation record; that acquire cannot resurrect ownership.
 Histories are bounded to 64 entries per process run.
 
 The station samples and mutates in one executor. File I/O precedes final live
-admission; sampling/clock reset cannot interleave inside an effect. This is not
-durable transactional storage across process or power loss. Sources are pinned
+admission; sampling cannot interleave inside an effect. Durable mode records an
+intent before final live interlocks and an outcome after mutation, without claiming
+an atomic transaction spanning the model effect and filesystem or physical power-loss
+recovery. Sources are pinned
 by sampled names, namespaces, types and endpoint GIDs. These are consistency
 checks on trusted local ROS, not message authentication or real-time guarantees.
 
@@ -124,11 +128,12 @@ retries the actuator.
 
 `unresolved` is nonterminal. Unknown actuator outcome, changed station run,
 expired observations or lost hold evidence may retain the action and external
-inhibitor indefinitely. There is no forced release/adoption or restart
-reconciliation command. Preserve identities and evidence and diagnose the
-source/owner before proceeding. Do not kill/restart components to turn an
-unknown action into success. Model clock reset can restore initial power and
-rotates the station run; old mission state cannot authorize further effects.
+inhibitor indefinitely. There is no forced release or restart adoption command.
+The durable history CLI provides retained records for diagnosis; it grants no live
+permission or resumed result. Preserve identities and evidence before proceeding.
+Do not kill/restart components to turn an unknown action into success. Durable
+mode refuses clock discontinuities; explicit new worlds require new mission/action
+IDs and cannot establish an old mission outcome.
 
 A known terminal result includes action/request IDs, machine/station run,
 status/error, times, inspection artifact reference, `hold_released=true`

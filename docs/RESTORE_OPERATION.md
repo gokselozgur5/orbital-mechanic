@@ -34,8 +34,9 @@ temperature. It reserves one restoration attempt before energizing. A known
 mutation-free rejection may release the reservation; an unexpected exception
 retains it even if power appears unchanged. Exact replay returns history without
 another call. Another ID, owner or later isolation cannot reuse the old reset to
-obtain another attempt. Station clock reset creates a new generation and rejects
-old requests; durable restart reconciliation remains unimplemented.
+obtain another attempt. [Durable scenario/action history](DURABLE_MAINTENANCE.md)
+now refuses station-only restart, old mission/action reuse and clock-triggered
+model reconstruction. Historical records never authorize resumed restoration.
 
 ## Applied effect and cancellation
 
@@ -80,7 +81,7 @@ is never verified. This reuses OM-051; it earns no duplicate implementation cred
 
 The endpoint's restore result does not itself collect that recovery window or
 provide a mission-level recovery API. Native sequence traces, independent
-causal evaluation, recovery orchestration and restart reconciliation remain open.
+causal evaluation, recovery orchestration and native restart acceptance remain open.
 No successful reset/restore result alone authorizes a claim of repair.
 
 Local tests run the actual station, guard, navigation supervisor and three real

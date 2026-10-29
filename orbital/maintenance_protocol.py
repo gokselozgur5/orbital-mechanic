@@ -11,11 +11,13 @@ REJECTION_CODES = frozenset(('invalid_argument', 'wrong_run', 'action_conflict',
                              'isolation_required', 'reset_not_eligible', 'reset_attempt_exhausted',
                              'reset_required', 'restore_not_eligible', 'restore_attempt_exhausted',
                              'cancellation_target_required', 'cancellation_conflict', 'target_superseded'))
+REJECTION_CODES |= {'mission_reused', 'action_reused', 'journal_full', 'journal_unavailable'}
 ERROR_CODES = frozenset(('hold_acquisition_unavailable', 'deadline_exceeded', 'cancel_requested',
     'owner_shutdown', 'inspection_unavailable', 'precondition_failed', 'effect_unknown',
     'station_run_changed', 'isolation_not_verified', 'clock_regressed', 'maintenance_hold_lost',
     'precondition_lost', 'maintenance_evidence_unavailable', 'reset_not_verified', 'restore_not_verified',
     'cancellation_evidence_unavailable', 'cancellation_isolation_failed'))
+ERROR_CODES |= {'journal_unavailable'}
 
 
 def command(text):

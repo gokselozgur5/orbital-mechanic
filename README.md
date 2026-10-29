@@ -84,6 +84,12 @@ Include a healthy scenario and an unrecoverable fault so success cannot mean bli
 
 Read [AGENTS.md](AGENTS.md) and [docs/STATUS.md](docs/STATUS.md). The status file distinguishes measured capabilities, prototype-only behavior and remaining work. Foxglove client opening is user-confirmed and its camera/TF subscriptions are visible in the server logs.
 
+[Durable maintenance ownership](docs/DURABLE_MAINTENANCE.md) retains scenario,
+mission and action identities across station-process loss. A station-only restart
+cannot reclaim a generation or renew old attempts. Each explicit full-demo start
+prepares a new world generation; old mission/action IDs remain refused. Local
+process-crash checks pass; native commissioning remains pending.
+
 [Cancellation with observed isolation](docs/CANCELLATION_OPERATION.md) resolves
 an exact owned maintenance action and, when still powered, requests one separately
 identified isolation with new live interlocks and camera evidence. Unknown
@@ -151,5 +157,6 @@ precede release; power stays off. Local controlled-transport checks pass;
 [owned restoration](docs/RESTORE_OPERATION.md) adds verified reset ownership,
 a third inspection and one reserved energization attempt. It reports actual
 powered measurements, including after cancellation. Observed recovery is a
-separate ten-second public measurement window. Full recovery orchestration,
-restart reconciliation and native maintenance acceptance remain pending.
+separate ten-second public measurement window. Full mission recovery orchestration
+and native maintenance acceptance remain pending; durable
+restart refusal and retained identity/history are implemented locally.

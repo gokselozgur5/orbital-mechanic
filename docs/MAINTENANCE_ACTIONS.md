@@ -8,14 +8,15 @@ The ROS-free baseline uses that checker instead of the model's hidden
 [owned isolation endpoint](MAINTENANCE_ENDPOINT.md), exact guard inhibition and
 versioned applied-effect telemetry. OM-054 implements [bounded reset](RESET_OPERATION.md)
 with retained powered eligibility and one attempt. OM-055 adds
-[owned restoration](RESTORE_OPERATION.md). Native maintenance acceptance and
-restart reconciliation remain open. The inspection
+[owned restoration](RESTORE_OPERATION.md). Native maintenance and restart acceptance remain open. [Durable scenario/action history](DURABLE_MAINTENANCE.md)
+now prevents station restart from renewing an old mission, without adopting its state. The inspection
 endpoint supplies observations; its cached success grants no maintenance rights.
 
 ## Ownership and admission
 
 The existing `MachineTelemetry` owns one causal `Station`. The isolation actuator
-mutates that exact instance, serialized with sampling and clock reset.
+mutates that exact instance, serialized with sampling. Durable mode refuses clock
+discontinuities instead of rebuilding the station.
 Starting a second model in the inspection process would change a private copy
 and cannot satisfy an operation on the published station.
 
@@ -184,8 +185,10 @@ rejection. The isolation implementation retains unknown effects as nonterminal
 and exact hold release are verified. Restart never adopts that old action.
 OM-054 adds reset boundary/loss controls and OM-055 adds restoration. A cancelled
 restore can retain an observed energized outcome; there is no implicit rollback.
-Durable reconciliation remains open. The current API is
-documented separately.
+OM-057 adds durable scenario claims, retained action/effect boundaries and read-only
+historical reconciliation. It refuses restart adoption and old mission/action reuse;
+native restart acceptance and live mission recovery remain open. The current API
+is documented separately.
 
 OM-056 provides an explicit [cancel-isolate policy](CANCELLATION_OPERATION.md).
 It reuses these ordinary action controls while owning the additional cancel,

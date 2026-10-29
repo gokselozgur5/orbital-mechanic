@@ -6,6 +6,7 @@ import types
 from unittest.mock import patch
 
 from test_machine_registry import ROOT, RegistryFixture
+from orbital.maintenance_journal import prepare_scenario
 
 SCRIPT = (ROOT/'scripts/machine-telemetry.py').read_bytes()
 
@@ -89,7 +90,8 @@ class AdapterHarness:
         self.modules['tf2_ros'].TransformListener = lambda *args:types.SimpleNamespace(unregister=close_listener)
         self.modules['tf2_ros'].TransformException = RuntimeError
 
-    def run(self, root, source=SCRIPT):
+    def run(self, root, source=SCRIPT, *, prepare=True):
+        if prepare: prepare_scenario(root)
         (root/'scripts').mkdir(exist_ok=True)
         script = root/'scripts/machine-telemetry.py'
         script.write_bytes(source)
@@ -151,13 +153,14 @@ class MachineTelemetryAdapterTests(RegistryFixture):
         self.assertEqual(len(harness.messages['/station/telemetry']),1)
         self.assertTrue(harness.destroyed and harness.shutdown)
 
-    def test_reset_has_new_identity_and_paused_clock_is_not_republished(self):
+    def test_durable_station_clock_reset_refuses_implicit_new_scenario(self):
         harness = AdapterHarness(times=(0,10**9,10**9,500000000))
-        harness.run(self.root)
+        with self.assertRaisesRegex(ValueError, 'station_reset_requires_new_scenario'):
+            harness.run(self.root)
         values = [json.loads(text) for text in harness.messages['/station/telemetry']]
-        self.assertEqual(len(values),2)
-        self.assertNotEqual(values[0]['run_id'],values[1]['run_id'])
-        self.assertEqual([v['sequence'] for v in values],[1,1])
+        self.assertEqual(len(values),1)
+        self.assertEqual(values[0]['sequence'],1)
+        self.assertTrue(harness.destroyed and harness.shutdown)
 
     def test_publication_failure_is_not_hidden_by_the_adapter(self):
         harness = AdapterHarness(publish_error=True)
