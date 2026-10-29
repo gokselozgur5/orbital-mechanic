@@ -4,10 +4,10 @@ OM-023 implements a read-only evaluator that records simulator truth, localizati
 at the same simulation timestamp and exact supervisor command identities. OM-027
 extends it with observed link/obstacle poses and a versioned geometry snapshot for
 [sampled collision evaluation](COLLISION_EVALUATION.md). Local tests pass.
-Native bindings and an idle observer candidate have now been exercised on Thor.
-The first installed-recorder attempt exposed the light-visual regression below;
-the corrected installed capture, negative TF controls and moving-robot acceptance
-remain pending. No route, machine arrival or physical stopping test is accepted.
+Native bindings, corrected installed idle capture and negative TF controls now
+pass on Thor. The first attempt exposed the light-visual regression below; its
+original failed artifact is retained. Moving-robot acceptance remains pending.
+No route, machine arrival or physical stopping test is accepted.
 
 ## Native light-visual regression — 2026-10-29
 
@@ -36,6 +36,37 @@ Evidence: operator workspace
 SHA-256 `d15d57cf89d362c01e51d8298ba776e7f8719fe3d0630b5023f707b997d9c1be`.
 This candidate proof does not establish installed deployment, negative-TF,
 moving-robot or between-sample collision acceptance.
+
+## Installed native timing controls
+
+After the separate `91f9096` rollout, `native/check_trajectory_timing.py` passed
+three controls against the installed application and its actual ROS/Gazebo
+bindings. The driver is staged independently of the installed source tree:
+
+- Normal two-second capture: 110 samples with exact-time TF, zero command/audit/
+  forwarded counters and no sampled geometry event. Maximum gaps are 20 ms
+  simulation and 23.2 ms receipt time; the copied trace passes offline replay.
+- A native TF query shifted ten milliseconds into the past returns the wrong
+  timestamp and is rejected by the production time/frame validator.
+- A native TF query shifted sixty seconds into the future stays unavailable and
+  fails the bounded warmup. Both negative artifacts remain incomplete, create no
+  ready marker and are rejected by the integrity verifier.
+
+Only the disposable observer's query is modified in the negative controls.
+Installed sources, live publishers and service identities remain unchanged;
+these controls do not establish physical stopping after localization loss.
+The proof cgroup exits. The current source identity is
+`6ef1b01db8ae73976f572d6887f072fdf5d512b24fc5d2588f3f0892463ec3cb` and driver hash is
+`817a6fc3e77e4700cf122c05f4d481bc74cc2c1082f05498df0b69ccfd53502a`.
+
+Evidence: `reviews/orbital-observer-fix-deployment-20261029/timing-evidence` in the
+operator workspace; 24-file manifest SHA-256
+`0487cbaf5a8fdc1226c5dfd66e102c0d391826a405a2d7a7d940abf06d89f775`.
+To repeat, stage the unchanged driver and source the production ROS environment
+inside `tmux orbital-work`; use a disposable user-service cgroup with
+`KillMode=control-group` and a 90-second runtime limit. Pass an unused `--prefix`;
+all three traces are retained under `runtime/evaluation`. No target or service
+mutation is requested. Guarded moving capture remains the next acceptance gate.
 
 ## Sources and timing
 
@@ -195,10 +226,10 @@ Legacy model-only traces remain readable by the integrity verifier, but lack the
 link/world evidence required for collision evaluation; recapture with this source.
 
 Those doubles do not establish native ABI, transport QoS, delivery rate or moving
-robot accuracy. The native candidate proof above exercises bindings and idle
-capture; next verify the corrected installed recorder, then a guarded
+robot accuracy. The installed native proofs above cover bindings, idle capture
+and observer time refusals; next commission a guarded
 bounded movement with measured displacement and exact target audit. Preserve a
-negative run with unavailable/wrong-time TF and prove its failure. Only after that
+negative runs with unavailable/wrong-time TF as the controls above do. Only after that
 should this recorder supply physical-loss stopping and three-machine arrival
 evidence. OM-027 geometry evaluation is implemented locally; native collision and
 complete route acceptance remain pending.

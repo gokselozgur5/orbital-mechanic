@@ -30,7 +30,20 @@ Navigation startup identity:
 Operator evidence is retained in
 `reviews/orbital-navigation-rollout-20261029/rollout-evidence`; its 188-file manifest
 SHA-256 is `c72ea2239201dcaba58304d897a22f356de631c081f5e10dc6ca4f8077a34790`.
-Next, commission the independent recorder before guarded motion/failure trials.
+That initial rollout is retained as historical evidence. The subsequent current
+rollout at `91f90966d4c050c05a85217ec37e14231a3bd124` changes only
+`orbital/collision_geometry.py` for Gazebo's generated light visual. It uses
+another explicit new world, preserving the first durable scenario record and
+avoiding adoption of old maintenance authority. All readiness checks above pass
+again with the same map revision and stationary error bounds. Current navigation
+identity is `6ef1b01db8ae73976f572d6887f072fdf5d512b24fc5d2588f3f0892463ec3cb`.
+
+The second rollout's 255-file evidence manifest is
+`2282330ef8ab139399abce2d6551576e4e9612dc7a274869cea6ff6beb860150`, under operator
+`reviews/orbital-observer-fix-deployment-20261029/rollout-evidence`.
+Installed idle recording and negative time controls now pass as described in
+[TRAJECTORY.md](TRAJECTORY.md); guarded moving capture and physical failure trials
+remain next.
 
 ## Map and coordinates
 

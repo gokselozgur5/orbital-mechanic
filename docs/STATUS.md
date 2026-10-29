@@ -29,25 +29,29 @@ implementation merges. Earlier delivery notes below retain their historical
 validation counts and deployment snapshots; [TRACKING.md](TRACKING.md) records
 the updated handoff. The following paragraph is the current live deployment.
 
-On 2026-10-29, source `0373a75` was deployed in one deliberate new-world restart.
+On 2026-10-29, source `91f9096` was deployed through a deliberate new-world restart.
 All 161 packaged source files match; navigation records 160 startup source pins
-under identity `e07200d7b7cad39bf8b762eb9cffe20560b75dc009b9eba555295aacf7c84634`.
+under identity `6ef1b01db8ae73976f572d6887f072fdf5d512b24fc5d2588f3f0892463ec3cb`.
 Revised map `f02e11a9cb0e4f2f`, sensors/frames, unseeded refusal, explicit origin
 seed, guarded Nav2 activation, native TF attribution, CLI status and fresh public
 station observations pass. Independent stationary error is 0.00809 m / 0.01144 rad.
 The new durable station generation has zero missions/actions; the supervisor is
 healthy, idle and latched, with zero command/audit/forwarded counters. This does
-not commission maintenance effects or a route. Next: commission the independent
-trajectory recorder, then live arming, measured stopping and three-machine trials.
+not commission maintenance effects or a route. The installed recorder now passes
+idle capture and negative time controls. Next: guarded moving capture, live arm
+and loss-stop measurements, then the three-machine tour.
 See [the rollout evidence](NAVIGATION.md#coordinated-native-deployment).
 
 The first live recorder attempt refused Gazebo's generated `sunVisual` entity.
 The [light-visual correction](TRAJECTORY.md#native-light-visual-regression--2026-10-29)
 passes 79 focused tests and the same five retained native messages that the old
 parser rejects. An explicitly identified observer candidate captured 278 idle
-samples with exact-time TF and no sampled geometry event. Installed-recorder,
-negative-TF and guarded moving-capture acceptance remain open; live source stayed
-unchanged during that candidate proof.
+samples with exact-time TF and no sampled geometry event. After the separate
+installed rollout, a repeatable native driver passes normal capture (110 samples),
+wrong-time TF refusal and unavailable-time refusal. Both negative traces stay
+incomplete with no ready marker and fail integrity acceptance. Local replay of
+the positive trace also passes. The trial creates no command publisher; live
+identities remain unchanged. Guarded moving-capture acceptance remains open.
 
 The [native station startup proof](DURABLE_MAINTENANCE.md#native-startup-proof)
 now passes six controls across nine actual CLI children on isolated Jazzy domain
