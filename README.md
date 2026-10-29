@@ -85,6 +85,17 @@ Include a healthy scenario and an unrecoverable fault so success cannot mean bli
 
 Read [AGENTS.md](AGENTS.md) and [docs/STATUS.md](docs/STATUS.md). The status file distinguishes measured capabilities, prototype-only behavior and remaining work. Foxglove client opening is user-confirmed and its camera/TF subscriptions are visible in the server logs.
 
+[Durable maintenance ownership](docs/DURABLE_MAINTENANCE.md) retains scenario,
+mission and action identities across station-process loss. A station-only restart
+cannot reclaim a generation or renew old attempts. Each explicit full-demo start
+prepares a new world generation; old mission/action IDs remain refused. Local
+process-crash checks pass; native commissioning remains pending.
+
+[Cancellation with observed isolation](docs/CANCELLATION_OPERATION.md) resolves
+an exact owned maintenance action and, when still powered, requests one separately
+identified isolation with new live interlocks and camera evidence. Unknown
+effects remain owned; native sequence acceptance is pending.
+
 [Named navigation commands](docs/NAVIGATION_CLIENT.md) provide explicit target
 request, arm and cancel operations. Their local protocol/CLI tests pass; native
 commissioning and route acceptance remain pending.
@@ -92,6 +103,15 @@ commissioning and route acceptance remain pending.
 [Independent trajectory recording](docs/TRAJECTORY.md) measures Gazebo truth,
 same-time localization and exact command identities without publishing controls.
 Local observer tests pass; native capture and physical route acceptance are pending.
+
+[Retained isolation observations](docs/ISOLATION_EVIDENCE.md) record exact
+maintenance identities and actual public station packets for offline replay.
+Local tests pass; native commissioning and independent hold/camera acceptance remain pending.
+
+[Maintenance sequence evidence](docs/MAINTENANCE_SEQUENCE_EVIDENCE.md) extends that
+read-only retention to reset, restore and cancel-isolate, resolving nested claims
+against separately observed results and raw telemetry. Public recovery remains a
+separate measured window; native complete sequence acceptance is pending.
 
 [Sampled collision evaluation](docs/COLLISION_EVALUATION.md) checks observed body,
 wheel and support geometry against the recorded world. Local tests pass; this
@@ -129,3 +149,20 @@ typed request/cancel/query commands, exact worker ownership, deadline and replay
 handling, verified artifact references and distinct terminal results. Local
 controlled-transport/process checks run the complete endpoint; native inspection
 and three-machine acceptance remain open.
+
+[Maintenance transitions and postconditions](docs/MAINTENANCE_ACTIONS.md) define
+the required isolate/reset/restore evidence and ownership. A public recovery
+checker now drives the ROS-free baseline's outcome using ten seconds of fresh
+healthy station samples. An [owned isolation endpoint](docs/MAINTENANCE_ENDPOINT.md)
+now joins the actual station model, guard inhibition, navigation quiescence and
+live camera inspection. It confirms the exact effect through newer telemetry
+before releasing its hold. [Bounded reset](docs/RESET_OPERATION.md) now requires
+retained eligible powered observations, verified owned isolation, cooldown and
+a second live inspection. One reserved attempt and an exact new observed effect
+precede release; power stays off. Local controlled-transport checks pass;
+[owned restoration](docs/RESTORE_OPERATION.md) adds verified reset ownership,
+a third inspection and one reserved energization attempt. It reports actual
+powered measurements, including after cancellation. Observed recovery is a
+separate ten-second public measurement window. Full mission recovery orchestration
+and native maintenance acceptance remain pending; durable
+restart refusal and retained identity/history are implemented locally.

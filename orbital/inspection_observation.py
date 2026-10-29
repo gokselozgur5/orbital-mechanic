@@ -96,6 +96,7 @@ class InspectionEvidence:
                 'measurements':{'voltage_v':sample['voltage_v'],**sample['machines'][machine_id]},
                 'units':dict(sample['units']),
                 'telemetry_source':{**{k:sample[k] for k in ('schema_version','source','run_id','sequence','stamp_ns','time_s')},
+                                    **({'control_revision': sample['control']['revision']} if sample['schema_version']==2 else {}),
                                     'sample_sha256':self.sample_digest},
                 'telemetry_freshness':observation['freshness'],'robot_state':robot,
                 'scope':'same-time local control pose and public model telemetry with sampled settling; '

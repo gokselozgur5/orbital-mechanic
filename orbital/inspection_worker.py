@@ -13,13 +13,17 @@ from orbital.inspection_protocol import canonical, worker_reply
 
 class OwnerLock:
     """Inherited open-file-description lock outlives an unexpectedly lost parent."""
-    def __init__(self, root):
+    def __init__(self, root, *, service='inspection-service'):
+        if service not in ('inspection-service', 'station-service'):
+            raise ValueError('invalid_owner_service')
+        self.service = service
         self.root = Path(root).resolve()
         self.fds = []
         try:
             parent = os.open(self.root, DIRECTORY_FLAGS); self.fds.append(parent)
-            for name in ('runtime', 'inspection-service'):
+            for name in ('runtime', self.service):
                 parent = directory(parent, name, True); self.fds.append(parent)
+            self.directory_fd = parent
             self.fd = os.open('owner.lock', os.O_RDWR | os.O_CREAT | FILE_FLAGS, 0o600, dir_fd=parent)
             self.fds.append(self.fd)
             info = os.fstat(self.fd)
@@ -35,7 +39,7 @@ class OwnerLock:
         opened = []
         try:
             parent = os.open(self.root, DIRECTORY_FLAGS); opened.append(parent)
-            for name in ('runtime', 'inspection-service'):
+            for name in ('runtime', self.service):
                 parent = directory(parent, name); opened.append(parent)
             info = os.stat('owner.lock', dir_fd=parent, follow_symlinks=False)
             if (info.st_dev, info.st_ino) != self.identity or info.st_nlink != 1:

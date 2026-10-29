@@ -11,6 +11,316 @@ original localization branch; six migrated commits do not count as new deliverie
 [Draft PR #16](https://github.com/gokselozgur5/orbital-mechanic/pull/16) links #6/#7,
 which remain open until full live localization/navigation acceptance and review.
 
+**OM-060: independent maintenance sequence recorder implemented; native acceptance pending.**
+[Sequence evidence](MAINTENANCE_SEQUENCE_EVIDENCE.md) now retains the actual
+command/state/result/telemetry messages from a powered idle baseline through a
+named terminal action. The read-only observer starts no service or effect.
+Replay binds requests, exact separately observed prior/child results, the complete
+control chain, reset eligibility and paired postconditions to raw source packets.
+Nested successful results or recomputed hashes cannot replace missing/contradictory
+source evidence. Internal cancellation intent is explicitly owner-reported;
+its separate public child result and effect observations remain mandatory.
+
+Historical decisions and final current measurements are checked separately.
+Optional required recovery reuses the existing public ten-second checker after
+the last observed restoration; energization, cancellation outcome and recovery
+remain distinct. Unmatched/rejected commands have no terminal observation in
+this recorder and leave it incomplete; admission replies remain client diagnostics.
+The existing bounded source/trace recorder and OM-058/059 model/refusal/loss gates
+are reused without duplicate delivery credit.
+
+All 718 local tests pass, including 30 new sequence/subscriber/CLI controls and
+five existing composed cases now retaining and replaying full sequences with
+three/four real camera children. The causal baseline, 189 Python AST files,
+17 shell scripts and two XML sources pass; executable source hashes stayed
+unchanged throughout validation. Four deliberate mutations are detected by
+the intended source-binding, reset-basis, final-pair and recovery-origin tests.
+A candidate regression incorrectly credited
+a previous mission's restoration to a later cancelled/unapplied intervention;
+the identical test fails before and passes after requiring restoration inside the
+captured control chain. The retained regression file has 23 tests; the final
+sequence file adds a separate final-pair freshness control.
+
+An initial instrumented 718-test run failed on five cleanup copies of a missing
+`ready.json`: the direct fixture writes a ready boundary, while the actual ROS
+adapter creates that marker. All five retained raw traces independently replay.
+The corrected evidence helper preserves the original files and does not create
+a fictitious marker. Product bytes are unchanged; the corrected cumulative run
+passes all 718 tests in 342.732 wall seconds, with all five copied raw traces
+independently replayed. Evidence is in operator workspace
+`reviews/orbital-delivery-20261028/om060`, with final validation under `final/`.
+Native DDS/timing/three-machine traces,
+independent camera/hold acceptance and full mission evaluation/recovery remain open.
+The known hosted-CI account block does not establish a remote test pass.
+
+**OM-057: durable scenario/action ownership implemented; native acceptance pending.**
+[Retained maintenance history](DURABLE_MAINTENANCE.md) now joins the actual station,
+owner and full-demo launcher. The explicit new-world start prepares one opaque
+scenario; the station consumes it once. Station-only restart refuses publication,
+and old mission/action IDs remain refused even in a new explicit scenario.
+Clock discontinuities stop the durable station rather than silently rebuilding it.
+The pure ROS-free model keeps its separate prototype reset semantics.
+
+Admission is persisted before hold acquisition; cancellation reserves its child
+before stopping the original. Effect intent precedes final live interlocks and
+mutation. Known applied/rejected outcomes and decision-time terminal history are
+retained without granting freshness, state adoption or resumed ownership.
+Partial/failed/ambiguous storage preserves uncertainty and blocks further effects;
+no implicit truncation, eviction or budget renewal is offered.
+
+A retained before-source controlled-core reproduction allowed the same mission
+another reset after reconstructing its station/owner. Five real Python process
+crash cuts now cover admission, intent, actual mutation before outcome metadata,
+applied outcome and terminal record before publication. All refuse station-only
+restart and old mission/action reuse; new explicit scenarios with new IDs work.
+This is not a native surviving-world or physical power-loss proof.
+
+Two prepublication regressions exposed terminal decisions after hold-release I/O:
+a crossed deadline could persist success, and expired verification could be
+misclassified as storage failure. Identical tests fail before and pass after final
+deadline/current-postcondition checks. Terminal disk delay retains the original
+completed-decision timestamps; it never renews the measured state.
+
+All 688 local tests pass (25 new), with the causal baseline, 184 Python AST files,
+17 shell scripts and two XML sources. Pinned executable bytes remain unchanged
+through validation. Four isolated deliberate mutations are detected by their
+intended tests: old-mission binding, exclusive scenario claim, effect-intent
+persistence and freshness after persistence. These sensitivity controls are
+separate from the historical core reproduction and two candidate regressions.
+Source-bound evidence is in operator workspace
+`reviews/orbital-delivery-20261028/om057`.
+
+OM-060 now implements independent local composite replay. Native commissioning,
+mission recovery and full maintenance acceptance remain open. The previously reported GitHub Actions
+account payment/spending-limit block is unresolved; no remote CI pass is claimed.
+
+**OM-056: cancellation with observed isolation implemented; native acceptance pending.**
+The explicit [cancel-isolate workflow](CANCELLATION_OPERATION.md) stops an exact
+owned maintenance action and waits for its known result, capture reap and hold
+release. Two new same-control public samples determine whether isolation is
+already observed or one separate `isolate` action is needed. That child has a
+reserved identity, new hold and camera capture, and unchanged final interlocks.
+Another fresh pair after child release establishes the workflow's final state.
+
+Schema-4 results preserve both requests/results and distinguish `isolated`,
+`energized` and `unverified`. Only verified isolation can succeed. Known failures
+can report the actual energized state; unknown effects stay nonterminal and
+owned even after deadlines. Client loss never implicitly cancels the explicit
+server policy. Replay, identity/capacity reservation, source loss, deadlines and
+shutdown controls do not silently retry or adopt old work after restart.
+
+The local composed cases use actual station/guard/navigation and three or four
+real capture children. Cancellation after energization performs a fourth new
+inspection and verified isolation. Before-effect cancellation confirms existing
+isolation without another effect. A late real artifact leaves energized failure
+explicit; cancellation after the isolation effect retains its actual record.
+The scenario-wide fixture budget includes the extra capture and observations;
+production deadlines and freshness bounds are unchanged. One initial unit fixture
+used its sample-invalid flag to simulate readiness loss; the fixture's separate
+availability flag now exercises the intended admission refusal. Original evidence
+is retained under `reviews/orbital-delivery-20261028/om056`.
+
+Review also reproduced a candidate completing from a fresh pair after another
+actual model effect had advanced the authoritative control revision. The same
+regression fails before and passes after a final current-control check. Both
+evidence variants are retained; this correction earns no additional delivery.
+
+Initial validation passes all 662 tests (34 new), the causal baseline, 179 Python
+AST files, 17 shell scripts and two XML sources with pinned source bytes unchanged.
+Four deliberate ownership/freshness/power/observer-loss mutations are detected
+by their intended tests. The invalid-pair mutants also reach a result-schema
+rejection before terminal publication; they are sensitivity controls, separate
+from the reproduced candidate revision defect above.
+
+After initial publication, a further controlled regression crossed the total
+deadline inside source-authority I/O while both off-state samples remained fresh.
+The published candidate incorrectly reported success. The identical regression
+passes after checking the deadline again at the terminal decision; it reports
+`timed_out` while retaining the actual observed isolation. This is an OM-056
+correction, not an additional delivery. Original source and failure logs remain
+in the evidence directory; final source validation is under `om056/correction`.
+
+Corrected validation passes all 663 tests (35 new), the causal baseline,
+179 Python AST files, 17 shell scripts and two XML sources. All four deliberate
+mutations are detected again, and pinned executable source bytes remain unchanged.
+
+This adds the missing server-owned workflow, reusing existing cancellation,
+isolation and idempotency controls without duplicate delivery credit. Holds are
+sequential, not one continuous mission token. OM-057 adds local durable history
+and restart refusal. OM-060 adds a separate local composite replay; the original
+single-isolation recorder does not certify this workflow. Native DDS/timing,
+live mission recovery and full acceptance remain open.
+
+**OM-055: owned power restoration implemented; native acceptance pending.**
+The [restore endpoint](RESTORE_OPERATION.md) requires the same owner's verified
+reset, retained eligible history, current cooldown and a third live inspection.
+The published station independently validates reset ownership and reserves one
+energization attempt before mutation; an unknown exception cannot renew it.
+Final source/pose/hold/freshness checks follow artifact I/O. Two fresh exact
+post-effect packets confirm power on before release, with actual voltage,
+current, vibration and temperature in the schema-3 terminal result.
+
+Cancellation before commitment preserves isolation. After commitment it reports
+an applied energized result; it never silently rolls back or claims isolation.
+Unknown outcomes stay nonterminal. Exact replay cannot repeat energization, and
+another action/owner/later isolation cannot reuse the old reset budget. CLI
+restore requires explicit owner/mission/reset identity and never retries blindly.
+
+The composed controls exercise actual station/guard/navigation code and three
+real capture children over controlled transport. New same-effect packets feed
+the existing ten-second public recovery checker independently. A post-restore
+jam control confirms power on without a recovery claim. The endpoint result
+itself is an energization result, not a mission-level recovery API. Full recovery
+orchestration, independent sequence traces, native commissioning and restart
+reconciliation remain open. Evidence: operator workspace
+`reviews/orbital-delivery-20261028/om055`.
+
+The first composed recovery run exceeded the fixture's old 20-second total
+watchdog while awaiting restoration verification. The fixture now budgets the
+third capture and additional recovery observation separately (60 seconds total
+for this scenario); the complete targeted run passed in 24.538 seconds. All 115
+production Python sources were byte-identical across that fixture adjustment.
+Production action deadlines, monotonic clocks and freshness gates are unchanged.
+The original failed run is retained; this local fixture bound is not a native
+timing or performance acceptance claim.
+
+Final validation passes all 628 tests (31 new), the causal baseline, 176 Python
+AST files, 17 shell scripts and two XML sources with unchanged pinned source
+bytes. Four deliberately disabled reservation, final-freshness, observed-power
+and model-prerequisite gates fail their intended controls. These sensitivity
+checks are separate from the retained fixture watchdog failure above.
+
+**OM-054: bounded reset implemented; native acceptance pending.**
+The [reset endpoint](RESET_OPERATION.md) reuses the exact published station,
+non-expiring drive hold and capture ownership. Retained powered excess-load/low-
+vibration measurements must match the prior isolation inspection. Missing,
+contradictory or high-vibration history refuses reset; isolated zero readings
+cannot erase that history. Current cooldown at most 40 °C and a new inspection
+precede final pose/source/hold/freshness checks after artifact I/O.
+
+The station reserves one attempt before the pulse, including an unknown outcome
+without an incremented model counter. Reset never restores power. Two strictly
+post-effect samples with the exact reset identity/revision, continued isolation
+and cooldown precede exact release. Cancellation before the pulse preserves the
+attempt; cancellation after it verifies and reports the applied effect. Unknown
+outcomes retain ownership. Reset results use schema 2 with their prior isolation
+result and eligibility references; legacy isolation results remain schema 1.
+The isolation recorder explicitly refuses reset results as isolation evidence.
+
+Local composed controls run isolate then reset with the actual station, guard,
+navigation supervisor and two separate real captures over controlled transport.
+They cover cancellation on either side of commitment and expiry after real
+artifact reads. No native DDS/timing, independent reset replay, electrical
+isolation or repaired-machine acceptance follows. OM-055 above adds restoration; restart
+reconciliation remains pending. Exact validation is retained under operator
+workspace `reviews/orbital-delivery-20261028/om054`.
+
+Review found an initial candidate could complete after the first post-reset
+sample expired while the latest sample was still fresh. The identical regression
+fails on the retained candidate and passes after requiring both receipt and
+simulation ages for both samples through release acknowledgement. The initial
+596-test pass did not cover this boundary; final validation includes that new
+regression. This was corrected before publication within OM-054.
+
+Final validation passes all 597 tests (36 new), the causal baseline, 175 Python
+AST files, 17 shell scripts and two XML sources with unchanged source bytes.
+Four deliberate mutations fail their intended history, reservation, final
+freshness and complete-pair assertions. These are sensitivity controls, separate
+from the reproduced candidate defect. Final logs and source hashes are under
+`reviews/orbital-delivery-20261028/om054/final` in the operator workspace.
+
+**OM-053: retained isolation evidence passes local controls; native acceptance pending.**
+The [read-only recorder](ISOLATION_EVIDENCE.md) retains exact command/state/result
+and station wire packets under a bounded exclusive trace. Offline replay checks
+integrity, source/registry/run/request/effect bindings and two fresh consecutive
+post-effect power-off/current-zero/vibration-zero measurements. The terminal
+digest must resolve to an actual retained packet; an ACK or success claim alone
+cannot verify isolation. Cancellation before/after the effect remains distinct.
+
+This adds independently retained postcondition evidence, not another owner
+verifier or maintenance action. It creates no control publisher or service
+client. Source loss, missing results, timeouts, bounds and cleanup failure retain
+incomplete evidence. A full trace proves a sampled model state, not continuous
+health, independent camera/pose/hold-release acceptance or electrical isolation.
+The composed real capture-child flow and the production observer over controlled
+transport pass locally; native DDS/timing and three-machine acceptance remain open.
+All 561 local tests pass (37 new recorder controls plus one CLI correction),
+with the causal baseline, 173 Python AST files, 17 shell scripts and two XML
+sources. Source bytes remain unchanged through validation. Two deliberate
+mutations fail the intended tests when source measurement or runtime binding
+checks are removed; these are sensitivity controls, not historical defects.
+The first PR CI returned failed statuses in two positive composed cases while
+same-head push CI passed; its inner cause was not logged. A controlled 350 ms
+child-write delay reproduces host scheduling advancing the test clock during
+I/O. The corrected fixture advances on child sensor-step requests and retains
+explicit expiry controls; production clocks and freshness bounds are unchanged.
+This controlled failure does not retrospectively prove the CI cause. Assertions
+now include inner inspection/worker diagnostics. This fixture correction earns
+no additional delivery credit.
+Evidence: `reviews/orbital-delivery-20261028/om053` in the operator workspace.
+
+**OM-052: owned isolation on the published station passes local controls.**
+The [isolation endpoint](MAINTENANCE_ENDPOINT.md) joins the actual telemetry
+model, a non-expiring exact guard hold, resolved navigation ownership and new
+live camera inspection. Guard reset/new navigation cannot bypass the hold.
+After artifact I/O the parent rechecks source, settled pose and unchanged
+200 ms freshness gates before one serialized isolation. Schema-2 telemetry
+records the exact applied effect and revision; a newer same-run observed pair
+must confirm target power/current/vibration before exact hold release.
+
+Cancellation before commitment prevents the effect and still waits for child
+reap. Cancellation after commitment reports the verified applied isolation and
+never restores power. Unknown effects or lost evidence retain nonterminal
+ownership. The CLI supports status/isolate/query/cancel and never blindly
+retransmits isolation. Legacy schema-1 telemetry remains readable. OM-054 above
+adds reset and OM-055 adds restore; restart reconciliation remains pending.
+
+Composed local tests run the actual station, guard, navigation supervisor,
+separate capture worker and artifact reader. The child receives actual parent
+station publications. A shared test clock isolates child teardown from freshness
+timing, then resumes for post-effect observations; production keeps real
+monotonic time. These controls are not native DDS/timing or physical acceptance.
+Thor SSH still closes before authentication; no native deployment occurred.
+OM-053 needs independently retained/native isolation acceptance without counting
+this verifier again. The complete maintenance mission remains open.
+
+All 523 local tests pass (50 new), plus the model baseline, 168 Python AST files,
+17 shell scripts and two XML sources. Source bytes stayed unchanged throughout
+final validation. Three isolated negative controls fail the intended assertions
+when final freshness, unknown-effect ownership or held-guard reset refusal is
+disabled. These are test-sensitivity controls, not historical production bugs.
+An earlier candidate falsely classified its own acknowledged release as hold
+loss; the retained failing test passes after tracking the release request.
+Evidence: `reviews/orbital-delivery-20261028/om052` in the operator workspace.
+
+The OM-052 deadline follow-up accepts the documented 0.1–30 second CLI range.
+The former reused navigation parser rejected 15 and 30 seconds before sending;
+the same actual-CLI regression fails before the correction and passes after it.
+All 11 maintenance client tests pass. This is a correction, not another delivery.
+
+**OM-051: maintenance contract and public recovery postcondition implemented locally (preceding delivery).**
+The [maintenance action contract](MAINTENANCE_ACTIONS.md) defines allowed
+isolate/reset/restore transitions, drive-hold and fresh-observation requirements,
+effect confirmation, cancellation and unresolved ownership for #9. The actual
+model demonstrates that isolated measurements cannot distinguish an unapplied
+reset, a cleared latch and a persistent jam; a versioned exact applied-operation
+record is therefore required before exposing reset through an endpoint.
+
+`RecoveryEvidence` now verifies ten simulation seconds of consecutive healthy
+public station measurements, with every machine powered, bus voltage at least
+27 V and per-machine observed power at most 110 W. Gaps, expiry or unhealthy
+measurements discard the window; malformed input/run changes fail the reader.
+The ROS-free baseline uses this checker rather than hidden `Station.recovered`.
+Its synthetic geometry and synchronous calls remain prototype-only; no mutating
+ROS endpoint, hold or native maintenance acceptance was claimed for OM-051. This work is
+isolated on `codex/maintenance-actions`, stacked on `codex/machine-integration`.
+
+All 473 local tests pass (12 new), plus the model baseline, 154 Python AST files,
+17 shell scripts and two XML sources. The identical public-decision regression
+fails on parent b4dba79 when access to `Station.recovered` is disabled and passes
+here. Source bytes remained unchanged during validation. Thor .55 closed SSH
+before authentication (exit 255); no native command or deployment occurred.
+
 **OM-049: cancellable inspection ownership passes local integration checks; native acceptance pending.**
 The typed String command endpoint owns one run/mission/action at a time, invokes
 the actual camera capture in a separate ROS process, and returns an ACK separately

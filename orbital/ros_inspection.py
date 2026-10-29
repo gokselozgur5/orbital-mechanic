@@ -18,11 +18,13 @@ OWNER = 'orbital_inspection_server'
 
 
 class LiveGuard:
-    def __init__(self, root, node, buffer, lock, *, now=time.monotonic, time_type, tf_error):
+    def __init__(self, root, node, buffer, lock, *, now=time.monotonic, time_type, tf_error,
+                 owner=OWNER, topics=TOPICS):
         self.registry = MachineRegistry.load(root)
         self.camera = CameraContract.load(self.registry)
         self.mapping = MapSnapshot.prepare(self.registry)
         self.node, self.buffer, self.lock = node, buffer, lock
+        self.owner, self.topics = owner, topics
         self.now, self.time_type, self.tf_error = now, time_type, tf_error
         self.expected = {**proximity_sources(), **CAMERA_TOPICS,
                          '/station/telemetry': [('station_telemetry', 'std_msgs/msg/String')]}
@@ -43,7 +45,7 @@ class LiveGuard:
             if self.node.get_parameter('use_sim_time').value is not True:
                 raise ValueError('simulation_clock_mode_changed')
             peers = authority(self.node, self.expected)
-            own = authority(self.node, {name: [(OWNER, 'std_msgs/msg/String')] for name in TOPICS})
+            own = authority(self.node, {name: [(self.owner, 'std_msgs/msg/String')] for name in self.topics})
             if self.pinned is None:
                 self.digest = hashlib.sha256(json.dumps(peers, separators=(',', ':')).encode()).hexdigest()
                 self.pinned, self.self_pinned = peers, own

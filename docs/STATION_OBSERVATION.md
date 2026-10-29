@@ -23,8 +23,10 @@ required nominal 0.5-second publisher samples arrive.
 ## Public schema and identity
 
 `orbital.telemetry_observation.TelemetryEvidence` decodes exactly the existing
-version 1 wire fields: source, registry, run/sequence, absolute simulation stamp,
-units and model observations. It requires the full locally configured public
+version 1 wire fields, or version 2 with the strict additional `control` record:
+source, registry, run/sequence, absolute simulation stamp, units and model
+observations. Schema 2 validates the applied operation and revision separately
+from the public machine measurements. It requires the full locally configured public
 catalog, not merely an echoed identity string. Canonical catalog content must
 match exactly, including numeric types; JSON whitespace/key order may differ.
 All three known machine IDs and all measured fields must be present, with no

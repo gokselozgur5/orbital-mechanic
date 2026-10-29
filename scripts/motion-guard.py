@@ -26,6 +26,7 @@ class GuardNode(Node):
         self.state_pub = self.create_publisher(String, '/motion/state', 1)
         self.odom_sub = self.create_subscription(Odometry, '/odom', self.feedback, qos_profile_sensor_data)
         self.input_sub = self.create_subscription(TwistStamped, '/motion/request', self.command, QoSProfile(depth=1))
+        self.hold_sub = self.create_subscription(String, '/motion/maintenance', self.maintenance, QoSProfile(depth=8))
         self.stop_service = self.create_service(Trigger, '/motion/stop', self.stop)
         self.reset_service = self.create_service(Trigger, '/motion/reset_stop', self.reset)
         self.steady_clock = Clock(clock_type=ClockType.STEADY_TIME)
@@ -66,6 +67,15 @@ class GuardNode(Node):
         self.tick()
         return response
 
+    def maintenance(self, msg):
+        peers = self.get_publishers_info_by_topic('/motion/maintenance')
+        if (len(peers) != 1 or peers[0].node_name != 'station_telemetry'
+                or peers[0].node_namespace != '/' or peers[0].topic_type != 'std_msgs/msg/String'):
+            self.guard.stop('maintenance_authority_ambiguous')
+        else:
+            self.guard.maintenance_command(msg.data, time.monotonic())
+        self.tick()
+
     def tick(self):
         linear, angular = self.guard.output(time.monotonic())
         output = Twist()
@@ -74,7 +84,8 @@ class GuardNode(Node):
         self.output_pub.publish(output)
         self.state_pub.publish(String(data=json.dumps({
             'latched': self.guard.latched, 'reason': self.guard.reason,
-            'linear_mps': linear, 'angular_rps': angular})))
+            'linear_mps': linear, 'angular_rps': angular,
+            'maintenance': self.guard.maintenance.snapshot(self.get_clock().now().nanoseconds)})))
 
 
 def main():

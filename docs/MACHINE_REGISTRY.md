@@ -59,13 +59,19 @@ without identity/time evidence and must not authorize an action.
 
 Every complete JSON telemetry sample includes:
 
-- `schema_version: 1` and `source: simplified_station_model`.
+- `schema_version: 2` and `source: simplified_station_model`.
 - The full public `registry`, including its source identity and bindings.
 - `run_id`, monotonically increasing per-run `sequence` and absolute simulation
   `stamp_ns` as a nonnegative integer. Measurements begin at a positive timestamp.
 - Explicit units for voltage, current, temperature, vibration, positions,
   orientations, source time and model elapsed time.
 - The existing `time_s`, `voltage_v` and `machines` observation fields unchanged.
+- `control: {revision, last_applied}`: revision zero starts with no effect.
+  Each successful owned isolation increments the revision and records owner run,
+  mission/action, request digest, machine, operation, revision and applied stamp.
+  The record contains no hidden fault cause or reset-success assertion. Readers
+  retain strict schema-1 compatibility for read-only history; isolation requires
+  the schema-2 record and newly observed post-effect measurements.
 
 `time_s` is elapsed **model** time; it is not the absolute simulator timestamp.
 The original causal model and allowed temperature/current/vibration/power
@@ -80,27 +86,30 @@ The existing demo launcher already passes that setting. The upstream
 declares and responds to this parameter; checking only startup would miss a later
 mode change. These source observations do not commission Thor's installed binary.
 
-A zero or repeated clock produces no new sample. A backward clock or forward gap
-greater than ten seconds resets the model, preserving the old prototype's reset
-policy, but now rotates `run_id` and restarts the sequence. A gap of exactly ten
-seconds advances the model in bounded one-second steps. Restarting the model can
-restore initial power/fault state, so future action owners must invalidate work
-across a run change rather than resume an old intervention. No maintenance action
-endpoint exists in this slice. The [public observation reader](STATION_OBSERVATION.md)
+A zero or repeated clock produces no new sample. A gap of exactly ten seconds
+advances the model in bounded one-second steps. With OM-057's
+[durable owner](DURABLE_MAINTENANCE.md), a backward clock or larger forward gap
+stops the station instead of resetting its power/fault state and attempt budgets.
+The standalone ROS-free model retains its prototype reset/run-rotation semantics.
+An explicit full-demo start prepares a new world generation; a station-only
+restart cannot reclaim a consumed generation or renew an old mission.
+The [public observation reader](STATION_OBSERVATION.md)
 now implements local consumer freshness, strict missing/invalid-data refusal and
 sampled publisher/clock identity checks. A joint machine/robot record is now
 integrated locally as described below. Native commissioning, noise confidence,
-inspection ownership and interlocked actions remain subsequent integration work.
+and native interlocked actions remain subsequent commissioning work.
 
 Registry drift, station identity drift, invalid clock, changed clock mode and
 publication failures propagate instead of publishing a fabricated measurement.
 Normal exit, interruption and errors destroy the node and shut down ROS. The
 existing demo cgroup launcher owns teardown if this child exits. There is no
-robot truth subscription, command publisher or maintenance service/client.
+robot truth subscription. OM-052 adds the owned maintenance command/state topics,
+guard hold publisher and live robot/camera observation described in the endpoint
+contract. Startup telemetry remains available before those prerequisites are ready.
 
-## Validation and native gate
+## Original OM-041 validation and native gate
 
-All 271 local tests pass, including 27 registry/core/adapter tests. They execute
+OM-041 passed all 271 local tests, including 27 registry/core/adapter tests. They execute
 the shipped telemetry entry point and actual adapter with controlled ROS
 transport, and cover translated models/link offsets, duplicate/missing/aliased
 IDs, malformed/linked/bounded sources, source changes, immutable projections,
@@ -125,7 +134,8 @@ public observation reader validates fresh telemetry locally. The
 [joint observation reader](INSPECTION_OBSERVATION.md) now binds a selected public
 sample to exact same-time settled robot state on one observer. Optional
 [camera capture](CAMERA_OBSERVATIONS.md) adds bounded timestamped image evidence
-locally. Native camera acceptance, inspection ownership and maintenance endpoints
-remain pending. Keep
+locally. Inspection ownership and isolation endpoints now pass local checks;
+native camera/maintenance acceptance remains pending; owned reset/restore are
+implemented locally. Keep
 the independent collision evaluator and hidden scenario state outside planner
 inputs throughout that integration.

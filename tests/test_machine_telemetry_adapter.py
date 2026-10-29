@@ -6,6 +6,7 @@ import types
 from unittest.mock import patch
 
 from test_machine_registry import ROOT, RegistryFixture
+from orbital.maintenance_journal import prepare_scenario
 
 SCRIPT = (ROOT/'scripts/machine-telemetry.py').read_bytes()
 
@@ -17,6 +18,9 @@ class AdapterHarness:
         self.messages = {'/station/telemetry':[], '/station/bus_voltage':[]}
         self.initialized = self.destroyed = self.shutdown = False
         self.parameters = {'use_sim_time':sim_time,'scenario':scenario}
+        self.subscriptions = {}
+        self.listener_closed = False
+        self.index = 0
         owner = self
 
         class Message:
@@ -31,12 +35,18 @@ class AdapterHarness:
             def declare_parameter(self, name, value):
                 owner.parameters.setdefault(name,value)
             def create_publisher(self, kind, topic, depth):
-                assert topic in owner.messages and depth == 5
+                owner.messages.setdefault(topic, [])
                 def publish(value):
-                    if owner.publish_error:
+                    if owner.publish_error and topic == '/station/telemetry':
                         raise RuntimeError('controlled publication failure')
                     owner.messages[topic].append(value.data)
+                    if topic in owner.subscriptions:
+                        owner.subscriptions[topic](value)
                 return types.SimpleNamespace(publish=publish)
+            def create_subscription(self, kind, topic, callback, qos):
+                owner.subscriptions[topic] = callback
+            def get_publishers_info_by_topic(self, topic):
+                return []  # Telemetry starts while navigation/camera are absent.
             def create_timer(self, period, callback):
                 assert period == .5
                 owner.callback = callback
@@ -45,26 +55,43 @@ class AdapterHarness:
             def destroy_node(self):
                 owner.destroyed = True
 
-        def init():
+        def init(**kwargs):
+            assert kwargs['signal_handler_options'] == 'NO'
             self.initialized = True
         def shutdown():
             self.shutdown = True
-        def spin(node):
-            for i, stamp in enumerate(self.times):
-                self.stamp = stamp
-                if self.before:
-                    self.before(i)
-                self.callback()
+        def spin(node, timeout_sec):
+            if self.index == len(self.times):
+                raise KeyboardInterrupt()
+            i = self.index
+            self.index += 1
+            self.stamp = self.times[i]
+            if self.before:
+                self.before(i)
+            self.callback()
         ros = types.ModuleType('rclpy')
-        ros.init, ros.create_node, ros.spin = init, Node, spin
+        ros.init, ros.create_node, ros.spin_once = init, Node, spin
         ros.ok, ros.shutdown = lambda:True, shutdown
         node_module = types.ModuleType('rclpy.node')
         node_module.Node = Node
         msg = types.ModuleType('std_msgs.msg')
         msg.String = msg.Float32 = Message
         self.modules = {'rclpy':ros,'rclpy.node':node_module,'std_msgs':types.ModuleType('std_msgs'),'std_msgs.msg':msg}
+        for name in ('rclpy.signals', 'rclpy.clock', 'rclpy.time', 'rclpy.qos', 'nav_msgs', 'nav_msgs.msg', 'tf2_ros'):
+            self.modules[name] = types.ModuleType(name)
+        self.modules['rclpy.signals'].SignalHandlerOptions = types.SimpleNamespace(NO='NO')
+        self.modules['rclpy.clock'].ClockType = types.SimpleNamespace(ROS_TIME=1)
+        self.modules['rclpy.time'].Time = lambda **kw:types.SimpleNamespace(**kw)
+        self.modules['rclpy.qos'].QoSProfile = lambda **kw:types.SimpleNamespace(**kw)
+        self.modules['rclpy.qos'].qos_profile_sensor_data = object()
+        self.modules['nav_msgs.msg'].Odometry = object
+        self.modules['tf2_ros'].Buffer = lambda **kw:object()
+        def close_listener(): self.listener_closed = True
+        self.modules['tf2_ros'].TransformListener = lambda *args:types.SimpleNamespace(unregister=close_listener)
+        self.modules['tf2_ros'].TransformException = RuntimeError
 
-    def run(self, root, source=SCRIPT):
+    def run(self, root, source=SCRIPT, *, prepare=True):
+        if prepare: prepare_scenario(root)
         (root/'scripts').mkdir(exist_ok=True)
         script = root/'scripts/machine-telemetry.py'
         script.write_bytes(source)
@@ -82,6 +109,11 @@ class MachineTelemetryAdapterTests(RegistryFixture):
         self.assertEqual([v['voltage_v'] for v in values],harness.messages['/station/bus_voltage'])
         self.assertEqual(values[0]['registry'],values[1]['registry'])
         self.assertTrue(harness.destroyed and harness.shutdown)
+        self.assertTrue(harness.listener_closed)
+        states = [json.loads(v) for v in harness.messages['/maintenance/state']]
+        self.assertTrue(states)
+        self.assertTrue(all(not v['ready'] for v in states))
+        self.assertEqual(states[-1]['station_run_id'], values[-1]['run_id'])
 
     def test_bad_registry_fails_before_ros_initialization(self):
         self.config['inspection_poses']['pump']['control_xy_m'] = [0,0]
@@ -121,13 +153,14 @@ class MachineTelemetryAdapterTests(RegistryFixture):
         self.assertEqual(len(harness.messages['/station/telemetry']),1)
         self.assertTrue(harness.destroyed and harness.shutdown)
 
-    def test_reset_has_new_identity_and_paused_clock_is_not_republished(self):
+    def test_durable_station_clock_reset_refuses_implicit_new_scenario(self):
         harness = AdapterHarness(times=(0,10**9,10**9,500000000))
-        harness.run(self.root)
+        with self.assertRaisesRegex(ValueError, 'station_reset_requires_new_scenario'):
+            harness.run(self.root)
         values = [json.loads(text) for text in harness.messages['/station/telemetry']]
-        self.assertEqual(len(values),2)
-        self.assertNotEqual(values[0]['run_id'],values[1]['run_id'])
-        self.assertEqual([v['sequence'] for v in values],[1,1])
+        self.assertEqual(len(values),1)
+        self.assertEqual(values[0]['sequence'],1)
+        self.assertTrue(harness.destroyed and harness.shutdown)
 
     def test_publication_failure_is_not_hidden_by_the_adapter(self):
         harness = AdapterHarness(publish_error=True)

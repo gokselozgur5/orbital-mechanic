@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 set -eo pipefail
 ROOT=$(cd "$(dirname "$0")/.." && pwd)
+# Each explicit full-demo launch creates a new world, never resumes an old mission.
+/usr/bin/python3 "$ROOT/scripts/maintenance-journal.py" prepare --new-world
 mkdir -p "$ROOT"/{logs,runtime/ros,runtime/gazebo-home,runtime/config,runtime/cache,runtime/data,runtime/tmp}
 ulimit -c 0
 # Gazebo 8 uses ~/.gz despite the XDG paths; keep the actual data in this project.

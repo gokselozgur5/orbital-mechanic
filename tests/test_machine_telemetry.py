@@ -30,7 +30,9 @@ class MachineTelemetryTests(RegistryFixture):
         for fault in Fault:
             value = self.model(fault).sample(10**9)
             registries.append(value['registry'])
-            self.assertEqual(set(value), {'schema_version','source','registry','run_id','sequence','stamp_ns','units','time_s','voltage_v','machines'})
+            self.assertEqual(set(value), {'schema_version','source','registry','run_id','sequence','stamp_ns','units','time_s','voltage_v','machines','control'})
+            self.assertEqual(value['schema_version'], 2)
+            self.assertEqual(value['control'], {'revision': 0, 'last_applied': None})
             for machine in value['machines'].values():
                 self.assertEqual(set(machine), {'powered','temperature_c','current_a','vibration_au'})
             text = json.dumps(value)
