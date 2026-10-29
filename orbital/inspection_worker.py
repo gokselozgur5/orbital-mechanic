@@ -14,7 +14,7 @@ from orbital.inspection_protocol import canonical, worker_reply
 class OwnerLock:
     """Inherited open-file-description lock outlives an unexpectedly lost parent."""
     def __init__(self, root, *, service='inspection-service'):
-        if service not in ('inspection-service', 'station-service'):
+        if service not in ('inspection-service', 'station-service', 'mission-service'):
             raise ValueError('invalid_owner_service')
         self.service = service
         self.root = Path(root).resolve()

@@ -11,7 +11,49 @@ original localization branch; six migrated commits do not count as new deliverie
 [Draft PR #16](https://github.com/gokselozgur5/orbital-mechanic/pull/16) links #6/#7,
 which remain open until full live localization/navigation acceptance and review.
 
-**OM-062: public inspection/diagnosis policy implemented; live integration pending.**
+**OM-066: persistent scripted gateway implemented; native acceptance pending.**
+[Mission runtime](MISSION_RUNTIME.md) now uses one ROS session for the public
+policy and existing navigation/inspection/maintenance clients. Exact command
+intent is fsynced before publication. Source/receipt freshness is checked after
+graph/file I/O, and one bounded cancellation preserves uncertain ownership and
+actual observed effects. Full owner observations are retained before closing the
+durable mission admission; process death or incomplete history cannot admit a new
+mission. Interrupted-mission reconciliation remains deliberately unavailable.
+
+Focused local checks compose the actual ROS adapter, capture/manifest reader and
+durable station with controlled peers, worker lifecycle and hold feedback.
+Recovery, healthy/persistent/ambiguous/blocked paths, cancellation, lost results,
+actual SIGKILL admission retention, startup budget, graph changes and storage
+failures are exercised. Before/after regressions reproduce stale command and
+terminal acceptance during the last graph read. This is one coherent delivery;
+shared OM-068 cancellation and OM-069 restart-refusal pieces earn no extra credit.
+
+All 811 local tests pass, including 35 new runtime/journal/ROS tests. The causal
+baseline, 203 Python AST files, 17 shell scripts and two XML sources pass; all 222
+executable source hashes stayed unchanged during the final 440.166-second run.
+Five retained actual-adapter runs and seven capture bundles reopen with validated
+mission journals: recovered, healthy, persistent, ambiguous and blocked.
+Four final deliberate mutations fail their intended publication-age, durable
+prior-intent, terminal-evidence and startup-budget assertions. An earlier
+terminal-age-only mutation remained refused by the independent journal guard;
+it is retained and excluded from mutation-detection claims.
+
+A separate regression reproduced shutdown of a caller-owned ROS context after
+initialization refusal. The adapter now cleans only its successfully initialized
+context, including its own subsequent node-construction failure. The same
+before/after control and both ownership branches pass. The preliminary 809-test
+pass predates this correction; final acceptance uses the full 811-test run.
+The temporary incorrect integer-validator import is also retained as a corrected
+candidate failure, not accepted validation.
+
+Evidence is retained in operator workspace `reviews/orbital-delivery-20261028/om066`,
+with final executable validation and complete retained runs under `verified/`.
+No native mission, final electrical isolation for all cancellations, interrupted
+mission resume, independent scoring, hosted CI acceptance or issue closure is
+claimed. Issue #11 and draft #21 remain In Progress; the earlier phase gates and
+full 100-delivery goal remain open.
+
+**OM-062: public inspection/diagnosis policy implemented.**
 [Mission policy](MISSION_POLICY.md) selects bounded inspection order from public
 measurements and binds actual inspection manifests/images to the exact retained
 telemetry sample. The selected sample and current consecutive pair must agree and
@@ -49,10 +91,10 @@ The first failure-latch mutation only changed the initial error message and was
 excluded as latch proof; the corrected mutation preserves that error and fails
 when the restored file is wrongly accepted on a second decision.
 
-The exclusive live gateway, real cancellation propagation, interrupted-mission
-handling, independent hidden-truth separation/scoring and complete native scenario
-matrix remain open. Issue #11 and draft #21 remain In Progress; local checks do not
-supply hosted CI or native acceptance.
+OM-066 adds the persistent gateway and bounded cancellation integration above.
+Interrupted-mission reconciliation, independent hidden-truth separation/scoring
+and the complete native scenario matrix remain open. Local checks do not supply
+hosted CI or native acceptance.
 
 **OM-061: retained local mission transition contract; native acceptance pending.**
 [Mission state](MISSION_STATE.md) connects existing navigation, inspection and

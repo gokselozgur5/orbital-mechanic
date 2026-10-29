@@ -1,12 +1,15 @@
 # Mission transition contract
 
-OM-061 implements `orbital.mission_state.MissionState`, the bounded transition contract for the scripted mission and its future shared gateway.
+OM-061 implements `orbital.mission_state.MissionState`, the bounded transition contract for the scripted mission and its shared gateway.
 
 It connects existing navigation, inspection and maintenance message identities in one mission without equating an acknowledgement with completion.
 
 The contract is exercised with the actual clients, inspection owner and durable maintenance station over controlled transport.
 
-The [public inspection policy](MISSION_POLICY.md) now supplies bounded inspection order and diagnosis decisions locally; the live mission service, shared gateway and independent scenario scoring remain open under #10/#11.
+The [public inspection policy](MISSION_POLICY.md) supplies bounded inspection order
+and diagnosis. The [persistent runtime](MISSION_RUNTIME.md) now owns the shared
+ROS gateway locally; native mission acceptance and independent scenario scoring
+remain open under #10/#11.
 
 ## State and outcomes
 
@@ -103,7 +106,9 @@ It sends no cancellation itself, and remains unresolved until the matching termi
 
 An unknown navigation request target stays unknown; a new supervisor target is not guessed or adopted.
 
-Actual propagation across ROS owners, explicit cancel-isolate policy, process containment and independent final stopping evidence remain part of the mission runtime work.
+The runtime now propagates bounded exact cancellation through actual clients.
+Explicit mission cancel-isolate policy, complete native process containment and
+independent final stopping evidence remain open.
 
 Mission duration is at most 600 wall seconds, with 32 steps by default and a hard maximum of 64; each normalized gateway record is at most 65,536 UTF-8 bytes.
 
@@ -111,7 +116,9 @@ Step identities never evict or reset within a session. Each navigation target ha
 
 Snapshot copies cannot mutate the active contract, and completed decisions ignore later telemetry rather than changing their historical outcome.
 
-State is in memory only. There is no resume API, durable mission adoption, retained gateway launch intent or cross-process mission lock yet.
+This state object remains in memory. The runtime adds a cross-process owner lock,
+durable prior intent and unfinished-mission refusal. There is no resume API or
+durable adoption of an interrupted mission.
 
 The station's existing durable history still refuses reused maintenance identities; it does not make this mission controller restart-safe.
 
@@ -129,6 +136,8 @@ Three retained sequences replay healthy, recovered and effect-with-lost-reply st
 
 The cumulative suite also runs the earlier composed station/camera endpoint controls, separately from the mission fixture's controlled workers.
 
-The policy is locally implemented; the live shared gateway/runner, durable interrupted-mission handling, independent hidden-truth isolation/scoring and the complete native scenario matrix remain open.
+The policy and persistent gateway/runner are locally implemented. Interrupted
+mission reconciliation, independent hidden-truth isolation/scoring and the
+complete native scenario matrix remain open.
 
 Do not close #10/#11/#12 or declare Phase 4 accepted from this contract's tests.

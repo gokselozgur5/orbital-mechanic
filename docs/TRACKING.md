@@ -58,6 +58,8 @@ on the maintenance work in [draft #20](https://github.com/gokselozgur5/orbital-m
 It binds existing client/owner results and preserves uncertain ownership.
 [Draft #21](https://github.com/gokselozgur5/orbital-mechanic/pull/21) also carries the
 [public inspection/diagnosis policy](MISSION_POLICY.md), with bounded uncertainty
-and artifact-to-source validation. The live mission gateway, independent evaluation
-#10 and native scenario acceptance remain open. Issue #11 and draft #21 stay
-In Progress; local policy tests do not close the earlier phase gates or this issue.
+and artifact-to-source validation. The [persistent mission gateway](MISSION_RUNTIME.md)
+now integrates the policy with actual clients, durable intent and bounded
+cancellation. Interrupted-mission reconciliation, independent evaluation #10 and
+native scenario acceptance remain open. Issue #11 and draft #21 stay In Progress;
+local adapter tests do not close the earlier phase gates or this issue.

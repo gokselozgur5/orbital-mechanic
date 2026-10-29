@@ -129,10 +129,10 @@ All items below start pending except the goal-contract commit itself. Dependenci
 | OM-063 | Deterministic diagnosis policy | Implemented with OM-062: public model hypotheses, sticky contradiction history and explicit uncertainty. No separate delivery credit or physical diagnosis claim. |
 | OM-064 | Healthy-machine preservation | OM-062 locally inspects all three healthy machines without intervention, then requires a new public health window. Reuse without extra credit; native acceptance remains pending. |
 | OM-065 | Ambiguous-evidence handling | OM-062 locally bounds repeated inspection and changing candidates before escalation. Reuse without extra credit; native acceptance remains pending. |
-| OM-066 | Recoverable-fault mission | Complete diagnosis and interlocked recovery from a fresh scenario. |
+| OM-066 | Recoverable-fault mission | Persistent ROS gateway integrates public diagnosis and actual owned client results, durable intent and new recovery. Controlled adapter/station tests pass; native fresh-scenario recovery remains pending. One coherent delivery includes shared cancellation and restart-refusal foundations, without duplicate credit. |
 | OM-067 | Persistent-fault escalation | Report evidence and leave the machine safe when recovery is unavailable. |
-| OM-068 | Mission cancellation propagation | Propagate cancellation through actual navigation/inspection/maintenance owners and verify final containment. Reuse OM-061's local sticky intent and exact pending identities without duplicate delivery credit. |
-| OM-069 | Interrupted mission recovery | Resume only after revalidating machine and robot state. |
+| OM-068 | Mission cancellation propagation | OM-066 connects exact cancellation to actual clients and retains lost results/effects locally. Reuse without extra credit; complete native owner containment and final electrical isolation remain pending. |
+| OM-069 | Interrupted mission recovery | OM-066 durably refuses unfinished missions, including actual process death. Resume/reconciliation still requires revalidating exact machine and robot ownership; refusal alone is not recovery acceptance. |
 | OM-070 | Complete scripted mission acceptance | Run the original station-power mission without an LLM. |
 
 ### Independent evaluation

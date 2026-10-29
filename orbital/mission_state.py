@@ -417,6 +417,16 @@ class MissionState:
             self.tick()
         return self.cancellation_target()
 
+    def fail(self, reason):
+        """Record a controller failure without discarding an owned remote step."""
+        if (not isinstance(reason,str) or not 1<=len(reason)<=96
+                or any(c not in 'abcdefghijklmnopqrstuvwxyz0123456789_' for c in reason)):
+            raise ValueError('invalid_mission_failure_reason')
+        if self.outcome is None:
+            self.stop_reason = self.stop_reason or reason
+            self.tick()
+        return self.cancellation_target()
+
     def cancellation_target(self):
         if self.pending is None:
             return None

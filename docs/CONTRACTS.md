@@ -1,7 +1,8 @@
 # Tool and scenario contracts — draft v0.1
 
-These are design contracts with implemented inspection and isolation subsets. The same tools
-are intended for scripted and LLM planners; a complete planner gateway is not yet implemented.
+These are design contracts with locally implemented inspection and maintenance
+subsets. The [scripted runtime](MISSION_RUNTIME.md) now uses their persistent ROS
+gateway; the external planner tool interface and native acceptance remain open.
 
 The read-only [station observation CLI](STATION_OBSERVATION.md) now implements
 fresh public telemetry consumption. The [machine observation CLI](INSPECTION_OBSERVATION.md)
@@ -19,7 +20,8 @@ checker is implemented and used by the ROS-free baseline. The
 the published station behind an acknowledged guard hold, resolved navigation,
 fresh pose and live capture. Owned reset/restore and explicit cancel-isolate are
 implemented locally; durable scenario/action history now fences restart and reused
-mission IDs. Native acceptance and complete mission recovery remain pending.
+mission IDs. Scripted recovery orchestration is locally implemented; native
+acceptance and complete independent mission evaluation remain pending.
 
 ## Common envelope
 
@@ -77,4 +79,11 @@ simulation seconds and describes its result as sampled recovery. It does not
 infer behavior between samples or establish that a reset was applied. The
 baseline uses the public result to decide its recovery outcome.
 
-The pure model receives distance/speed/timestamps from its caller. In future ROS integration these must come from trusted robot state, never planner arguments. This library is not an independently secured gateway. Telemetry run IDs, fresh public reading and inspection mission/action ownership now exist locally; native inspection acceptance, cross-action mission ownership, sensor noise, unknown faults and integrated navigation/camera diagnosis remain open. A persistent jam may be re-energized by the model to demonstrate continued failure; the scripted policy instead escalates upon its vibration evidence.
+The pure model receives distance/speed/timestamps from its caller. The ROS owners
+obtain those inputs from trusted robot observations rather than planner arguments;
+the model library itself is not an independently secured gateway. Telemetry run
+IDs, fresh public reading and cross-action mission ownership now exist locally.
+Native acceptance, independent evaluator access separation, sensor noise, unknown
+faults and rendered visual diagnosis remain open. A persistent jam may be
+re-energized by the model to demonstrate continued failure; the scripted policy
+instead escalates upon its vibration evidence.

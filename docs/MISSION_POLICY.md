@@ -84,4 +84,7 @@ This proves reproducibility, not independent scenario scoring, native ROS transp
 
 Controls cover other candidate machines, hidden-label changes without new observations, contradictory history, changing candidates, global budgets, coherent manifest tampering, missing/evicted samples, image mutation and expiry/cancellation/source changes during artifact I/O.
 
-The live exclusive gateway, action cancellation propagation, interrupted-mission handling, independent evaluator access separation and full native scenario acceptance remain open under #10/#11/#12.
+The [persistent runtime](MISSION_RUNTIME.md) now integrates the policy with actual
+clients, durable intent and bounded exact cancellation. Interrupted-mission
+reconciliation, complete cancellation containment, independent evaluator access
+separation and full native scenario acceptance remain open under #10/#11/#12.
