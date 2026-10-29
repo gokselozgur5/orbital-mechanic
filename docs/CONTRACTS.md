@@ -56,6 +56,14 @@ No tool accepts arbitrary code, paths, ROS topic names or raw motor velocities f
 
 Inspection/navigation are asynchronous where needed. The executive handles tool dispatch and polling; the model cannot start another mutating action while one is in progress. Errors distinguish invalid_argument, stale_observation, precondition_failed, unreachable, deadline_exceeded, unavailable and wrong_run.
 
+[Offline Messages proposals](PLANNER_PROVIDER.md) use a separate bounded planning
+basis, explicitly revalidated against fresh public state before a native tool
+request is created and durably bound.
+
+The exact native packet check remains unchanged; synthetic replay, reported usage
+limits and same-process checks do not establish live model, dollar-spend or OS
+isolation acceptance.
+
 ## Machine model
 
 Three distinct labelled machines share a simplified station power bus. Telemetry includes voltage (V), current (A), temperature (degrees C), vibration (documented arbitrary units), operating mode and sample validity. Controls expose only measured control state, not hidden fault cause. Equations, constants, noise seeds and recovery windows must live in a versioned scenario specification before implementation acceptance.

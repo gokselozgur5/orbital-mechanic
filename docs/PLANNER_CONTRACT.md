@@ -83,7 +83,11 @@ Only the latest issued packet is retained; reading a view does not refresh its r
 
 `validate()` rechecks source files, then clocks, and rejects a missing, invented, old or expired reference.
 
-A planner that responds after this strict freshness window must obtain a new observation; the executive also rechecks the original packet after binding I/O, immediately before publication.
+A native request referring to an old packet must obtain a new observation; the executive also rechecks its original packet after binding I/O, immediately before publication.
+
+The separate [offline Messages proposal boundary](PLANNER_PROVIDER.md) retains an older planning basis and explicitly records its revalidation against a fresh frame before creating a new native request.
+
+It does not relax this native packet rule or silently update an already admitted request.
 
 Stop and outcome-claim parsing remain available after observation failure; parsing a stop does not prove that cancellation or physical stopping occurred.
 
@@ -101,6 +105,6 @@ Its catalog additionally describes the nonterminal, nondurable pending acknowled
 
 The existing scripted runtime can opt into the same contract; local composed tests include actual station and camera artifacts.
 
-Provider transport, model image input, process/OS isolation and native commissioning remain open.
+Synthetic recorded Messages transport is implemented separately; live provider/network integration, model image input, process/OS isolation and native commissioning remain open.
 
 Issue #13 stays open, and earlier phase acceptance/#12 remain prerequisites for complete planner acceptance.

@@ -24,7 +24,7 @@ The tool mode observes public telemetry, navigates to the selected configured ma
 
 Healthy scenarios inspect all three machines without intervention; persistent and ambiguous scenarios escalate.
 
-Inspection applies the deterministic diagnosis policy automatically in this baseline; an external provider cannot yet choose a separate diagnosis or drive a provider loop.
+Inspection applies the deterministic diagnosis policy automatically in this baseline; a recorded provider can now choose bounded tools through the separate [proposal loop](PLANNER_PROVIDER.md), but cannot choose an independent diagnosis.
 
 ## Admission, execution and replay
 
@@ -100,7 +100,9 @@ Owned child-process SIGKILL controls cover binding before publication, actual is
 
 They establish observed process-death behavior, not physical power-loss durability or native ROS acceptance.
 
-The library is trusted code in the executive process: no provider transport, external tool server, OS/process isolation, independent source authentication or live model call is implemented.
+The library is trusted code in the executive process; its child proposal loop adds only synthetic recorded transport.
+
+No external tool server, OS/process isolation, independent source authentication or live model call is implemented.
 
 Earlier native navigation/maintenance gates, independent robot pose/interlock evidence, blocked/noisy and held-out inputs, the 25-trial freeze and the full MVP remain incomplete.
 

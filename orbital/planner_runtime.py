@@ -11,6 +11,8 @@ from orbital.planner_schema import FRESH_TOOLS
 
 
 class PlannerRuntime(MissionRuntime):
+    execution_mode = 'scripted-tools-v1'
+
     def __init__(self, registry, transport, journal, **kwargs):
         mission = kwargs.get('mission_id') or uuid.uuid4().hex
         kwargs['mission_id'] = mission
@@ -89,8 +91,8 @@ class PlannerRuntime(MissionRuntime):
 
     def run(self):
         report = super().run()
-        report['planner'] = {'run_id': self.inputs.run_id, 'mode': 'scripted-tools-v1',
+        report['planner'] = {'run_id': self.inputs.run_id, 'mode': self.execution_mode,
             'stop_delivery_failed': False if self.gateway is None else self.gateway.stop_delivery_failed,
             'calls': None if self.gateway is None else self.journal.tools.get(self.mission_id),
-            'scope': 'Actual scripted tool execution; no provider or native acceptance.'}
+            'scope': 'Owned tool execution constrained by the scripted public diagnosis policy; no native acceptance.'}
         return report

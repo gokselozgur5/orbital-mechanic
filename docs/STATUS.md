@@ -11,6 +11,71 @@ original localization branch; six migrated commits do not count as new deliverie
 [Draft PR #16](https://github.com/gokselozgur5/orbital-mechanic/pull/16) links #6/#7,
 which remain open until full live localization/navigation acceptance and review.
 
+**OM-084: recorded Messages proposals with explicit fresh-state revalidation.**
+
+The [offline proposal driver](PLANNER_PROVIDER.md) accepts bounded synthetic
+Messages client-tool turns and routes them through the actual owned executive.
+
+A five-second response with advancing telemetry cannot reuse an old native
+packet; the new distinct proposal boundary records its original planning basis,
+checks unchanged public decision inputs, and explicitly binds a fresh native
+request before the existing final publication gates.
+
+Turn/reply/binding/receipt history is durable; exact completed replay preserves
+old evidence, changed call identity is refused, and unknown effects remain owned.
+
+Turn, byte, reported-token, rejection and deadline bounds stop exhausted work;
+callbacks continue while the nonblocking replay waits, and the reserved stop
+retains the existing operator-reset latch.
+
+`run --provider-replay /absolute/operator/fixture.json` uses an explicit synthetic
+recording; it is exclusive with the same-contract scripted mode.
+
+All 1,001 local tests pass, including 42 new tests, plus the causal baseline,
+257 Python AST files, 17 shell scripts and 2 XML sources.
+
+All 276 executable source pins stayed unchanged through validation.
+
+Four deliberate mutants fail the intended planning-equivalence, provider-identity,
+provider-result-binding and turn-budget assertions.
+
+Six retained actual adapter/station runs cover healthy, recoverable, persistent,
+ambiguous, stopped and malformed-response cases, reopening 10 actual captures.
+
+The recoverable fixture uses five-second replies and applies exactly one
+isolation/reset/restoration sequence before an independently supported claim.
+
+Three retained owned child SIGKILL cuts preserve unfinished mission admission
+before native execution, after actual isolation and after provider receipt.
+
+The initial nonfinite-input test accidentally left a valid response unchanged;
+the control-change fixture initially used the wrong model call, then bypassed
+required durable-owner admission and was correctly refused.
+
+Both fixture defects were corrected, the control now uses the actual owner, and
+all original failure logs remain in the evidence bundle.
+
+Evidence: operator workspace `reviews/orbital-delivery-20261028/om084`.
+
+Branch `codex/planner-provider` is stacked on `codex/planner-executive`, refs #13.
+
+This one coherent delivery includes the related OM-083/085/086/087/088 offline
+behaviors without claiming separate delivery credit or completing #14.
+
+The response recipes are authored synthetic fixtures, not real captured model
+outputs; the scripted diagnosis constraints remain and the Messages subset is
+not qualified against a current live model/full response envelope.
+
+No credentials, network provider, paid call, measured dollar budget or model
+quality comparison is implemented.
+
+Controlled transport/robot/camera peers and same-process checks do not establish
+OS isolation, independent robot interlocks, power-loss or native acceptance.
+
+Earlier phase gates, real blocked/noisy and held-out trials, interrupted
+reconciliation, full cancellation containment/final isolation, the 25-trial freeze
+and the complete 100-delivery/MVP goal remain open.
+
 **OM-082: durable tools connected to the existing owned executive.**
 
 The [planner executive](PLANNER_EXECUTION.md) dispatches the nine bounded tools
@@ -56,8 +121,8 @@ Branch `codex/planner-executive` is stacked on `codex/planner-contract`, refs #1
 OM-082 replaces validation already covered by OM-081 with this missing execution
 integration; this is one coherent delivery, with no extra OM-083/086/088 credit.
 
-The diagnosis remains the scripted public-measurement policy, with controlled
-transport/robot peers in local tests; there is no provider or external tool server.
+The OM-082 diagnosis remains the scripted public-measurement policy, with controlled
+transport/robot peers in local tests; its original scope had no provider or external tool server.
 
 Native commissioning, independent pose/interlock evidence, OS/planner isolation,
 real blocked/noisy and held-out inputs, interrupted reconciliation, full cancellation

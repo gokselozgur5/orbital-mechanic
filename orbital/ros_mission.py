@@ -155,8 +155,10 @@ class RosMissionTransport:
 
 
 def run(root, *, mission_id=None, timeout_s=600., now=time.monotonic, transport_factory=RosMissionTransport,
-        tool_contract=False):
+        tool_contract=False, provider=None, provider_options=None):
     """Run one explicit bounded mission; never start/restart a prerequisite."""
+    if provider is not None and tool_contract:raise ValueError('choose_scripted_tools_or_recorded_provider')
+    if provider is None and provider_options:raise ValueError('provider_options_require_recording')
     deadline=finite(now(),0.,float('inf'))+finite(timeout_s,1.,600.)
     mission_id=identifier(uuid.uuid4().hex if mission_id is None else mission_id)
     registry=MachineRegistry.load(root)
@@ -187,11 +189,16 @@ def run(root, *, mission_id=None, timeout_s=600., now=time.monotonic, transport_
         remaining=deadline-now()
         if remaining<1.:raise ValueError('mission_startup_deadline')
         driver_type=MissionRuntime
-        if tool_contract:
+        options={}
+        if provider is not None:
+            from orbital.planner_provider import ProviderRuntime
+            driver_type=ProviderRuntime
+            options={'provider':provider,**(provider_options or {})}
+        elif tool_contract:
             from orbital.planner_runtime import PlannerRuntime
             driver_type=PlannerRuntime
         driver=driver_type(registry,transport,journal,mission_id=mission_id,timeout_s=remaining,
-            stop_requested=lambda:stopping)
+            stop_requested=lambda:stopping,**options)
         report=driver.run()
         if report['complete']:
             try:
@@ -226,6 +233,7 @@ def run(root, *, mission_id=None, timeout_s=600., now=time.monotonic, transport_
                         report['complete']=False
                         report.setdefault('evidence_failure','mission_witness_unavailable')
         finally:
+            if provider is not None:provider.close()
             if witness is not None:witness.close()
             if journal is not None:journal.close()
             lock.close()

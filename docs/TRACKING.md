@@ -98,5 +98,12 @@ Child `codex/planner-executive` adds [durable owned execution](PLANNER_EXECUTION
 exact replay, cancellation and a same-contract scripted baseline, with local
 actual station/capture and process-death checks.
 
-Issue #13 stays In Progress: provider integration, OS separation, native
+Child `codex/planner-provider` adds [offline Messages proposals](PLANNER_PROVIDER.md)
+with explicit fresh-state revalidation, bounded synthetic replay and durable
+provider/native result binding.
+
+Issue #13 stays In Progress: live provider integration, OS separation, native
 commissioning and complete earlier prerequisites remain open.
+
+Issue #14 remains To-do until actual provider/model integration and explicit
+spending controls are delivered; synthetic token claims do not satisfy it.

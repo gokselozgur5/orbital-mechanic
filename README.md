@@ -116,7 +116,17 @@ uncertainty and an operator-reset stop latch.
 
 `scripts/run-scripted-mission.py run --tool-contract` runs the same scripted
 policy through these tools. Local composed station/capture tests pass; provider
-integration, native commissioning and OS isolation remain open.
+network integration, native commissioning and OS isolation remain open.
+
+[Offline Messages proposals](docs/PLANNER_PROVIDER.md) now connect synthetic
+recorded turns to the owned executive, with explicit planning-basis revalidation,
+durable replay identity and bounded reply handling.
+
+`run --provider-replay /absolute/operator/fixture.json` uses an operator-selected
+synthetic fixture; no credentials or live model calls are involved.
+
+The scripted diagnosis constraints remain, and this does not establish model
+quality, native acceptance or paid spending controls.
 
 [Retained mission evaluation](docs/MISSION_EVALUATION.md) independently compares
 the claimed terminal time with actual station state, raw gateway publication
