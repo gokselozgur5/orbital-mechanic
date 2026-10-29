@@ -104,8 +104,13 @@ client/station tests pass; native acceptance remains open.
 [Persistent scripted missions](docs/MISSION_RUNTIME.md) now connect the policy to
 navigation, inspection and maintenance through one ROS session, with durable
 intent, bounded cancellation and unfinished-mission refusal. Local adapter and
-station tests pass; native commissioning, restart reconciliation and independent
-mission scoring remain pending.
+station tests pass; native commissioning and restart reconciliation remain pending.
+
+[Retained mission evaluation](docs/MISSION_EVALUATION.md) independently compares
+the claimed terminal time with actual station state, raw gateway publication
+attempts, owner replies and capture files. An optional sampled collision trace
+must match runtime generations, commands and the entire mission interval.
+Local tests pass; full native mission acceptance and OS isolation remain open.
 
 [Public inspection and diagnosis policy](docs/MISSION_POLICY.md) chooses a bounded
 inspection order, verifies actual capture files against retained public telemetry

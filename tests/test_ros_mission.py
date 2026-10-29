@@ -8,7 +8,7 @@ from unittest.mock import patch
 from orbital import ros_mission
 from orbital.machines import Fault
 from orbital.mission_journal import MissionJournal
-from mission_ros_fixture import MissionRos
+from mission_ros_fixture import MissionRos, runtime_identity
 from mission_runtime_fixture import RuntimeFixture
 
 
@@ -20,13 +20,15 @@ class RosMissionTests(RuntimeFixture):
     def composed(self, fake=None, timeout=60.):
         self.release_initial_gateway()
         self.ros=fake or MissionRos(self.bus)
-        with patch.dict(sys.modules,self.ros.modules):
+        with patch.dict(sys.modules,self.ros.modules), patch.object(ros_mission,'runtime_snapshot',
+                return_value=runtime_identity(self.f.model.registry)):
             return ros_mission.run(self.f.root,mission_id=self.f.request['mission_id'],
                                    timeout_s=timeout,now=self.bus.now)
 
     def test_actual_adapter_runs_recovery_and_cleans_all_subscriptions(self):
         report=self.composed()
         self.assertTrue(report['complete'],report)
+        self.assertTrue(report['witness']['complete'])
         self.assertEqual(report['mission']['outcome'],'recovered')
         self.assertEqual(self.f.model.control_revision,3)
         self.assertEqual(len(self.ros.subscribers),8)

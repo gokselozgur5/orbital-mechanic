@@ -3,8 +3,8 @@
 `scripts/run-scripted-mission.py run` connects the public mission policy to the
 existing navigation, inspection and maintenance owners through one persistent
 ROS session. It does not start prerequisites, inject scenarios or read hidden
-fault labels. This is the local OM-066 implementation; native mission acceptance
-and independent scenario scoring remain open.
+fault labels. Native mission acceptance remains open; OM-080 adds
+[independent retained mission evaluation](MISSION_EVALUATION.md).
 
 ## Admission and execution
 
@@ -12,6 +12,11 @@ The gateway acquires the private `runtime/mission-service` owner lock, validates
 its append-only `events.jsonl`, and refuses an unfinished mission before creating
 ROS publishers. One explicit invocation admits one new mission UUID. Every
 original command has an exact durable intent before transport publication.
+
+OM-080 also requires a private raw witness and verified before/after runtime
+service identities. `complete` now includes witness closure and adapter cleanup;
+a missing or failed witness makes the gateway report incomplete. It does not
+clear or reopen an already terminal journal admission.
 
 The adapter pins publisher names, namespaces, types and endpoint GIDs for public
 clock/telemetry and the three owner protocols. Each command topic must have only
@@ -99,4 +104,5 @@ ambiguity/persistence, blocked routes, cancellation, lost observations, durable
 admission after actual SIGKILL and storage failures. Final graph-read delays
 originally admitted stale publication/finalization; the same controls pass after
 the final freshness fence. None of these proves native DDS/Nav2, camera-child
-mission execution, collision freedom, rendered diagnosis or independent scoring.
+mission execution, collision freedom or rendered diagnosis. OM-080 separately
+joins actual retained station and gateway evidence, with explicit coverage limits.

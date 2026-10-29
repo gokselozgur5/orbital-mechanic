@@ -70,13 +70,18 @@ Issue [#10](https://github.com/gokselozgur5/orbital-mechanic/issues/10) is In Pr
 on `codex/scenario-evaluation`, stacked on `codex/scripted-mission`, and its child
 `codex/station-evaluation` for actual private observations and offline station scoring.
 
+Its child `codex/mission-evaluation` adds the
+[closed mission evidence join](MISSION_EVALUATION.md), retaining actual gateway
+attempts and evaluating station state at the original success claim.
+
 [Versioned private fixtures](SCENARIOS.md) bind the actual station to repeatable
 initial conditions and exact launch identities; public ROS fault parameters are
 removed. Four local profiles run, while blocked geometry, noisy observations,
 process separation and native acceptance remain open.
 
 [Station-axis evaluation](STATION_EVALUATION.md) measures actual sampled recovery
-and interventions after a separate authoritative closure. Complete collision,
-independent robot-interlock and mission-terminal joins remain unaccepted.
+and interventions after a separate authoritative closure. The mission-terminal
+and optional sampled collision joins are implemented locally; complete native
+collision and independent robot-interlock acceptance remain open.
 
 Issue #10 stays open; the 25-trial freeze in #12 remains To-do.

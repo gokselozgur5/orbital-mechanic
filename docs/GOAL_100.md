@@ -148,7 +148,7 @@ All items below start pending except the goal-contract commit itself. Dependenci
 | OM-077 | Fault-timing scenarios | Inject faults during travel and inspection with recorded timing. |
 | OM-078 | Navigation/maintenance combined faults | Evaluate safe outcomes across action-boundary failures. |
 | OM-079 | Run metrics and event trace | Private actual station trace and offline sampled-health/intervention/duration metrics with authoritative closure. One coherent local station-axis delivery; collision, independent interlocks, complete mission termination and native acceptance remain pending. No duplicate scenario-acceptance credit. |
-| OM-080 | Repeatable evaluation report | Compare matched scenarios with source/config/seed identities. |
+| OM-080 | Repeatable evaluation report | Local closed mission/station/capture join, actual publication attempts and station criteria at the original claim time. Optional collision join requires matching generations, commands and full interval; source/config/seed and matched-condition digests enable comparison. One coherent delivery; batch/native matched trials, independent interlocks and complete acceptance remain open. |
 
 ### Planner adapter without paid calls
 
