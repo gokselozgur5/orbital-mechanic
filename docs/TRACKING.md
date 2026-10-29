@@ -40,3 +40,12 @@ Created 2026-10-24. GitHub is the authority for current open/closed state; this 
 Phase 0 scope and setup are accepted based on the user-approved baseline, docs/EVIDENCE.md, confirmed Mac Gazebo/Foxglove viewing and this dependency-ordered backlog. Its acceptance issue and milestone are closed after publishing these documents.
 
 Policy review #2 is complete. ROS integration #3 passed its Thor deployment and motion checks; evidence is in STATUS.md and MOTION.md. Failure acceptance #4 passed; detailed results are in MOTION_EVIDENCE.md. Operator controls and user-rendered camera/lidar/state/velocity panels now pass #5; accepted identities and evidence are in OPERATOR.md. Phase 1 is accepted for that baseline. Next: #6, beginning with live verification of the prepared frame-height correction, then known-map localization.
+
+
+## Navigation integration PR
+
+[Draft PR #16](https://github.com/gokselozgur5/orbital-mechanic/pull/16) links #6 and
+#7 with closing references. Both issues remain open until localization recovery,
+live route/obstacle/stopping acceptance and review are complete. Native isolated
+configuration and service proofs are recorded in STATUS.md; they do not close the
+live acceptance gates. Preserve the individual atomic commits when merging.

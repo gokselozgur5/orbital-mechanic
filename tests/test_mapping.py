@@ -45,6 +45,16 @@ class MappingTests(unittest.TestCase):
         self.assertTrue(g.reachable((3.5,1.5),(3.5,5.5),0))
         self.assertFalse(g.reachable((3.5,1.5),(3.5,5.5),.6))
 
+    def test_all_goals_require_one_connected_inflated_region(self):
+        cells = [FREE]*63
+        for row in range(7):
+            cells[row*9+4] = OCCUPIED
+        grid = Grid(1, (0,0), 9, 7, cells)
+        self.assertTrue(grid.reachable_all((1.5,1.5), [(1.5,1.5),(2.5,4.5)], .1))
+        self.assertFalse(grid.reachable_all((1.5,1.5), [(2.5,4.5),(6.5,4.5)], .1))
+        self.assertFalse(grid.reachable_all((1.5,1.5), [(4.5,4.5)], .1))
+        self.assertFalse(grid.reachable_all((1.5,1.5), [(-1.,4.5)], .1))
+
     def test_rotated_static_collision_is_not_silently_ignored(self):
         tree=ET.parse(ROOT/self.config['world'])
         tree.getroot().find("world/model[@name='pump']/pose").text='3 1.8 .6 0 0 .3'

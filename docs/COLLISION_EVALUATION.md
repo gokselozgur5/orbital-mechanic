@@ -1,0 +1,146 @@
+# Sampled independent collision evaluation
+
+OM-027 evaluates every captured simulator-truth sample against the robot and
+world collision primitives. It reports observed overlap/touch, uncertain cylinder
+boundaries, floor violations and qualified sampled clearance. Local controls pass;
+native collision commissioning and collision-free route acceptance are pending.
+
+```bash
+python3 scripts/evaluate-navigation-collisions.py runtime/evaluation/pump-trial-001
+```
+
+The command prints a JSON report without ROS, Gazebo access, control publishers or
+service calls. Keep the original trace unchanged. Exit 0 means all declared
+capture samples were clear under this geometry contract; exit 1 means adverse or
+indeterminate geometry; exit 2 means invalid/incomplete evidence. No exit code
+accepts a navigation or maintenance mission.
+
+## Observed geometry and identity
+
+Use a trace from the current [recorder](TRAJECTORY.md). Each full Gazebo pose batch
+contains the robot model, its actual link transforms, static model transforms and
+static link observations. The evaluator composes model, link and collision-local
+transforms. It does not substitute nominal joint poses for missing observations,
+use localization as collision truth, or count the 0.37 m planning radius as a
+measured physical collision.
+
+All four current robot parts are included: the body box, caster sphere and two
+finite wheel cylinders. All seven non-floor obstacle boxes are tested, giving 28
+part/obstacle checks per truth sample, plus a separate floor/support check for each
+part. Additional declared supported collision parts are included within explicit
+bounds. A translated or rotated static model uses its observed pose, so a moved
+machine can create a collision even though the source map has not moved it.
+
+The summary embeds the exact SDF source and hash observed against the verified
+startup manifest. The parser supports the explicit SDF 1.9 maintenance world:
+static box obstacles; box, sphere and cylinder robot geometry; default parent
+frames; finite dimensions and poses. Required robot parts, walls and machines
+cannot disappear silently. It rejects includes, nested models, named/relative
+frames, XML state overrides, ambiguous identities/dimensions, unsupported shapes
+and extra dynamic models. Source bounds are 32 KiB, 32 models, 16 links per model,
+128 collision parts overall and 16 robot collision parts.
+
+The full observed entity-name multiset must match the source, all entity IDs must
+be distinct and their generation signature is pinned. Static links retain their
+declared relative poses. Unscoped same-name links must all declare the same
+relative transform; otherwise unique names are required because the pose packet
+does not identify their parents. Duplicate pose/static/geometry elements are
+rejected. A moved floor is unsupported. Missing, additional or
+changed scene entities refuse complete capture. These checks do not authenticate
+publishers or prove that an unchanged loaded entity still has the source's shape
+in physics memory. Changing collision geometry without a new documented world
+deployment is outside this contract. The supported pose semantics are based on
+the [SDF specification](https://sdformat.org/spec/?elem=world&ver=1.9) and the pinned
+Gazebo source linked in TRAJECTORY.md; native package behavior still needs proof.
+
+## Geometry decisions
+
+Box pairs use oriented separating-axis tests, including face normals and crossed
+edge directions; sphere/box pairs use the sphere center's distance to the oriented
+box. The box test follows the geometric basis described in
+[Gottschalk, Lin and Manocha, section 5](https://techreports.cs.unc.edu/papers/96-013.pdf).
+The implementation is local code, not a vendored collision library, and its tests
+do not inherit the paper's runtime or robustness claims.
+
+Wheel cylinders use 32-sided inner and outer prisms with the actual observed axis
+orientation and exact finite length. The inner prism is contained by the cylinder;
+the outer prism contains it. Separation of the outer prism proves sample clearance;
+intersection of the inner prism establishes geometric overlap/touch within the
+declared numerical tolerance. A case between those bounds is `indeterminate` and
+cannot produce a clear result. Exact cylinder projection and enclosing-sphere
+checks only reject distant pairs; their bounding volumes are never labeled as
+measured collisions. Numerical distance tolerance is 1e-9 m.
+
+The computation uses full 3D orientation. A tilted body is not flattened back onto
+the floor, and a cylinder is not replaced by its bounding cube or sphere when
+declaring a collision. Tests include independent circle/rectangle oracle cases,
+crossing box edges, sphere corners, rigid-transform invariance and the cylinder's
+explicit uncertainty band.
+
+## Floor policy
+
+The named wheel cylinders and caster sphere are the reviewed support parts.
+Their maximum penetration below the horizontal floor top is reported separately.
+Up to 0.002 m is allowed by this initial simulation-support contract; deeper
+penetration is adverse. This tolerance has not been calibrated against a new live
+capture and must be evaluated during native commissioning, not widened simply to
+make a failing trial pass.
+
+Body or other non-support geometry at/below the floor plane is adverse. Any part
+extending beyond the finite floor footprint is adverse. These are reported as
+floor/support violations, separate from measured obstacle overlap. Normal wheel
+support does not count as an unintended obstacle collision, and no blanket floor
+exclusion can hide a tipped body or a robot below the floor.
+
+## Evidence and result meaning
+
+Evaluation visits the same bounded record bytes whose sequence, hash, byte count
+and record count are verified. It never verifies a file and then analyzes a second
+unbound read. No accepted result is returned until the final integrity check.
+It replays state/audit through the recorder's production protocol validator and
+checks capture boundaries, entity generations, clock advancement, sample gaps,
+truth-to-localization correspondence, state-at-truth references, localization
+errors and the exact final summary. A rehashed malformed trace is still refused.
+
+The report binds the trace/world hashes, deployment identity and evaluator source
+hashes. It counts every sample and adverse event, retains the first 100 event
+examples with truth-record/timestamp references, and reports truncation explicitly.
+Warmup is validated but does not count as the declared capture interval. Missing
+geometry, localization, audit tails or final boundaries cannot become a zero-hit
+success. Legacy OM-023 model-only artifacts require a new capture.
+
+`sampled_clear: true` means no overlap/touch, cylinder uncertainty or floor
+violation was found at the captured timestamps. **It does not prove absence of
+contacts between samples.** `continuous_collision_free` is always `null` in this
+version. A test deliberately crosses an obstacle between two clear endpoints and
+preserves that unknown result. This report cannot by itself establish the full
+mission's no-collision criterion or close navigation acceptance.
+
+Sampling gaps are bounded to 250 ms in both simulation and observer receipt time.
+That rejects incomplete observation windows; it does not create a continuous
+motion bound. Contact/continuous-coverage evidence and native source/world checks
+remain necessary for full collision-free mission acceptance. Hashes demonstrate
+self-consistency, not authenticity or protection against a deliberately forged
+trace and manifest.
+
+## Acceptance and next native work
+
+All 244 local tests pass. The 40 added cases include complete synthetic traces,
+the actual recorder adapter with controlled transport, wheel-only contact after
+moving an obstacle, actual link offsets, rotated obstacles, tipping, finite-floor
+violations, cylinder uncertainty, malformed/rehashed evidence and bounded reports.
+Three hundred deterministic cylinder cases cross-check an independent analytic
+circle/rectangle oracle. A separate identical regression fails on `5ff3a8e` and
+passes after enforcing the recorder's 0.5-second TF wait even when a late lookup
+would succeed.
+Two additional review regressions reject ambiguous same-name static-link parents
+and duplicate source declarations; both failed before the corresponding checks.
+
+No live world, obstacle or robot was changed for these tests. Native work must
+first establish the current service/world identities, deploy reviewed source and
+coordinate the already-required map/localization reload. Commission full pose
+delivery and relative-frame composition while idle, then compare controlled
+guarded motion and known geometric-contact cases against independent native
+observations. Preserve negative controls for missing links, source mismatch and
+lost samples. Retain the existing trial guardian for every armed movement; neither
+this evaluator nor its recorder owns cancellation or a physical stop.

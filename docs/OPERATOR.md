@@ -1,5 +1,9 @@
 # Bounded operator CLI
 
+Named autonomous targets use the separate [navigation command client](NAVIGATION_CLIENT.md).
+Its request/arm/cancel contract is locally tested; native commissioning remains
+pending. The controls below retain their Phase 1 manual-motion acceptance.
+
 Run on Thor inside `tmux orbital-work`, from the project root:
 
 ```bash

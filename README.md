@@ -2,7 +2,7 @@
 
 A simulated maintenance robot that investigates and repairs faults in a space station using ROS 2 and an LLM task planner.
 
-**Status: guarded simulated motion and fresh sensor delivery are verified on ARM64 Thor. Operator CLI safety tests, the rendered Foxglove view and the frame-height correction are accepted; the complete runtime regression runner passes. Known-map generation and a machine model are tested offline. Autonomous navigation, integrated maintenance and LLM control are not implemented yet.**
+**Status: guarded simulated motion and fresh sensor delivery are verified on ARM64 Thor. Operator CLI safety tests, the rendered Foxglove view and the frame-height correction are accepted; the complete runtime regression runner passes. Known-map generation and a machine model are tested offline. The native Nav2 stack passed guarded active standby, unseeded admission refusal, measured offset-seed convergence and cancellation after reseeding a moving native goal. Autonomous routes, integrated maintenance and LLM missions remain unverified.**
 
 ## Run the current prototype
 
@@ -84,3 +84,15 @@ Include a healthy scenario and an unrecoverable fault so success cannot mean bli
 ## Continue development
 
 Read [AGENTS.md](AGENTS.md) and [docs/STATUS.md](docs/STATUS.md). The status file distinguishes measured capabilities, prototype-only behavior and remaining work. Foxglove client opening is user-confirmed and its camera/TF subscriptions are visible in the server logs.
+
+[Named navigation commands](docs/NAVIGATION_CLIENT.md) provide explicit target
+request, arm and cancel operations. Their local protocol/CLI tests pass; native
+commissioning and route acceptance remain pending.
+
+[Independent trajectory recording](docs/TRAJECTORY.md) measures Gazebo truth,
+same-time localization and exact command identities without publishing controls.
+Local observer tests pass; native capture and physical route acceptance are pending.
+
+[Sampled collision evaluation](docs/COLLISION_EVALUATION.md) checks observed body,
+wheel and support geometry against the recorded world. Local tests pass; this
+does not establish continuous collision freedom or native route acceptance.
