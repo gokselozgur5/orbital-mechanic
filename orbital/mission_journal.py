@@ -18,6 +18,7 @@ from orbital import inspection_protocol, maintenance_protocol
 from orbital.navigation_client import NavigationClient
 from orbital.station_control import control
 from orbital.planner_history import ToolHistory, KINDS as TOOL_KINDS
+from orbital.planner_dialog import ProviderHistory, KINDS as PROVIDER_KINDS
 
 NAME = 'events.jsonl'
 MAX_BYTES = 32*1024*1024
@@ -25,7 +26,7 @@ MAX_EVENTS = 16384
 MAX_MISSIONS = 64
 MAX_EVENT_BYTES = 65536
 KINDS = frozenset(('start','command','receipt','telemetry','decision','error','cancel_intent','terminal',
-                   'operator_tool_reset')) | TOOL_KINDS
+                   'operator_tool_reset')) | TOOL_KINDS | PROVIDER_KINDS
 
 
 class MissionJournal:
@@ -38,6 +39,7 @@ class MissionJournal:
         self.context = None
         self.missions = set()
         self.tools = ToolHistory()
+        self.provider = ProviderHistory()
         try:
             lock.verify()
             parent = os.fstat(lock.directory_fd)
@@ -131,6 +133,7 @@ class MissionJournal:
             if self.active!=mission_id:
                 raise ValueError('mission_journal_has_no_matching_owner')
             self.tools = self.tools.advance(mission_id,kind,data,self.context)
+            self.provider = self.provider.advance(mission_id,kind,data,self.context,self.tools)
             if kind=='terminal':
                 if (set(data)!={'outcome','reason','control','pending','quiescence'} or data['pending'] is not None
                         or data['outcome'] not in ('healthy','recovered','escalated','cancelled','timed_out','failed')
@@ -190,7 +193,8 @@ class MissionJournal:
         except BaseException:
             self.broken=True
             raise
-        self.active,self.missions,self.context,self.tools=trial.active,trial.missions,trial.context,trial.tools
+        self.active,self.missions,self.context,self.tools,self.provider=(
+            trial.active,trial.missions,trial.context,trial.tools,trial.provider)
         self.sequence,self.previous=event['sequence'],digest
         return digest
 

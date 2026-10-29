@@ -52,7 +52,7 @@ class ToolHistory:
         if kind not in KINDS:return self
         if kind == 'tool_session':
             if (mission_id in self._sessions or set(data) != {'run_id', 'mode', 'max_calls'}
-                    or data['mode'] != 'scripted-tools-v1' or type(data['max_calls']) is not int
+                    or data['mode'] not in ('scripted-tools-v1','recorded-tools-v1') or type(data['max_calls']) is not int
                     or not 1 <= data['max_calls'] <= MAX_CALLS):
                 raise ValueError('invalid_planner_session')
             identifier(data['run_id'])

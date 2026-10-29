@@ -26,7 +26,7 @@ class PlannerGateway:
         self.stop_delivery_failed = False
         self.current = None
         runtime._record('tool_session', {'run_id': inputs.run_id,
-            'mode': 'scripted-tools-v1', 'max_calls': max_calls})
+            'mode': runtime.execution_mode, 'max_calls': max_calls})
 
     def state(self):
         self.runtime.journal.verify()

@@ -156,12 +156,12 @@ All items below start pending except the goal-contract commit itself. Dependenci
 | --- | --- | --- |
 | OM-081 | Versioned planner tool schemas | Nine bounded request/result schemas, strict decoding, effect uncertainty and fresh public-observation preflight implemented locally. No command dispatch, provider integration, replay protection or full #13 acceptance; one coherent delivery only. |
 | OM-082 | Durable tool executive and scripted compatibility | Replaces argument validation already covered by OM-081: actual owned dispatch, fsynced logical/native binding and results, exact replay, retained uncertainty, bounded calls/deadlines and persistent operator-reset stop. Local composed profiles and process cuts; provider/native/OS acceptance remains open. One coherent delivery, no duplicate OM-081/083/086/088 credit. |
-| OM-083 | Planner observation boundary | Send only public fresh observations and permitted machine metadata. |
-| OM-084 | Provider adapter interface | Separate provider transport from deterministic execution and policy. |
-| OM-085 | Recorded-response replay adapter | Exercise realistic tool turns without network or paid inference. |
-| OM-086 | Bounded planning loop | Cap turns, retries and pending actions; stop on exhausted limits. |
-| OM-087 | Refusal and truncation handling | Provider stop conditions cannot masquerade as valid actions. |
-| OM-088 | Tool-call replay protection | Repeated provider calls reuse results without duplicate effects. |
+| OM-083 | Planner observation boundary | Public projection delivered with OM-081; explicit older-basis/fresh-state handoff belongs to OM-084. Independent process/access boundary remains open; no duplicate delivery credit. |
+| OM-084 | Offline Messages proposal integration | Synthetic nonblocking replay through the actual owned executive, explicit planning-basis revalidation, durable turn/proposal/native result binding, identity replay, bounded turns/rejections/reported usage and stop-reason handling. Local station/capture/process-cut evidence; no real model/network/OS/native acceptance. One coherent delivery only. |
+| OM-085 | Recorded-response replay adapter | Synthetic recipe transport included in OM-084; not captured real model responses and no separate credit. |
+| OM-086 | Bounded planning loop | Offline turn/rejection/byte/reported-usage bounds included in OM-084; real provider resource/spending enforcement remains open. No separate credit. |
+| OM-087 | Refusal and truncation handling | Fixed Messages subset refusal/truncation/unsupported-stop handling included in OM-084; real model envelope qualification remains open. No separate credit. |
+| OM-088 | Tool-call replay protection | Native replay in OM-082 and provider-to-native identity in OM-084; interrupted reconciliation remains open. No separate credit. |
 | OM-089 | Budget and credential boundary | Enforce configured ceilings and keep secrets out of traces/artifacts. |
 | OM-090 | Matched offline planner evaluation | Compare replay fixtures with scripted behavior; never claim live model quality. |
 
