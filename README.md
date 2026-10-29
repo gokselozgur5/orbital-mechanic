@@ -87,8 +87,14 @@ Read [AGENTS.md](AGENTS.md) and [docs/STATUS.md](docs/STATUS.md). The status fil
 [Mission state transitions](docs/MISSION_STATE.md) bind navigation, inspection and
 maintenance steps to one mission, retaining uncertain ownership and separating
 acknowledgement, terminal action results and a new public recovery window. Local
-client/station tests pass; automatic diagnosis, the live mission runner and native
-mission acceptance remain open.
+client/station tests pass; the live mission runner and native acceptance remain open.
+
+[Public inspection and diagnosis policy](docs/MISSION_POLICY.md) chooses a bounded
+inspection order, verifies actual capture files against retained public telemetry
+and handles contradictory or changing measurements before intervention. Local
+tests cover all three healthy machines, recovery and bounded escalation. Diagnosis
+uses the simplified model's public measurements; live integration and independent
+scenario scoring remain pending.
 
 [Durable maintenance ownership](docs/DURABLE_MAINTENANCE.md) retains scenario,
 mission and action identities across station-process loss. A station-only restart

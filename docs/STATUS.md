@@ -11,7 +11,50 @@ original localization branch; six migrated commits do not count as new deliverie
 [Draft PR #16](https://github.com/gokselozgur5/orbital-mechanic/pull/16) links #6/#7,
 which remain open until full live localization/navigation acceptance and review.
 
-**OM-061: local mission transition contract validated; native mission acceptance pending.**
+**OM-062: public inspection/diagnosis policy implemented; live integration pending.**
+[Mission policy](MISSION_POLICY.md) selects bounded inspection order from public
+measurements and binds actual inspection manifests/images to the exact retained
+telemetry sample. The selected sample and current consecutive pair must agree and
+remain fresh after artifact I/O. Historical high vibration cannot be erased by
+later low readings. At most two inspections per machine and six overall precede
+a decision or escalation; healthy stations require all three inspections and a new
+public recovery window without intervention.
+
+All 776 local tests pass, including 25 new policy tests, with the actual capture adapter, artifact reader,
+inspection client/owner and durable causal station over controlled ROS peers.
+Candidate regressions retain the original owner-generation fixture refusal,
+forgotten high-vibration history, exhausted global budget and coerced JSON boolean
+measurement failures before correction. A final source-read delay regression
+additionally reproduced acceptance of stale data: lifecycle and clock checks now
+run after registry I/O, with identical wall/simulation/admission controls failing
+before and passing after the correction. The policy verifies image integrity but
+does not classify pixels. Persistent escalation does not assert physical stopping
+or electrical isolation. OM-063 and the local OM-064/065 controls share this single
+delivery, with no duplicate credit. Evidence is in operator workspace
+`reviews/orbital-delivery-20261028/om062`.
+
+The causal baseline, 194 Python AST files, 17 shell scripts and two XML sources
+also pass; all 213 executable source hashes stayed unchanged during the final
+390.523-second run. Four deliberate mutations fail the intended type, artifact-I/O
+freshness, vibration-history and sticky-failure assertions. Five retained public
+input sequences and seven actual capture bundles reproduce healthy, recovered,
+persistent, ambiguous and blocked outcomes through the corrected policy offline.
+This same-code replay is reproducibility, not independent scenario scoring.
+
+The initial cumulative run was invalidated by our SIGINT during investigation of
+the registry-delay defect: the adapter caught the interrupt and its incomplete
+trace failed while the suite continued. That failed 773-test run is preserved,
+not accepted. The final corrected run passes the affected case and entire suite.
+The first failure-latch mutation only changed the initial error message and was
+excluded as latch proof; the corrected mutation preserves that error and fails
+when the restored file is wrongly accepted on a second decision.
+
+The exclusive live gateway, real cancellation propagation, interrupted-mission
+handling, independent hidden-truth separation/scoring and complete native scenario
+matrix remain open. Issue #11 and draft #21 remain In Progress; local checks do not
+supply hosted CI or native acceptance.
+
+**OM-061: retained local mission transition contract; native acceptance pending.**
 [Mission state](MISSION_STATE.md) connects existing navigation, inspection and
 maintenance request/result identities. It reserves before entering a gateway,
 keeps one unresolved step, separates navigation request/arm ACKs from measured
@@ -52,8 +95,8 @@ separate zero-warmup control preserves that refusal. The formerly failing compos
 case and final cumulative suite pass. This fixture correction receives no extra
 delivery credit; the original source and failed log remain retained.
 
-This is a state contract, not an automatic diagnosis policy or live mission
-service. No durable mission restart, cross-process gateway lock or native mission
+This is a state contract; the policy is now provided separately by OM-062. No live
+mission service, durable mission restart, cross-process gateway lock or native mission
 acceptance is claimed. Issue #11 remains open/In Progress; independent evaluation
 #10 and full scenario acceptance #12 remain pending. Work is isolated on
 `codex/scripted-mission`, stacked on the unmerged maintenance branch. Source-bound

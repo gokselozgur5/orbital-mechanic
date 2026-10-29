@@ -6,7 +6,7 @@ It connects existing navigation, inspection and maintenance message identities i
 
 The contract is exercised with the actual clients, inspection owner and durable maintenance station over controlled transport.
 
-There is no live mission service or operator mission command yet; automatic inspection order, diagnosis policy, gateway integration and independent scenario scoring remain open under #10/#11.
+The [public inspection policy](MISSION_POLICY.md) now supplies bounded inspection order and diagnosis decisions locally; the live mission service, shared gateway and independent scenario scoring remain open under #10/#11.
 
 ## State and outcomes
 
@@ -79,7 +79,7 @@ Explicit `not_sent` cannot contradict a previous possible delivery.
 
 These are controller policy decisions, not diagnoses inferred by this library.
 
-The future policy must read the verified public inspection artifact and current observations, handle uncertainty and keep evaluator truth out of its inputs.
+The separate policy reads the verified public inspection artifact and current observations, handles uncertainty and keeps evaluator labels out of its inputs.
 
 The contract does not read images, artifact measurements, hidden fault labels or reset counters to select a diagnosis.
 
@@ -129,6 +129,6 @@ Three retained sequences replay healthy, recovered and effect-with-lost-reply st
 
 The cumulative suite also runs the earlier composed station/camera endpoint controls, separately from the mission fixture's controlled workers.
 
-Automatic policy, the live shared gateway/runner, durable interrupted-mission handling, independent hidden-truth isolation/scoring and the complete native scenario matrix remain open.
+The policy is locally implemented; the live shared gateway/runner, durable interrupted-mission handling, independent hidden-truth isolation/scoring and the complete native scenario matrix remain open.
 
 Do not close #10/#11/#12 or declare Phase 4 accepted from this contract's tests.

@@ -55,7 +55,9 @@ live acceptance gates. Preserve the individual atomic commits when merging.
 Issue [#11](https://github.com/gokselozgur5/orbital-mechanic/issues/11) now has a local
 [executable state contract](MISSION_STATE.md) on `codex/scripted-mission`, stacked
 on the maintenance work in [draft #20](https://github.com/gokselozgur5/orbital-mechanic/pull/20).
-It binds existing client/owner results and preserves uncertain ownership. Automatic
-policy, live mission orchestration, independent evaluation #10 and native scenario
-acceptance remain open. This prototype does not close the earlier phase gates or
-its own issue.
+It binds existing client/owner results and preserves uncertain ownership.
+[Draft #21](https://github.com/gokselozgur5/orbital-mechanic/pull/21) also carries the
+[public inspection/diagnosis policy](MISSION_POLICY.md), with bounded uncertainty
+and artifact-to-source validation. The live mission gateway, independent evaluation
+#10 and native scenario acceptance remain open. Issue #11 and draft #21 stay
+In Progress; local policy tests do not close the earlier phase gates or this issue.
