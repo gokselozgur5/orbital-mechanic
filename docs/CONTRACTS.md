@@ -61,6 +61,12 @@ A recoverable fault must cause bus degradation through the model, and a valid in
 
 Mechanical jam is deliberately not repaired by a software reset. Physical jam removal is reserved for the manipulation milestone.
 
+[Private scenario inputs](SCENARIOS.md) implement versioned local initial conditions, rotating the fault target across all three machines by seed.
+
+The current ambiguous fixture uses two equal excess loads; missing/noisy telemetry remains required, and the blocked descriptor refuses launch until a geometry-bound scene is implemented.
+
+This local fixture delivery does not complete the scenario set or independent evaluation acceptance.
+
 ## Evaluation separation
 
 The evaluator reads hidden truth, actual world state and action trace. The planner sees sensor-derived observations only. Asset names, filenames, tool errors and image overlays must not leak scenario labels. Machine positions and irrelevant visual appearance vary independently of the fault. Hold out seeds/configurations from prompt tuning.

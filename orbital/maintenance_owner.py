@@ -79,7 +79,7 @@ class MaintenanceOwner:
         self.run_id = uuid.uuid4().hex
         self.journal = journal
         if journal is not None:
-            journal.claim(self.run_id, model.run_id, model.registry.identity)
+            journal.claim(self.run_id, model.run_id, model.registry.identity, model.configuration_sha256)
             model.journal = journal
         elif model.journal is not None:
             raise ValueError('station_journal_required')

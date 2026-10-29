@@ -63,3 +63,15 @@ now integrates the policy with actual clients, durable intent and bounded
 cancellation. Interrupted-mission reconciliation, independent evaluation #10 and
 native scenario acceptance remain open. Issue #11 and draft #21 stay In Progress;
 local adapter tests do not close the earlier phase gates or this issue.
+
+## Independent scenario evaluation
+
+Issue [#10](https://github.com/gokselozgur5/orbital-mechanic/issues/10) is In Progress
+on `codex/scenario-evaluation`, stacked on `codex/scripted-mission`.
+
+[Versioned private fixtures](SCENARIOS.md) bind the actual station to repeatable
+initial conditions and exact launch identities; public ROS fault parameters are
+removed. Four local profiles run, while blocked geometry, noisy observations,
+process separation, independent scoring and native acceptance remain open.
+
+Issue #10 stays open; the 25-trial freeze in #12 remains To-do.

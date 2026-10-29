@@ -53,7 +53,7 @@ class DeferredGuard:
 
 
 class StationMaintenance:
-    def __init__(self, root, node, model, *, now=time.monotonic):
+    def __init__(self, root, node, model, *, now=time.monotonic, expected_trial_id=None):
         from nav_msgs.msg import Odometry
         from rclpy.clock import ClockType
         from rclpy.qos import QoSProfile, qos_profile_sensor_data
@@ -65,12 +65,20 @@ class StationMaintenance:
         self.lock = OwnerLock(root, service='station-service')
         self.listener = self.owner = None
         self.journal = None
+        self.configuration = None
         self.pinned = None
         self.broken = False
         self.queue = deque()
         self.next_state = 0.
         try:
             self.journal = Journal(self.lock)
+            if model is None:
+                from orbital.machine_registry import MachineRegistry
+                from orbital.scenario_input import PreparedInput
+                self.configuration = PreparedInput(self.journal, MachineRegistry.load(root),
+                                                   expected_trial_id=expected_trial_id)
+                model = self.configuration.model()
+            self.model = model
             self.publishers = {name:node.create_publisher(String, name, QoSProfile(depth=10)) for name in TOPICS}
             hold_pub = node.create_publisher(String, '/motion/maintenance', QoSProfile(depth=8))
             self.holds = HoldEvidence(now=now, sim_ns=lambda:node.get_clock().now().nanoseconds,
@@ -101,6 +109,7 @@ class StationMaintenance:
         self.lock.verify()
         try:
             self.journal.verify()
+            if self.configuration is not None: self.configuration.verify()
         except JournalUnavailable:
             self.broken = True
             raise ValueError('maintenance_journal_unavailable') from None
@@ -161,6 +170,12 @@ class StationMaintenance:
                 # not manufacture a release or terminal result during teardown.
                 self.live.end()
         finally:
-            if self.listener is not None: self.listener.unregister()
-            if self.journal is not None: self.journal.close()
-            self.lock.close()
+            try:
+                if self.listener is not None: self.listener.unregister()
+            finally:
+                try:
+                    if self.configuration is not None: self.configuration.close()
+                finally:
+                    try:
+                        if self.journal is not None: self.journal.close()
+                    finally: self.lock.close()

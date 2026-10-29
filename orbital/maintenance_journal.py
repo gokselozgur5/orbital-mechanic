@@ -118,7 +118,7 @@ class Journal:
         digest = hashlib.sha256(canonical(event).encode()).hexdigest()
         raw = (canonical({**event,'sha256':digest})+'\n').encode()
         # Leave bounded headroom for outcomes/terminal records of admitted work.
-        headroom = 4*MAX_EVENT_BYTES if kind in ('scenario','claim','admit') else 0
+        headroom = 4*MAX_EVENT_BYTES if kind in ('scenario','scenario_v2','claim','admit') else 0
         if (len(raw) > MAX_EVENT_BYTES or self.sequence >= MAX_EVENTS-(8 if headroom else 0)
                 or self.expected[2]+len(raw)+headroom > MAX_BYTES):
             raise ValueError('journal_full')
@@ -145,10 +145,16 @@ class Journal:
         self.record('scenario',{'scenario_id':scenario,'registry_identity':registry_identity})
         return scenario
 
-    def claim(self, run_id, station_run_id, registry_identity):
+    def prepare_configuration(self, scenario_id, registry_identity, configuration_sha256):
+        self.record('scenario_v2', {'scenario_id':scenario_id, 'registry_identity':registry_identity,
+                                   'configuration_sha256':configuration_sha256})
+
+    def claim(self, run_id, station_run_id, registry_identity, configuration_sha256=None):
         current = self.history.scenarios.get(self.history.current)
         if current is None: raise ValueError('scenario_not_prepared')
         if current['registry_identity'] != registry_identity: raise ValueError('scenario_registry_changed')
+        if current.get('configuration_sha256') != configuration_sha256:
+            raise ValueError('scenario_configuration_mismatch')
         value = {'scenario_id':self.history.current,'run_id':run_id,'station_run_id':station_run_id}
         self.record('claim',value)
         self.claimed = value
@@ -177,6 +183,7 @@ class Journal:
 
 
 def prepare_scenario(root):
+    """Legacy model-fixture generation; insufficient for the live ROS publisher."""
     registry = MachineRegistry.load(root)
     lock = OwnerLock(root,service='station-service')
     journal = None
@@ -185,6 +192,26 @@ def prepare_scenario(root):
         scenario = journal.prepare(registry.identity)
         registry.verify_current()
         return {'scenario_id':scenario,'registry_identity':registry.identity,'new_world_required':True}
+    finally:
+        if journal is not None: journal.close()
+        lock.close()
+
+
+def prepare_configured_scenario(root, profile, seed):
+    """An explicit new-world input, never live mutation or station-only resume."""
+    from orbital import scenario_spec
+    from orbital.scenario_input import write_input
+    registry = MachineRegistry.load(root)
+    value = scenario_spec.create(profile, seed, registry.identity)
+    scenario_spec.require_station_fixture(value)
+    lock = OwnerLock(root, service='station-service')
+    journal = None
+    try:
+        journal = Journal(lock, create=True)
+        digest = write_input(lock, value)
+        registry.verify_current()
+        journal.prepare_configuration(value['trial_id'], registry.identity, digest)
+        return {**scenario_spec.assignment(value), 'new_world_required':True}
     finally:
         if journal is not None: journal.close()
         lock.close()

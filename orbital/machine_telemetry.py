@@ -13,8 +13,14 @@ UNITS = {'stamp_ns': 'simulation_nanoseconds', 'time_s': 'model_seconds',
 
 
 class MachineTelemetry:
-    def __init__(self, registry, fault=Fault.NONE):
+    def __init__(self, registry, fault=Fault.NONE, *, initial=None):
         self.registry, self.fault = registry, fault
+        from orbital.scenario_spec import initial_state
+        if initial is not None and fault != Fault.NONE:
+            raise ValueError('conflicting_private_initial_state')
+        self.initial = None if initial is None else initial_state(initial)
+        self.configuration = None
+        self.configuration_sha256 = None
         self.journal = None  # The live station owner attaches its durable claim.
         self.previous = None
         self.reset()
@@ -23,6 +29,12 @@ class MachineTelemetry:
         if self.journal is not None:
             raise ValueError('station_reset_requires_new_scenario')
         self.station = Station(self.fault)
+        if self.initial is not None:
+            for name, values in self.initial.items():
+                machine = self.station.machines[name]
+                machine.fault = Fault(values['fault'])
+                machine.powered = values['powered']
+                machine.temperature_c = values['temperature_c']
         self.run_id = uuid.uuid4().hex
         self.sequence = 0
         self.control_revision = 0
@@ -50,6 +62,7 @@ class MachineTelemetry:
         return True
 
     def sample(self, stamp_ns):
+        if self.configuration is not None: self.configuration.verify()
         if self.journal is not None: self.journal.verify()
         self.registry.verify_current()
         if not self._advance(stamp_ns):
@@ -136,6 +149,7 @@ class MachineTelemetry:
                                     isolation_action_id, reset_action_id)
                 intent_recorded = True
             self.registry.verify_current()
+            if self.configuration is not None: self.configuration.verify()
             live = admission()  # All file/manifest work precedes this final gate.
             stamp = live['stamp_ns']
             if type(stamp) is not int or not 0 < stamp < 2**63:

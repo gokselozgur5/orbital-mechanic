@@ -6,7 +6,7 @@ import types
 from unittest.mock import patch
 
 from test_machine_registry import ROOT, RegistryFixture
-from orbital.maintenance_journal import prepare_scenario
+from orbital.maintenance_journal import prepare_configured_scenario
 
 SCRIPT = (ROOT/'scripts/machine-telemetry.py').read_bytes()
 
@@ -18,6 +18,9 @@ class AdapterHarness:
         self.messages = {'/station/telemetry':[], '/station/bus_voltage':[]}
         self.initialized = self.destroyed = self.shutdown = False
         self.parameters = {'use_sim_time':sim_time,'scenario':scenario}
+        self.scenario = scenario
+        self.declarations = {}
+        self.parameter_reads = []
         self.subscriptions = {}
         self.listener_closed = False
         self.index = 0
@@ -31,8 +34,10 @@ class AdapterHarness:
             def __init__(self, name):
                 assert name == 'station_telemetry'
             def get_parameter(self, name):
+                owner.parameter_reads.append(name)
                 return types.SimpleNamespace(value=owner.parameters[name])
             def declare_parameter(self, name, value):
+                owner.declarations[name] = value
                 owner.parameters.setdefault(name,value)
             def create_publisher(self, kind, topic, depth):
                 owner.messages.setdefault(topic, [])
@@ -91,7 +96,9 @@ class AdapterHarness:
         self.modules['tf2_ros'].TransformException = RuntimeError
 
     def run(self, root, source=SCRIPT, *, prepare=True):
-        if prepare: prepare_scenario(root)
+        if prepare:
+            profile={'none':'healthy','latched_controller':'recoverable','mechanical_jam':'persistent'}.get(self.scenario,self.scenario)
+            prepare_configured_scenario(root,profile,0)
         (root/'scripts').mkdir(exist_ok=True)
         script = root/'scripts/machine-telemetry.py'
         script.write_bytes(source)
@@ -172,7 +179,7 @@ class MachineTelemetryAdapterTests(RegistryFixture):
         harness = AdapterHarness(scenario='unknown')
         with self.assertRaises(ValueError):
             harness.run(self.root)
-        self.assertTrue(harness.destroyed and harness.shutdown)
+        self.assertFalse(harness.initialized)
         self.assertEqual(harness.messages['/station/telemetry'],[])
 
     def test_operator_interrupt_cleans_up(self):

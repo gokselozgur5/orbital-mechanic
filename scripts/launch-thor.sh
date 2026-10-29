@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 ROOT=$(cd "$(dirname "$0")/.." && pwd)
+if [[ $# != 0 && ! ( $# == 2 && $1 == --trial-id && $2 =~ ^[a-f0-9]{32}$ ) ]]; then
+  echo 'Usage: launch-thor.sh [--trial-id PREPARED_TRIAL_ID]' >&2
+  exit 2
+fi
 mkdir -p "$ROOT/logs"
 # A stopped transient unit can remain loaded briefly while systemd collects it.
 # Wait for collection instead of racing a second unit with the same name.
@@ -32,4 +36,4 @@ systemd-run --user --unit=orbital-demo --collect \
   --property=KillMode=control-group --property=TimeoutStopSec=2 \
   --property="StandardOutput=append:$ROOT/logs/session.log" \
   --property="StandardError=append:$ROOT/logs/session.log" \
-  /bin/bash "$ROOT/scripts/start-demo.sh"
+  /bin/bash "$ROOT/scripts/start-demo.sh" "$@"

@@ -2,6 +2,16 @@
 
 Updated: 2026-10-29
 
+## Maintenance CI repair
+
+PR #22–27 runs exposed host-watchdog failures in reset/restoration fixtures.
+The fixture now budgets 30 host seconds per capture, including compensation;
+production action deadlines and observation freshness checks are unchanged.
+All 21 maintenance endpoint tests pass locally on Python 3.12.13. A real
+21-second delay before the second child starts reproduces the old 20-second
+watchdog failure and passes after the repair, with both actions below their
+unchanged 15-second deadlines. Hosted validation is tracked in issue #28.
+
 ## Active delivery goal
 
 The user requested at least 100 substantive atomic commits toward the complete
@@ -10,6 +20,43 @@ isolated `codex/nav2-integration` branch preserves the dirty main checkout and
 original localization branch; six migrated commits do not count as new deliveries.
 [Draft PR #16](https://github.com/gokselozgur5/orbital-mechanic/pull/16) links #6/#7,
 which remain open until full live localization/navigation acceptance and review.
+
+**OM-071: private scenario fixtures implemented; complete evaluation remains open.**
+[Private inputs](SCENARIOS.md) now bind deterministic initial conditions to an
+exact durable station generation, source/registry identities and a private file
+digest. The actual station no longer declares or reads a ROS fault selector.
+Healthy, recoverable, persistent and ambiguous equal-load profiles execute through
+the station adapter. The blocked descriptor refuses until real geometry exists;
+missing/noisy telemetry remains a separate required scenario.
+
+The contained launcher accepts an opaque prepared trial ID, preserves the selected
+profile and checks the same identity again under the station owner lock. Private
+files use bounded exclusive creation, fsync/read-back and strict path/mode/source
+checks. Claims require the exact input digest; changed inputs refuse new samples
+and effects after durable intent, while consumed generations remain refused.
+
+All 838 local tests pass, including 27 new tests, the causal baseline, 208 Python
+AST files, 17 shell scripts and two XML sources. All 227 executable source hashes
+remain unchanged through the final 461.533-second validation run. Five deliberate
+mutations fail their intended public-allowlist, claim-binding, final-input-check,
+launch-identity and retained-digest assertions. Four retained real adapter runs
+reopen valid private journals and contain no public fault/seed/private-digest
+fields; these are startup/publication traces, not independently scored missions.
+
+The initial full run retained 20 errors from endpoint fixtures still preparing
+legacy generations. Those fixtures now use actual configured inputs and assert
+trial/digest/station binding; real capture, reset, restore and cancellation paths
+pass in the final full suite. An earlier temperature test expectation was also
+corrected to distinguish initial reset state from subsequent thermal evolution.
+
+Evidence is retained in operator workspace `reviews/orbital-delivery-20261028/om071`,
+with final validation under `verified/`. Branch `codex/scenario-evaluation` is
+stacked on `codex/scripted-mission`; #10 remains open/In Progress and #12 remains
+To-do. This single fixture delivery does not accept OM-072 or the full scenario set.
+Native commissioning, actual OS isolation, blocked/noisy fixtures, independent
+recovery/collision/interlock scoring and the 25-trial freeze remain open. Thor
+access timed out; the previously observed hosted Actions account block is not
+treated as a code failure or a CI pass. No deployment, merge or paid call occurred.
 
 **OM-066: persistent scripted gateway implemented; native acceptance pending.**
 [Mission runtime](MISSION_RUNTIME.md) now uses one ROS session for the public

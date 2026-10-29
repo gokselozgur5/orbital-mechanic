@@ -17,7 +17,7 @@ from orbital import inspection_owner, ros_machine_telemetry, ros_maintenance
 from orbital.inspection_artifacts import read_capture
 from orbital.inspection_protocol import canonical
 from orbital.maintenance_protocol import result, state
-from orbital.maintenance_journal import prepare_scenario, read_history
+from orbital.maintenance_journal import prepare_configured_scenario, read_history
 from orbital.maintenance_observation import RecoveryEvidence
 from orbital.machine_registry import MachineRegistry
 from orbital.isolation_trace import IsolationTrace, TOPICS as TRACE_TOPICS, verify_isolation
@@ -41,7 +41,7 @@ class MaintenanceEndpointTests(unittest.TestCase):
                      cancel_isolate=False, sequence_retained=False):
         self.assertFalse(cancel_isolate and (retained or recovery))
         self.assertFalse(retained and sequence_retained)
-        prepare_scenario(self.root)
+        prepared = prepare_configured_scenario(self.root, 'recoverable', 0)
         host_started = time.monotonic()
         clock = SharedClock(self.root, create=True)
         self.addCleanup(clock.close)
@@ -62,9 +62,10 @@ class MaintenanceEndpointTests(unittest.TestCase):
         last_tick = None
         sequence = ('isolate', 'reset', 'restore') if restore else ('isolate', 'reset') if reset else ('isolate',)
         target_operation = sequence[-1]
-        # This host watchdog bounds the whole fixture, not any ROS action. The
-        # three-capture scenario and the extra recovery window add real work.
-        host_budget = 20.+10.*max(0, len(sequence)-2)+(30. if recovery else 0.)+(20. if cancel_isolate else 0.)
+        # Bound host scheduling/storage separately from each 15 s ROS action.
+        # CI needs 10-12 real seconds per capture even while the shared test
+        # clock waits for the child. Budget every capture, including compensation.
+        host_budget = 30.*(len(sequence)+int(cancel_isolate))+(30. if recovery else 0.)
         self.telemetry_receipts = []
         real_popen = subprocess.Popen
         real_station = ros_maintenance.StationMaintenance
@@ -175,6 +176,11 @@ class MaintenanceEndpointTests(unittest.TestCase):
 
         def launch(args, **kwargs):
             self.assertEqual(Path(args[1]).name, 'inspection-worker.py')
+            if mode == 'slow_startup' and len(workers) == 1:
+                # Host scheduling does not advance the controlled ROS clocks.
+                before = now()
+                time.sleep(21.)
+                self.assertEqual(now(), before)
             kwargs['env'].update(ORBITAL_TEST_ORIGIN=str(origin), ORBITAL_TEST_SHARED_CLOCK='1',
                                  ORBITAL_TEST_STATION_PUBLICATIONS='1', ORBITAL_TEST_EXIT_DELAY='.05',
                                  ORBITAL_TEST_STORAGE_DELAY='.35' if mode == 'slow_storage' else '0')
@@ -253,7 +259,7 @@ class MaintenanceEndpointTests(unittest.TestCase):
                 not recovery or h.sim-values[-1]['state_change']['effect']['applied_stamp_ns'] >= 12000000000)
         h.modules['rclpy'].spin_once = spin
         try:
-            with patch.dict(sys.modules, h.modules), patch.object(ros_maintenance, 'StationMaintenance', side_effect=station_owner), patch('orbital.inspection_worker.subprocess.Popen', side_effect=launch), patch.object(inspection_owner, 'read_capture', side_effect=read):
+            with patch.dict(os.environ, {'ORBITAL_TRIAL_ID':prepared['trial_id']}), patch.dict(sys.modules, h.modules), patch.object(ros_maintenance, 'StationMaintenance', side_effect=station_owner), patch('orbital.inspection_worker.subprocess.Popen', side_effect=launch), patch.object(inspection_owner, 'read_capture', side_effect=read):
                 for name in ('ros_health_interlock', 'ros_navigation_action', 'ros_navigation_supervisor'):
                     navigation = load('orbital.'+name, ROOT/'orbital'/f'{name}.py')
                 motion = load('maintenance_test_motion', ROOT/'scripts/motion-guard.py')
@@ -285,6 +291,9 @@ class MaintenanceEndpointTests(unittest.TestCase):
             'guard_failure': station.holds.failure}
         self.assertTrue(outputs['/maintenance/reply'][0]['accepted'])
         history = read_history(self.root)
+        self.assertEqual(history.current, prepared['trial_id'])
+        self.assertEqual(history.scenarios[history.current]['configuration_sha256'], station.model.configuration_sha256)
+        self.assertEqual(history.scenarios[history.current]['claim']['station_run_id'], station.model.run_id)
         for value in outputs['/maintenance/result']:
             self.assertEqual(history.actions[value['action_id']]['result'], value)
         self.assertEqual(history.status()['unresolved_count'], 0)
@@ -395,6 +404,18 @@ class MaintenanceEndpointTests(unittest.TestCase):
         record, image = read_capture(self.root, ref['observation_id'], ref['manifest_sha256'])
         self.assertEqual(record['telemetry_source']['control_revision'], 1)
         self.assertEqual(record['inspection_action']['action_id'], terminal['action_id'])
+        self.assertGreater(len(image), 900000)
+
+    def test_reset_allows_slow_host_startup_without_extending_action_deadline(self):
+        terminal, output = self.run_endpoint('slow_startup', reset=True)
+        self.assertEqual(terminal['status'], 'succeeded', self.endpoint_diagnostic)
+        self.assertEqual(output['/station/telemetry'][-1]['control']['revision'], 2)
+        for completed in output['/maintenance/result']:
+            self.assertLess(completed['wall_duration_s'], 15.)
+        ref = terminal['observation']
+        record, image = read_capture(self.root, ref['observation_id'], ref['manifest_sha256'])
+        self.assertEqual(record['inspection_action']['action_id'], terminal['action_id'])
+        self.assertEqual(record['telemetry_source']['control_revision'], 1)
         self.assertGreater(len(image), 900000)
 
     def test_reset_real_capture_cancel_retains_isolation_without_pulse(self):

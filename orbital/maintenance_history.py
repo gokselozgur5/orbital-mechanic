@@ -17,6 +17,7 @@ class History:
         if not isinstance(value, dict): raise ValueError('invalid_journal_event')
         fields = {
             'scenario': {'scenario_id', 'registry_identity'},
+            'scenario_v2': {'scenario_id', 'registry_identity', 'configuration_sha256'},
             'claim': {'scenario_id', 'run_id', 'station_run_id'},
             'admit': {'scenario_id', 'request', 'child_id', 'parent_action_id'},
             'intent': {'scenario_id', 'action_id', 'context', 'operation', 'station_run_id',
@@ -27,8 +28,9 @@ class History:
         }
         if kind not in fields or set(value) != fields[kind]: raise ValueError('invalid_journal_event')
         scenario_id = identifier(value['scenario_id'])
-        if kind == 'scenario':
+        if kind in ('scenario', 'scenario_v2'):
             identifier(value['registry_identity'], 64)
+            if kind == 'scenario_v2': identifier(value['configuration_sha256'], 64)
             if scenario_id in self.scenarios or len(self.scenarios) >= MAX_SCENARIOS:
                 raise ValueError('scenario_conflict_or_capacity')
             self.scenarios[scenario_id] = {**value, 'claim': None, 'actions': [], 'control_revision': 0}
