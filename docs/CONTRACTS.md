@@ -2,7 +2,11 @@
 
 These are design contracts with locally implemented inspection and maintenance
 subsets. The [scripted runtime](MISSION_RUNTIME.md) now uses their persistent ROS
-gateway; the external planner tool interface and native acceptance remain open.
+gateway.
+
+The [planner wire contract](PLANNER_CONTRACT.md) now implements bounded request/result
+schemas and public-observation preflight; command dispatch, provider integration
+and native acceptance remain open.
 
 [Retained mission evaluation](MISSION_EVALUATION.md) joins actual gateway attempts,
 terminal observations, private station state and capture bundles at the claimed

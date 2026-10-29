@@ -85,3 +85,14 @@ and optional sampled collision joins are implemented locally; complete native
 collision and independent robot-interlock acceptance remain open.
 
 Issue #10 stays open; the 25-trial freeze in #12 remains To-do.
+
+## Planner contract prototype
+
+Issue [#13](https://github.com/gokselozgur5/orbital-mechanic/issues/13) now has a local
+[wire contract and public observation preflight](PLANNER_CONTRACT.md) on
+`codex/planner-contract`, stacked on `codex/mission-evaluation`.
+
+Nine tools have bounded input/result schemas; no command executor or provider is connected.
+
+Durable duplicate handling, cancellation integration, same-contract scripted
+compatibility and complete prerequisites remain open.

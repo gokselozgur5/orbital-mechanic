@@ -11,6 +11,49 @@ original localization branch; six migrated commits do not count as new deliverie
 [Draft PR #16](https://github.com/gokselozgur5/orbital-mechanic/pull/16) links #6/#7,
 which remain open until full live localization/navigation acceptance and review.
 
+**OM-081: bounded planner wire contracts and public-observation preflight.**
+
+The [planner contract](PLANNER_CONTRACT.md) defines nine versioned tools, strict
+8 KiB request/result decoding, expected executive run/mission binding and
+terminal result consistency, including unknown or reported effects after failure.
+
+`python3 scripts/planner-tools.py` prints the provider-neutral catalog offline.
+
+The observation boundary uses the actual public telemetry decoder and configured
+registry; it requires two advancing samples, unchanged sources, current packet
+identity and freshness on both clocks after source I/O.
+
+No private scenario/evaluator files are read, and no command can be published by
+these modules.
+
+All 116 affected local tests pass, including 33 new tests, plus the causal
+baseline, 237 Python AST files, 17 shell scripts and two XML sources.
+
+All 256 executable pins stayed unchanged through validation; no existing
+executable source changed from OM-080.
+
+The full inherited suite was not rerun for these isolated additions; its last
+896-test pass belongs to parent `0d994a3`, not this revision.
+
+Four deliberate mutants fail the intended run-binding, post-I/O freshness,
+actual control-change and request/result digest assertions.
+
+A retained actual causal-model isolation invalidates the previously issued
+public observation; the harness invokes the trusted model directly, not through
+a planner executor or ROS transport.
+
+Evidence: operator workspace `reviews/orbital-delivery-20261028/om081`.
+
+Branch `codex/planner-contract` is stacked on `codex/mission-evaluation`; this is
+one coherent prototype delivery for #13, with no extra OM-082/083 credit.
+
+Command dispatch, durable call replay, pending-action limits, referenced evidence
+verification, same-contract scripted compatibility, provider integration and
+OS/planner isolation remain open.
+
+Wire validation is not execution, source authentication or independent outcome
+acceptance; earlier phase gates and #12 remain incomplete.
+
 **OM-080: retained mission claims independently joined to actual evidence.**
 [Mission evaluation](MISSION_EVALUATION.md) joins raw gateway callbacks and actual
 publication attempts, prior durable intent, real capture files and actual private

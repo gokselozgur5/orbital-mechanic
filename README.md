@@ -105,6 +105,14 @@ navigation, inspection and maintenance through one ROS session, with durable
 intent, bounded cancellation and unfinished-mission refusal. Local adapter and
 station tests pass; native commissioning and restart reconciliation remain pending.
 
+[Planner wire contracts](docs/PLANNER_CONTRACT.md) provide nine bounded tool schemas,
+strict request/result validation and fresh public-observation preconditions.
+
+Print the catalog with `python3 scripts/planner-tools.py`.
+
+This local interface does not dispatch commands or call a model; scripted-runtime
+integration, replay-safe execution and provider support remain open.
+
 [Retained mission evaluation](docs/MISSION_EVALUATION.md) independently compares
 the claimed terminal time with actual station state, raw gateway publication
 attempts, owner replies and capture files. An optional sampled collision trace

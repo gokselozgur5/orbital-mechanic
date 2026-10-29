@@ -154,7 +154,7 @@ All items below start pending except the goal-contract commit itself. Dependenci
 
 | ID | Deliverable | Acceptance gate |
 | --- | --- | --- |
-| OM-081 | Versioned planner tool schemas | Expose typed bounded actions and explicit error outcomes. |
+| OM-081 | Versioned planner tool schemas | Nine bounded request/result schemas, strict decoding, effect uncertainty and fresh public-observation preflight implemented locally. No command dispatch, provider integration, replay protection or full #13 acceptance; one coherent delivery only. |
 | OM-082 | Tool validation boundary | Reject malformed, extra, nonfinite and out-of-range arguments. |
 | OM-083 | Planner observation boundary | Send only public fresh observations and permitted machine metadata. |
 | OM-084 | Provider adapter interface | Separate provider transport from deterministic execution and policy. |
