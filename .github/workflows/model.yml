@@ -1,5 +1,8 @@
 name: Model and source checks
-on: [push, pull_request]
+on:
+  push:
+    branches: [main]
+  pull_request:
 jobs:
   model:
     runs-on: ubuntu-24.04

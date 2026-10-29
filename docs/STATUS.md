@@ -2,6 +2,16 @@
 
 Updated: 2026-10-29
 
+## Maintenance CI repair
+
+PR #22–27 runs exposed host-watchdog failures in reset/restoration fixtures.
+The fixture now budgets 30 host seconds per capture, including compensation;
+production action deadlines and observation freshness checks are unchanged.
+All 21 maintenance endpoint tests pass locally on Python 3.12.13. A real
+21-second delay before the second child starts reproduces the old 20-second
+watchdog failure and passes after the repair, with both actions below their
+unchanged 15-second deadlines. Hosted validation is tracked in issue #28.
+
 ## Active delivery goal
 
 The user requested at least 100 substantive atomic commits toward the complete
