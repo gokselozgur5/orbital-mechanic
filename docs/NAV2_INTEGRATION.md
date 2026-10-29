@@ -674,3 +674,31 @@ Its 12-file manifest SHA-256 is
 This establishes native middleware protocol behavior, not live deployment,
 physical arming/stopping or route acceptance. Those remaining gates are tracked
 in [#30](https://github.com/gokselozgur5/orbital-mechanic/issues/30).
+
+### Live arm-fix deployment, 2026-10-29
+
+The exact original fix `24df24d1c620ac6a10acbb6629424578ebc9c108` also passed all
+seven native cases with the OM-017 dependency versions and the same driver.
+Before deployment, all 94 live source files matched the OM-017 startup manifest.
+The reviewed deployment replaced only `orbital/ros_navigation_supervisor.py`,
+retaining its previous bytes and navigation runtime records in a backup.
+
+After an announced navigation-only restart, explicit guarded activation, map
+binding, a 270-message native TF audit and independent stationary localization
+all passed. The demo and localization InvocationIDs stayed unchanged. Navigation
+now has InvocationID `3a41b1713feb47838d4670688d7593c7`; supervisor run
+`1fcbef98-4a8e-4edd-a615-2725743e7414` is healthy/idle/latched with no target,
+command sequence zero and zero forwarded motion requests.
+
+All 94 source pins match the new startup identity
+`73c058639066b1bc6d9155b771ce00d8c92676c3abd87a3519729ac9f1fd2fcd`.
+Independent Gazebo pose remained `(0.000386, 0.000002, 0.012884)` at the reported
+precision. Localization error was 0.0109483 m / 0.0208018 rad. No armed goal was
+requested; this accepts the fix in guarded standby, not physical arming or routes.
+
+The live source consists of OM-017 plus this single supervisor fix. Later map,
+CLI and maintenance integrations still require their coordinated deployment and
+acceptance. Retained source, backups, service receipts and probe outputs are in
+operator workspace `reviews/orbital-native-resume-20261029/arm-deployment-evidence`.
+Its 46-file manifest SHA-256 is
+`67b68b674d82798f14b18d2ded0556699dc6129cd10423b6d11c9f2397ee12e2`.

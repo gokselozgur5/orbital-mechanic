@@ -29,9 +29,12 @@ implementation merges. Earlier delivery notes below retain their historical
 validation counts; [TRACKING.md](TRACKING.md) records the updated handoff.
 
 SSH access returned on 2026-10-29. Native domain-84 arm and CLI protocol proofs
-pass with synthetic feedback, while the last verified live deployment remains
-OM-017. Next: review the deployed source delta and explicitly load the revised
-map/localization before live arming, measured stopping and route trials.
+pass with synthetic feedback. The live OM-017 baseline now includes the single
+OM-018 supervisor fix: guarded readiness, map binding, native TF attribution and
+independent stationary localization pass after a navigation-only restart.
+Later map, CLI and maintenance integrations still await their coordinated
+deployment. Next: explicitly load the revised map/localization and commission
+the observation tools before live arming, measured stopping and route trials.
 
 **OM-066: persistent scripted gateway implemented; native acceptance pending.**
 [Mission runtime](MISSION_RUNTIME.md) now uses one ROS session for the public
@@ -794,7 +797,7 @@ map binding and readiness; an already-loaded old revision is intentionally
 rejected. No native process or simulation was changed. OM-018/019/020 and the
 measured tour remain pending; SSH access to the configured Thor is unresolved.
 
-**OM-018: arm callback races pass native protocol tests; live deployment is pending.**
+**OM-018: arm fix deployed in guarded standby; physical arming is pending.**
 The command callback now expires the health lease before admitting a request or
 arm. If moving feedback arrives while a guard-arm response is pending, that
 target is invalidated even when stationary feedback returns before the next tick.
@@ -813,11 +816,18 @@ Disposable proof cgroups exited; the live service identities and selected source
 hashes stayed unchanged. [NAV2_INTEGRATION.md](NAV2_INTEGRATION.md) records exact
 source/driver identities, the retained setup failure and the evidence manifest.
 
-This used synthetic health/odometry in empty-checked domain 84, without a world or
-drive connection. The live deployment remains at OM-017. Next: commission the
-actual navigation CLI, deploy the reviewed source with explicit map/localization
-checks, then verify live stationary arming and physical-loss stopping. Remaining
-native acceptance is tracked in [#30](https://github.com/gokselozgur5/orbital-mechanic/issues/30).
+The native comparison used synthetic health/odometry in empty-checked domain 84.
+The original fix at `24df24d` then passed the same seven cases with the OM-017
+dependencies. A backed-up, one-file deployment restarted only navigation. Fresh
+guarded readiness, map binding, native TF and independent pose checks pass;
+all 94 source pins match the new startup manifest. The supervisor is healthy,
+idle and latched with no target or forwarded motion; Gazebo pose stayed unchanged
+at the reported precision. Exact source/service identities and the 46-file
+evidence manifest are in [NAV2_INTEGRATION.md](NAV2_INTEGRATION.md).
+
+The live root retains OM-017 plus this supervisor fix. Later CLI/map/maintenance
+deployment and live stationary arming/physical-loss stopping remain under
+[#30](https://github.com/gokselozgur5/orbital-mechanic/issues/30).
 
 **OM-017: map revision binding is deployed and accepted.**
 Startup validates the loaded map-server revision and artifacts; readiness also
