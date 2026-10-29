@@ -65,9 +65,11 @@ of Git. Board work never authorizes paid resources or live planner calls.
 
 ## Navigation handoff
 
-[PR #16](https://github.com/gokselozgur5/orbital-mechanic/pull/16) is the active
-navigation integration. Its closing references cover #6 and #7; neither can be
-closed merely because CI or isolated fixtures pass. Current source and evidence
-are on `codex/nav2-integration` in `docs/STATUS.md` and
-`docs/NAV2_INTEGRATION.md`. The full live route, collision and failure gates still
-control its readiness.
+The owner merged [PR #16](https://github.com/gokselozgur5/orbital-mechanic/pull/16)
+on 2026-10-29; its closing references closed #6 and #7. Preserve those records.
+The remaining native deployment, route, collision and failure gates now live in
+[#30](https://github.com/gokselozgur5/orbital-mechanic/issues/30), in the open
+Phase 2 milestone. Merged source and isolated protocol proofs do not satisfy the
+phase's physical acceptance criteria. Current evidence and the next deployment
+step are in `docs/STATUS.md`, `docs/NAV2_INTEGRATION.md` and
+`docs/NAVIGATION_CLIENT.md`.

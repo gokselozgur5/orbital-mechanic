@@ -10,16 +10,28 @@ production action deadlines and observation freshness checks are unchanged.
 All 21 maintenance endpoint tests pass locally on Python 3.12.13. A real
 21-second delay before the second child starts reproduces the old 20-second
 watchdog failure and passes after the repair, with both actions below their
-unchanged 15-second deadlines. Hosted validation is tracked in issue #28.
+unchanged 15-second deadlines. PR #29 merged and issue #28 closed on 2026-10-29.
+Hosted checks passed on PR #22–27 and #29, and on main `41cca9a`: the final main
+run executed 812 tests. Feature-branch pushes now validate through their PR;
+main still validates on push. No manual CI rerun was needed for the repair.
 
 ## Active delivery goal
 
 The user requested at least 100 substantive atomic commits toward the complete
 maintenance MVP. [GOAL_100.md](GOAL_100.md) defines scope and evidence gates. The
-isolated `codex/nav2-integration` branch preserves the dirty main checkout and
-original localization branch; six migrated commits do not count as new deliveries.
-[Draft PR #16](https://github.com/gokselozgur5/orbital-mechanic/pull/16) links #6/#7,
-which remain open until full live localization/navigation acceptance and review.
+isolated worktrees preserve the dirty original checkout and localization branch;
+six migrated commits do not count as new deliveries. The owner merged PR #16,
+#19, #20 and #21 on 2026-10-29. Closing references in #16 closed #6/#7; remaining
+native navigation acceptance is now tracked in
+[#30](https://github.com/gokselozgur5/orbital-mechanic/issues/30). Phase 2 remains
+open. Issues #8/#9/#11 also remain open for native acceptance despite their
+implementation merges. Earlier delivery notes below retain their historical
+validation counts; [TRACKING.md](TRACKING.md) records the updated handoff.
+
+SSH access returned on 2026-10-29. Native domain-84 arm and CLI protocol proofs
+pass with synthetic feedback, while the last verified live deployment remains
+OM-017. Next: review the deployed source delta and explicitly load the revised
+map/localization before live arming, measured stopping and route trials.
 
 **OM-066: persistent scripted gateway implemented; native acceptance pending.**
 [Mission runtime](MISSION_RUNTIME.md) now uses one ROS session for the public
@@ -751,7 +763,7 @@ eight native protocol controls using 14 actual CLI subprocesses in empty-checked
 domain 84. The old-token, competing-publisher and lock controls sent no command;
 the lost-reply control returned uncertain after one delivery and retained the
 target until explicit cancellation. Nine commands were received, with no Nav2
-goal or drive output. Final state was idle/latched; live services were unchanged.
+goal or forwarded motion request. Final state was idle/latched; live services were unchanged.
 
 Next: reviewed source deployment, the coordinated OM-021 map reload, physical
 loss/recovery gates and measured tour under #30. Independent trajectory recording

@@ -120,7 +120,7 @@ its lost-reply control suppresses state publication after command reception.
 - A lost reply returns `uncertain` / exit 3 after exactly one command. A fresh
   status still shows the owned target, which a subsequent explicit cancel resolves.
 
-Nine command deliveries were observed. No Nav2 goal or drive command was sent;
+Nine command deliveries were observed. No Nav2 goal or motion request was forwarded;
 final state was idle/latched. All 158 staged source hashes stayed unchanged, the
 proof cgroup exited, and live service identities/selected source hashes were
 unchanged. The 37 local client/protocol tests also pass on Python 3.12.13.
