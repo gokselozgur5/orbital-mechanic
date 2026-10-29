@@ -139,7 +139,7 @@ All items below start pending except the goal-contract commit itself. Dependenci
 
 | ID | Deliverable | Acceptance gate |
 | --- | --- | --- |
-| OM-071 | Scenario fixture schema | Versioned private seeds/initial conditions bind to actual station claims and opaque launch IDs. Four local profiles run; blocked geometry, noisy telemetry, native trials and independent isolation/scoring remain open. One coherent fixture delivery, not OM-072 acceptance. |
+| OM-071 | Scenario fixture schema | Versioned private seeds/initial conditions bind to actual station claims and opaque launch IDs. Four local profiles run; blocked geometry, noisy telemetry, native trials, enforced isolation and complete mission evaluation remain open. One coherent fixture delivery, not OM-072 acceptance. |
 | OM-072 | Hidden-truth isolation check | Prove planner/tool inputs cannot read evaluator-only fields. |
 | OM-073 | Healthy scenario acceptance | Score correct non-intervention and unnecessary actions. |
 | OM-074 | Recoverable scenario acceptance | Score measured recovery rather than reported success. |
@@ -147,7 +147,7 @@ All items below start pending except the goal-contract commit itself. Dependenci
 | OM-076 | Ambiguous scenario acceptance | Score evidence gathering and bounded uncertainty handling. |
 | OM-077 | Fault-timing scenarios | Inject faults during travel and inspection with recorded timing. |
 | OM-078 | Navigation/maintenance combined faults | Evaluate safe outcomes across action-boundary failures. |
-| OM-079 | Run metrics and event trace | Record success, interventions, collisions, duration and termination causes. |
+| OM-079 | Run metrics and event trace | Private actual station trace and offline sampled-health/intervention/duration metrics with authoritative closure. One coherent local station-axis delivery; collision, independent interlocks, complete mission termination and native acceptance remain pending. No duplicate scenario-acceptance credit. |
 | OM-080 | Repeatable evaluation report | Compare matched scenarios with source/config/seed identities. |
 
 ### Planner adapter without paid calls

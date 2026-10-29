@@ -71,6 +71,14 @@ Terminal timestamps describe that decision, before disk persistence and delivery
 
 A terminal record proves a historical decision, not that a client received the result or that the measured state is still current.
 
+Configured stations also retain [actual private observations](STATION_EVALUATION.md).
+
+After a clean settled shutdown syncs and reads back the observation end record, an `observations_closed` journal event binds its chain tip, count and source revision.
+
+This event must immediately follow the action-history prefix named by the private end record; it seals that generation against further admissions and does not claim complete mission acceptance.
+
+Incomplete, failed-sync and abruptly terminated observation streams cannot become a complete station report merely because an end payload is visible on disk.
+
 The cancellation workflow keeps original and child records separate and validates both against their retained history.
 
 ## Unknown outcomes and operator inspection

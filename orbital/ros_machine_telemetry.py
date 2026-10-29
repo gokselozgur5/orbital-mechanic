@@ -14,6 +14,7 @@ def run(root, *, stop_requested=lambda:False, now=time.monotonic):
     from orbital.ros_maintenance import StationMaintenance
 
     node = maintenance = None
+    complete = False
     rclpy.init(signal_handler_options=SignalHandlerOptions.NO)
     try:
         node = rclpy.create_node('station_telemetry')
@@ -40,12 +41,13 @@ def run(root, *, stop_requested=lambda:False, now=time.monotonic):
         while rclpy.ok() and not stop_requested():
             rclpy.spin_once(node, timeout_sec=.01)
             maintenance.tick()
+        complete = True
     except KeyboardInterrupt:
-        pass
+        complete = True
     finally:
         try:
             if maintenance is not None:
-                maintenance.close()
+                maintenance.close(complete=complete)
         finally:
             if node is not None:
                 node.destroy_node()

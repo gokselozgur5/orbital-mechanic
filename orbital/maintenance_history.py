@@ -25,6 +25,7 @@ class History:
             'applied': {'scenario_id', 'action_id', 'effect'},
             'rejected': {'scenario_id', 'action_id'},
             'terminal': {'scenario_id', 'result'},
+            'observations_closed': {'scenario_id','station_run_id','chain_sha256','records','source_revision'},
         }
         if kind not in fields or set(value) != fields[kind]: raise ValueError('invalid_journal_event')
         scenario_id = identifier(value['scenario_id'])
@@ -48,6 +49,15 @@ class History:
             scenario['claim'] = copy.deepcopy(value)
             return
         if scenario['claim'] is None: raise ValueError('scenario_not_claimed')
+        if 'observations_closed' in scenario: raise ValueError('scenario_observations_closed')
+        if kind == 'observations_closed':
+            if ('configuration_sha256' not in scenario or value['station_run_id'] != scenario['claim']['station_run_id']
+                    or type(value['records']) is not int or not 2 <= value['records'] <= 20000
+                    or any(self.actions[a]['result'] is None for a in scenario['actions'])):
+                raise ValueError('invalid_observation_closure')
+            identifier(value['chain_sha256'],64);identifier(value['source_revision'],64)
+            scenario['observations_closed'] = copy.deepcopy(value)
+            return
         if kind == 'admit':
             self._admit(value, scenario)
             return

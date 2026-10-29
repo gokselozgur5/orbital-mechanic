@@ -22,6 +22,7 @@ class MachineTelemetry:
         self.configuration = None
         self.configuration_sha256 = None
         self.journal = None  # The live station owner attaches its durable claim.
+        self.truth = None  # Private actual-state producer; absent in legacy model-only fixtures.
         self.previous = None
         self.reset()
 
@@ -65,6 +66,7 @@ class MachineTelemetry:
         if self.configuration is not None: self.configuration.verify()
         if self.journal is not None: self.journal.verify()
         self.registry.verify_current()
+        if self.truth is not None: self.truth.reserve()
         if not self._advance(stamp_ns):
             return None
         if stamp_ns == 0:
@@ -73,11 +75,13 @@ class MachineTelemetry:
         if set(self.station.machines) != names or any(m.name != name for name, m in self.station.machines.items()):
             raise ValueError('Station identities differ from the scene registry')
         self.sequence += 1
-        return {'schema_version': 2, 'source': 'simplified_station_model',
+        value = {'schema_version': 2, 'source': 'simplified_station_model',
                 'registry': self.registry.public(), 'run_id': self.run_id,
                 'sequence': self.sequence, 'stamp_ns': stamp_ns, 'units': dict(UNITS),
                 'control': {'revision': self.control_revision, 'last_applied': copy.deepcopy(self.last_applied)},
                 **self.station.observe()}
+        if self.truth is not None: self.truth.sample(value)
+        return value
 
     def isolate(self, context, expected_run, expected_revision, *, admission):
         return self._control('isolate', context, expected_run, expected_revision, admission=admission)
@@ -150,6 +154,7 @@ class MachineTelemetry:
                 intent_recorded = True
             self.registry.verify_current()
             if self.configuration is not None: self.configuration.verify()
+            if self.truth is not None: self.truth.reserve()
             live = admission()  # All file/manifest work precedes this final gate.
             stamp = live['stamp_ns']
             if type(stamp) is not int or not 0 < stamp < 2**63:
@@ -168,6 +173,9 @@ class MachineTelemetry:
             history = (intent, receipt)
             # These bounded values are prepared before the synchronous mutation.
             distance, speed = finite(live['distance_m']), finite(live['speed_mps'])
+            if self.truth is not None:
+                from orbital.station_truth_protocol import snapshot
+                before = snapshot(self)
         except (ValueError, KeyError, TypeError, OSError, RuntimeError) as error:
             if intent_recorded: self.journal.outcome(context['action_id'])
             raise EffectRejected(str(error)) from None
@@ -189,4 +197,5 @@ class MachineTelemetry:
         self.last_applied = effect
         self.effects[key] = history
         if intent_recorded: self.journal.outcome(context['action_id'], receipt)
+        if self.truth is not None: self.truth.effect(before, live, receipt)
         return copy.deepcopy(receipt)

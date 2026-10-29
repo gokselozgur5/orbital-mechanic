@@ -66,6 +66,7 @@ class StationMaintenance:
         self.listener = self.owner = None
         self.journal = None
         self.configuration = None
+        self.truth = None
         self.pinned = None
         self.broken = False
         self.queue = deque()
@@ -93,6 +94,10 @@ class StationMaintenance:
                 authority=self.authority,
                 journal=self.journal,
                 on_result=lambda result:self.publish('/maintenance/result', result))
+            if self.configuration is not None:
+                from orbital.station_truth import StationTruth
+                self.truth = StationTruth(self.lock, self.journal, self.configuration, model, now=now)
+                model.truth = self.truth
             node.create_subscription(String, '/maintenance/command', self.receive, QoSProfile(depth=16))
             node.create_subscription(String, '/motion/state', lambda msg:self.holds.on_guard(msg.data), 10)
             node.create_subscription(String, '/navigation/state', lambda msg:self.holds.on_navigation(msg.data), 10)
@@ -153,7 +158,8 @@ class StationMaintenance:
             self.publish('/maintenance/state', self.owner.state())
             self.next_state = self.now()+.1
 
-    def close(self):
+    def close(self, *, complete=False):
+        cleaned = False
         try:
             if self.owner is not None:
                 self.owner.shutdown()
@@ -169,13 +175,21 @@ class StationMaintenance:
                 # An unresolved external guard hold survives this process. Do
                 # not manufacture a release or terminal result during teardown.
                 self.live.end()
+            cleaned = True
         finally:
             try:
-                if self.listener is not None: self.listener.unregister()
+                if self.truth is not None:
+                    current = self.journal.history.scenarios[self.journal.history.current]
+                    settled = (self.owner.active is None and self.owner.cancellation is None
+                               and all(self.journal.history.actions[a]['result'] is not None for a in current['actions']))
+                    self.truth.finish(complete and cleaned and settled)
             finally:
                 try:
-                    if self.configuration is not None: self.configuration.close()
+                    if self.listener is not None: self.listener.unregister()
                 finally:
                     try:
-                        if self.journal is not None: self.journal.close()
-                    finally: self.lock.close()
+                        if self.configuration is not None: self.configuration.close()
+                    finally:
+                        try:
+                            if self.journal is not None: self.journal.close()
+                        finally: self.lock.close()

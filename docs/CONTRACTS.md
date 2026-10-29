@@ -73,6 +73,10 @@ The evaluator reads hidden truth, actual world state and action trace. The plann
 
 A successful repair requires the correct machine and intervention, a sustained healthy observation window, no collision, no interlock violation and no unnecessary intervention on another machine. A healthy scenario requires no mutating maintenance action. A persistent fault requires safe escalation, not a false success report. Evaluate these outcomes separately.
 
+[Actual station evaluation](STATION_EVALUATION.md) implements the sampled model-health and applied-intervention axis, joined to closed durable generations and independent of mission success claims.
+
+It explicitly leaves overall acceptance, collision, independent robot interlocks, pre-admission rejections and mission escalation/false-claim coverage unknown; it does not satisfy the complete acceptance contract above.
+
 ## Implemented model prototype
 
 `orbital/machines.py` implements a ROS-free subset. Each powered healthy machine draws 100 W; a latched or jammed pump draws 300 W. The shared 450 W supply provides 28 V with 0.08 V droop per excess watt, clamped at zero. Reported current is load divided by measured bus voltage (1 V floor). Thermal target is 25 °C + 0.08 °C/W with a 30-second first-order time constant. A powered jam produces vibration 3 arbitrary units versus 0.2 normally.
