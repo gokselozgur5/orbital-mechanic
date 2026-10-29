@@ -1,6 +1,6 @@
 # Project status
 
-Updated: 2026-10-28
+Updated: 2026-10-29
 
 ## Active delivery goal
 
@@ -10,6 +10,227 @@ isolated `codex/nav2-integration` branch preserves the dirty main checkout and
 original localization branch; six migrated commits do not count as new deliveries.
 [Draft PR #16](https://github.com/gokselozgur5/orbital-mechanic/pull/16) links #6/#7,
 which remain open until full live localization/navigation acceptance and review.
+
+**OM-049: cancellable inspection ownership passes local integration checks; native acceptance pending.**
+The typed String command endpoint owns one run/mission/action at a time, invokes
+the actual camera capture in a separate ROS process, and returns an ACK separately
+from a terminal result. Exact replay returns cached state; conflicting reuse,
+wrong runs and history overflow are rejected. Cancellation/deadline intent stays
+sticky until the exact child is reaped. A bounded lifeline and inherited owner
+lock preserve ownership across loss of the parent; the user-service launcher
+contains descendants and pins existing prerequisites.
+
+The parent independently checks live settled pose, source/publisher/map identity
+and both clocks, verifies the actual manifest/image and owned request context,
+then rechecks after I/O. Slow completion never renews capture freshness. The CLI
+distinguishes acknowledged, terminal, rejected, not_sent and uncertain outcomes;
+same-run query recovers a cached result, while restart never adopts orphan files.
+This is a versioned JSON endpoint, not a generated ROSIDL action or a motion hold.
+
+All 461 local tests pass (46 new), along with the causal baseline, shell syntax,
+Python AST and XML checks. Two deliberate mutation controls fail the same tests
+when final freshness or cancellation-before-commit handling is removed; the
+candidate passes both. These are test-sensitivity controls, not historical bugs.
+Tests cover process reap/escalation, idempotency/capacity, cancellation
+races and full server → subprocess → actual capture → artifact → terminal flow
+with controlled ROS transport and a shared test clock. The initial late-read fixture failed earlier at
+sample expiry; the corrected provider supplies post-settling telemetry before
+testing the intended 250 ms final-read delay. The first published PR CI rejected
+a positive capture at final validation; its specific inner cause was not logged.
+Eight later real-clock local controls passed. CI ownership tests now freeze their
+shared clock after capture during actual worker exit, and a 350 ms delayed-exit
+case proves terminal publication waits for reap. Production still uses real
+monotonic time and unchanged freshness bounds; native timing remains open.
+The fixture correction adds no separate OM-049 delivery credit.
+Thor SSH timed out (exit 255); no native state changed. Native endpoint, camera,
+map/navigation and three-machine acceptance remain open under #8 / draft #19.
+Contract and operator commands: [INSPECTION_ENDPOINT.md](INSPECTION_ENDPOINT.md).
+
+**OM-048: camera evidence passes local integration checks; native capture remains pending.**
+`machine-observation.py --with-camera` and `capture_machine_observation` acquire
+an image/CameraInfo pair on the joint observer. Image and telemetry stamps remain
+separate, with an explicit maximum 100 ms difference. Both must be post-settling;
+image-time robot and optical TF are measured and checked against the configured
+mount, while telemetry-time pose and all existing gates remain required.
+Source-bound dimensions, RGB stride/byte limits, calibration, frame/time/order,
+publisher identity and 200 ms image/info freshness are enforced.
+
+Schema 2 references a lossless RGB PPM and bounded manifest under ignored
+`runtime/inspection/<observation_id>`. Exclusive no-follow writes, a nonblocking
+writer lock, a 64-entry quota and bounded digest-verified reads prevent arbitrary
+paths, overwrites or unlimited capture retention. Identities are prepared before
+final validity checks; live validity and stored bytes are rechecked around
+manifest publication. Managed failure/interruption removes the acceptance marker
+and retains bounded partial evidence. Stored files alone are not action permission
+or a successful inspection endpoint result; crash recovery remains future work.
+
+All 415 local tests pass, including 32 new core/adapter/filesystem/CLI tests.
+The causal baseline, shell syntax, Python AST, XML and whitespace checks pass.
+A late-digest freshness failure in the initial new writer is reproduced and the
+identical regression passes after correction. A real
+monotonic-clock paced controlled transport probe accepts actual local capture and
+rejects a 250 ms storage delay with no accepted manifest. Synthetic pixels and
+controlled transports do not prove native rendered visibility, DDS timing or
+vision diagnosis. Thor SSH again timed out (exit 255); no native state changed.
+The map revision remains `f02e11a9cb0e4f2f`. Issue #8 / draft PR #19 remain open;
+next are cancellable inspection ownership and all pending native gates.
+Contract: [CAMERA_OBSERVATIONS.md](CAMERA_OBSERVATIONS.md).
+
+**OM-047: joint machine/robot observations pass locally; native inspection remains pending.**
+The production `read_machine_observation` reader and `machine-observation.py`
+CLI use one live observer to bind a selected public telemetry sample to robot TF
+at exactly the same simulation timestamp. The sample must be produced at or
+after a fresh half-second stopped-odometry window. That window's generation and
+the selected packet remain pinned through actual map collection and final checks.
+Fresh lagging odometry may catch up within the fixed 200 ms sample lifetime;
+new telemetry, movement, expiry or changed source/clock/publisher/map evidence
+rejects the query. There is no later-sample or latest-TF fallback.
+
+The target-specific schema-1 record includes public measurements, original
+run/sequence/source/time identities and the complete measured robot-state report.
+It contains no hidden fault fields, camera, diagnosis, stop acknowledgement or
+action permission. The packet hash correlates to the full original public wire
+sample, not a digest recomputable from the returned target-only measurements.
+
+All 383 local tests pass, including 21 new core/adapter/CLI tests with controlled
+transport. The causal baseline, shell syntax, Python AST, XML and whitespace
+checks also pass. Native DDS timing and inspection acceptance remain unverified.
+A fresh strict SSH read
+to Thor timed out (exit 255); no native state changed. The map revision remains
+`f02e11a9cb0e4f2f`, with the existing explicit reload/seed/readiness requirements.
+Issue #8 / draft PR #19 remain In Progress. OM-048 adds local camera capture above;
+native camera acceptance, cancellable inspection ownership and maintenance endpoints
+remain subsequent work.
+Contract: [INSPECTION_OBSERVATION.md](INSPECTION_OBSERVATION.md).
+
+**OM-046: fresh public telemetry reading passes locally; native integration remains pending.**
+The existing OM-041 public projection is reused rather than reimplemented for
+OM-045 credit. `observe-station.py` and its production reader accept only the exact
+source-bound public schema and require two advancing samples in one run. Both
+receipt and simulation age must be below one second. Gaps/expiry discard the
+pair; replay, run/clock regression, malformed/missing/future data and changed
+publisher identity refuse the query. Model elapsed time remains distinct from
+the absolute simulator timestamp. Invalid input cannot be erased by a later
+valid packet, and input text is not reflected into decoder error messages.
+
+The reader pins the clock and telemetry publishers before subscribing, then
+rechecks source files, clock mode, generations, age and deadline before returning.
+No control publisher/client, hidden fault field, diagnosis or action permission
+is introduced. Numerically valid noisy values are retained without model-based
+correction; causal diagnosis and noise confidence remain subsequent work.
+
+All 362 local tests pass, including 30 new tests. Baseline, shell/AST/XML and
+whitespace checks pass. The shipped publisher and reader/CLI run with controlled ROS
+transport, covering normal samples, malformed/schema/source/time/order failures,
+final-read races and cleanup. Review reproduced five station-reader and ten
+existing proximity-adapter acceptance failures during result preparation. The
+same tests pass after ID/digest work moves before the final validity checks;
+proximity's old adapter is loaded directly from `24860f4` with unchanged runtime
+dependencies. A fresh Thor SSH attempt timed out (exit 255); no
+native source/process changed. The joint record is now integrated locally in
+OM-047 above; camera capture, inspection endpoints and all native gates remain
+open under issue #8.
+Contract: [STATION_OBSERVATION.md](STATION_OBSERVATION.md).
+
+OM-046's follow-up size correction rejects an oversized string before UTF-8
+encoding can copy its full payload. The same 1 MiB allocation regression fails
+before the correction and passes after; this receives no separate delivery credit.
+
+**OM-044: settled inspection preconditions pass locally; native inspection remains pending.**
+The production `read_inspection_state` reader and CLI `--require-settled-pose`
+mode require the accepted inspection pose and direct stopped odometry spanning
+at least 0.5 seconds in both monotonic receipt time and simulation time. All
+velocity axes use the localization monitor's existing 0.01 m/s and 0.02 rad/s
+norm limits. Motion, invalid/out-of-order data, stale/gapped samples and unhealthy,
+moving, frozen or missing health reset the window. Health simulation freshness is
+checked throughout accumulation, not only at the final pose. A post-settling
+invalidation rejects this query even if later callbacks settle again.
+
+The full map geometry is validated before ROS observation starts. During live
+collection and after TF lookup, exact source/artifact fingerprints are checked;
+actual server/retained cells and consumer parameters/subscriptions are still read.
+This avoids spending the short odometry lease on repeated geometry computation.
+The map revision remains `f02e11a9cb0e4f2f`; previous explicit native reload gates
+still apply. Schema 3 exposes stationarity separately from distance/pose.
+
+All 332 local tests pass, including 25 new tests covering the production reader, shipped CLI,
+source changes, cleanup and invalidation races through controlled transport.
+A discriminating regression reproduces two stale/future-health history acceptances
+before the freshness correction and rejects both afterward. Baseline, shell,
+Python AST and XML checks pass. With real wall-clock paced controlled callbacks,
+recomputing geometry during observation expires the stopped history; the prepared
+path accepts a fresh settled pose with the same live map checks. Native odometry/TF
+timing and stopping remain uncommissioned; sampled settling is not a hold or an
+inspection/action authorization. A fresh Thor SSH attempt timed out (exit 255),
+with no native changes. Issue #8 / draft PR #19 remain In Progress. Next: fresh
+public observation handling and inspection integration, plus pending native gates.
+Contract: [PROXIMITY.md](PROXIMITY.md).
+
+**OM-043: measured inspection pose passes locally; native inspection remains pending.**
+The map validator and public registry now require each nominal inspection heading
+to face its actual west-face control. The same fresh TF used for distance reports
+measured XY/yaw errors against the existing 0.10 m / 0.15 rad arrival bounds.
+Schema 2 distinguishes distance from `within_inspection_pose`; the CLI's
+`--require-inspection-pose` option rejects a nearby robot with the wrong position
+or heading. A valid pose still does not authorize inspection or maintenance.
+
+All 307 local tests pass, including eleven new tests through nominal configuration, production evidence and the
+actual CLI/map/TF adapters with controlled transport. The same regression rejects
+opposite/misaligned configured headings only after the change; a valid diagonal
+goal passes before and after. Boundary and quaternion sign/norm/wrap controls
+pass. The causal model baseline and shell/AST/XML checks also pass.
+
+Two map generations agree at revision `f02e11a9cb0e4f2f`; occupancy is unchanged
+from `1c58f56cf5246735`, which current source now rejects. Native use requires an
+explicit map regeneration/localization reload, seed and readiness check. Thor
+SSH again closed the connection (exit 255); no native state changed. PR #19 and
+issue #8 remain open/In Progress. Next: stationary inspection interlock and fresh
+public observations, alongside the pending native commissioning gates. Contract:
+[PROXIMITY.md](PROXIMITY.md).
+
+**OM-042: measured proximity passes locally; native commissioning remains pending.**
+The read-only `machine-proximity.py` query uses the registry, actual map-binding
+gate, localization health and an exact-time `map` to `base_footprint` transform.
+It pins publisher/run/epoch identity, checks current source and timing, and
+reports planar control distance for one machine. Caller-supplied pose/distance,
+stale or reset evidence and successful lookups that finish after validity gates
+expire cannot produce an accepted measurement. No control RPC or publisher is
+created; the observer never acknowledges a motion-stop obligation.
+
+All 296 local tests pass, including 25 new production core/CLI and actual map/TF
+adapter tests with controlled transports. Three lookup races (publisher generation,
+clock mode and map age) fail before the final checks and pass afterward; a strict
+timestamp regression also fails before and passes after. The native access check
+could not establish an SSH session (exit 255). No native source, process or world changed. See
+[PROXIMITY.md](PROXIMITY.md) for the evidence contract and commissioning steps.
+
+This remains stacked on navigation through draft PR #19 / issue #8. A valid
+distance is not inspection eligibility: native pose/source commissioning,
+stationarity, telemetry freshness and action ownership remain open; OM-043 adds
+local pose checks above. Next local work: stationary inspection interlocks;
+native navigation/map/telemetry gates remain required before live integration.
+
+**OM-041: machine registry and telemetry binding pass locally; native commissioning remains pending.**
+The `codex/machine-integration` branch is based on navigation head `fd86e6e` and
+contributes to [issue #8](https://github.com/gokselozgur5/orbital-mechanic/issues/8).
+The existing telemetry process now binds its three machine IDs to configured SDF
+models, collision boxes, controls and inspection poses. A versioned public catalog
+identifies exact world/map source bytes; each measurement carries the catalog,
+simulation timestamp, run/sequence and units while retaining the causal model's
+existing observation fields. Scenario truth remains outside the projection.
+
+All 271 local tests pass, including 27 new registry/core/actual-adapter cases.
+The identical source-change regression fails on `fd86e6e` and passes now: changed
+source stops publication before the next measurement. Duplicate/missing geometry,
+invalid controls, source boundaries, clock pause/reset/gaps, clock-mode changes,
+identity drift and publication errors have discriminating controls. Registry
+poses are declared source geometry, not runtime truth or robot proximity.
+
+This is a stacked maintenance change; navigation PR #16 and its native gates stay
+open. Thor SSH still times out and no remote process/source changed. Native
+telemetry/schema/source and measured proximity commissioning, orientation/stationarity,
+freshness/noisy data handling and inspection/actions remain outstanding. See
+[MACHINE_REGISTRY.md](MACHINE_REGISTRY.md) for contracts and deployment gates.
 
 **OM-027: sampled collision evaluation passes locally; native contact/route acceptance is pending.**
 The evaluator covers the body box, caster sphere and both finite wheel cylinders

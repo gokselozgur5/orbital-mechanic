@@ -2,6 +2,7 @@
 import copy
 import hashlib
 import json
+import math
 from pathlib import Path
 import shutil
 import tempfile
@@ -36,6 +37,17 @@ class InspectionGeometryTests(unittest.TestCase):
         poses, digest = self.load()
         self.assertEqual(poses['pump'], (2., 1.8, 0.))
         self.assertEqual(digest, hashlib.sha256(self.path.read_bytes()).hexdigest())
+
+    def test_nominal_heading_must_face_the_control(self):
+        for yaw in (math.pi,-math.pi/2,.2):
+            self.config['inspection_poses']['pump']['goal_xy_yaw'][2] = yaw
+            with self.subTest(yaw=yaw),self.assertRaisesRegex(ValueError,'heading'):
+                self.load()
+
+    def test_diagonal_inspection_pose_faces_its_actual_control(self):
+        yaw = math.atan2(-.2,.6)
+        self.config['inspection_poses']['pump']['goal_xy_yaw'] = [2.,2.,yaw]
+        self.assertEqual(self.load()[0]['pump'],(2.,2.,yaw))
 
     def test_nominal_clearance_does_not_cover_arrival_tolerance(self):
         self.config['inspection_poses']['pump']['goal_xy_yaw'][0] = 2.1

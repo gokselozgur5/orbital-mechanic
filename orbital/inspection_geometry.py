@@ -29,6 +29,17 @@ def _number(value):
     return type(value) in (int, float) and math.isfinite(value)
 
 
+def validate_control_heading(goal, control, name):
+    """A nominal inspection pose faces its west-face control, not another target."""
+    if goal[0] >= control[0]:
+        raise ValueError('Inspection heading must approach the west control face: '+name)
+    bearing = math.atan2(control[1]-goal[1],control[0]-goal[0])
+    # This is nominal source consistency, not the robot's measured yaw tolerance.
+    if abs(math.remainder(goal[2]-bearing,2*math.pi)) > 1e-8:
+        raise ValueError('Inspection heading does not face its control: '+name)
+    return bearing
+
+
 def validate_inspection_map(config, poses, root):
     """Require the reviewed bounds, actual west-face controls and clear goals."""
     root = Path(root).resolve()
@@ -68,11 +79,13 @@ def validate_inspection_map(config, poses, root):
             raise ValueError('Expected finite numeric control XY for '+name)
         if math.dist(control, (box.x-box.sx/2, box.y)) > 1e-8:
             raise ValueError('Control must match the machine west-face center: '+name)
+        bearing = validate_control_heading(goal,control,name)
         distance = math.dist(goal[:2], control)
         margin = MAX_CONTROL_DISTANCE_M-distance-ARRIVAL_XY_TOLERANCE_M
         if margin < -1e-12:
             raise ValueError('Arrival tolerance exceeds control proximity bound: '+name)
         checks[name] = {'goal_xy_yaw': list(goal), 'control_xy_m': control,
+                        'nominal_control_bearing_rad': bearing,
                         'goal_control_distance_m': distance, 'control_margin_m': max(0., margin),
                         'arrival_footprint_radius_m': ROBOT_RADIUS_M+ARRIVAL_XY_TOLERANCE_M}
     grid = build_grid(world, config)

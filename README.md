@@ -15,7 +15,7 @@ bash scripts/launch-thor.sh
 
 Stop with `bash scripts/stop-thor.sh`. The demonstration runs as a transient user service; it does not start at boot. See [operations](docs/OPERATIONS.md) for installation, Mac SSH forwarding, Foxglove compatibility and sensor verification.
 
-The world contains a wheeled robot, three machine props, camera, lidar, IMU and odometry. Machine telemetry comes from a separate simplified causal model. Its geometry and maintenance controls are not yet integrated with the robot.
+The world contains a wheeled robot, three machine props, camera, lidar, IMU and odometry. Machine telemetry comes from a separate simplified causal model. A public source registry binds its machine IDs to configured scene/control geometry. Read-only proximity and same-time machine/robot observation queries pass local tests; native proximity, inspection and maintenance actions remain uncommissioned.
 
 Run the ROS-independent checks on a development machine:
 
@@ -96,3 +96,36 @@ Local observer tests pass; native capture and physical route acceptance are pend
 [Sampled collision evaluation](docs/COLLISION_EVALUATION.md) checks observed body,
 wheel and support geometry against the recorded world. Local tests pass; this
 does not establish continuous collision freedom or native route acceptance.
+
+[Machine registry and telemetry](docs/MACHINE_REGISTRY.md) bind each public
+measurement to configured scene identities, source revisions and simulation time.
+Local integration tests pass; native commissioning remains pending.
+
+[Fresh public station observations](docs/STATION_OBSERVATION.md) read the existing
+telemetry through strict schema, source, sequence and dual-clock freshness checks.
+The CLI returns measurements without inferring a diagnosis. Local publisher-to-reader
+tests pass; native transport remains pending.
+
+[Measured machine proximity and inspection pose](docs/PROXIMITY.md) combine
+registered control geometry, verified map binding, localization health and
+exact-time robot TF. The query can require the measured inspection position,
+heading and a fresh half-second stopped-odometry window. Local core/adapter tests
+pass. Native measurement and inspection/action acceptance remain open; sampled
+robot state alone grants no permission.
+
+[Same-time machine observations](docs/INSPECTION_OBSERVATION.md) acquire a public
+telemetry sample and the settled robot pose at that sample's exact timestamp on
+one live observer. Local core/adapter/CLI tests pass; inspection ownership and
+native acceptance remain pending.
+
+[Camera evidence](docs/CAMERA_OBSERVATIONS.md) is available through
+`machine-observation.py --with-camera`. It preserves actual image/telemetry
+times, validates image-time pose and calibration, and retains a bounded local
+RGB/manifest bundle with digest verification. Local software tests pass; native
+rendered evidence and complete inspection-action acceptance remain pending.
+
+[Owned inspection requests](docs/INSPECTION_ENDPOINT.md) connect actual capture to
+typed request/cancel/query commands, exact worker ownership, deadline and replay
+handling, verified artifact references and distinct terminal results. Local
+controlled-transport/process checks run the complete endpoint; native inspection
+and three-machine acceptance remain open.

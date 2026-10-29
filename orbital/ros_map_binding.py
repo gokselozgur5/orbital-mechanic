@@ -18,7 +18,7 @@ def grid_payload(msg):
             'resolution':msg.info.resolution, 'origin':[p.x,p.y,p.z,q.x,q.y,q.z,q.w], 'data':list(msg.data)}
 
 
-def collect(node, root, *, configured=True, timeout=12.):
+def collect(node, root, *, configured=True, timeout=12., prepared=None):
     root = Path(root).resolve()
     deadline = time.monotonic()+timeout
     clients = []
@@ -47,7 +47,14 @@ def collect(node, root, *, configured=True, timeout=12.):
     try:
         response = call(GetParameters, '/map_server/get_parameters', GetParameters.Request(names=['yaml_filename']))
         yaml_path = parameter_value_to_python(response.values[0])
-        bundle = validate_bundle(root, yaml_path)
+        if prepared is None:
+            bundle = validate_bundle(root, yaml_path)
+        else:
+            from orbital.map_snapshot import MapSnapshot
+            if not isinstance(prepared,MapSnapshot):
+                raise ValueError('Expected an internally prepared map snapshot')
+            prepared.verify_current(root,yaml_path)
+            bundle = prepared.bundle()
         params('/map_server', {'frame_id':'map','topic_name':'map','use_sim_time':True})
         params('/amcl', {'global_frame_id':'map','base_frame_id':'base_footprint',
                         'odom_frame_id':'odom','map_topic':'map','first_map_only':False,'use_sim_time':True})
@@ -88,9 +95,12 @@ def collect(node, root, *, configured=True, timeout=12.):
                 raise ValueError('Map consumer subscription mismatch: '+name)
         for message in received:
             validate_grid(bundle, message)
-        after = validate_bundle(root, yaml_path)
-        if after != bundle:
-            raise ValueError('Map source/artifacts changed during binding')
+        if prepared is None:
+            after = validate_bundle(root, yaml_path)
+            if after != bundle:
+                raise ValueError('Map source/artifacts changed during binding')
+        else:
+            prepared.verify_current(root,yaml_path)
         return {'passed':True, 'configured':configured, 'map_yaml':yaml_path,
                 'binding':{k:v for k,v in bundle.items() if k != 'grid'},
                 'received_maps':len(received), 'consumers':sorted(expected),

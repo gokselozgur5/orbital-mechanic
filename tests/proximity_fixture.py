@@ -1,0 +1,194 @@
+"""Controlled DDS-shaped transport executing the real map/proximity adapters."""
+import copy
+import importlib.util
+import json
+import math
+from pathlib import Path
+import sys
+from types import ModuleType, SimpleNamespace as NS
+from unittest.mock import patch
+
+from orbital.machine_registry import MachineRegistry
+from orbital.machine_telemetry import MachineTelemetry
+from orbital.navigation_graph import BASE_TOPICS,NAV_TOPICS
+from orbital import ros_proximity
+from test_proximity import health,transform
+
+ROOT = Path(__file__).resolve().parents[1]
+
+
+class Harness:
+    def __init__(self, case):
+        self.root,self.map_path,self.payload = case.root,case.directory/'map.yaml',case.payload
+        self.config_hash = MachineRegistry.load(self.root).config_sha256
+        self.wall,self.sim,self.sequence = 10.,10**9,0
+        self.callbacks,self.clients,self.reads = {},[],[]
+        self.destroyed = self.unregistered = self.shutdown = False
+        self.changed_gid = self.wrong_map = self.wrong_params = False
+        self.no_tf = self.wrong_tf = self.paused = self.unhealthy = False
+        self.changed_epoch = self.drop_health = self.clock_mode_changed = False
+        self.lookup_hook = None
+        self.lookups = []
+        self.pose = (2.,1.8,0.)
+        self.moving = self.drop_odom = False
+        self.spin_hook = None
+        self.call_hook = None
+        self.missing_odom_publisher = False
+        self.telemetry_model = MachineTelemetry(MachineRegistry.load(self.root))
+        self.next_telemetry = 1500000000
+        self.last_telemetry = None
+        self.telemetry_hook = None
+        self.drop_telemetry = self.missing_telemetry_publisher = False
+        self.odom_delay_ns = 0
+        self.drop_image = self.drop_info = self.missing_camera_publisher = False
+        self.camera_hook = None
+        self.camera_order = ('image','info')
+        self.next_camera = 1600000000
+        self.camera_lookups = []
+        self.wrong_camera_tf = False
+        owner = self
+        parameters = {
+            '/map_server':{'yaml_filename':str(self.map_path),'frame_id':'map','topic_name':'map','use_sim_time':True},
+            '/amcl':{'global_frame_id':'map','base_frame_id':'base_footprint','odom_frame_id':'odom','map_topic':'map','first_map_only':False,'use_sim_time':True},
+            '/global_costmap/global_costmap':{'global_frame':'map','robot_base_frame':'base_footprint','static_layer.map_topic':'/map','static_layer.map_subscribe_transient_local':True,'static_layer.plugin':'nav2_costmap_2d::StaticLayer','rolling_window':False,'use_sim_time':True},
+            '/bt_navigator':{'global_frame':'map','robot_base_frame':'base_footprint','use_sim_time':True},
+            '/orbital_navigation_supervisor':{'map_config_sha256':self.config_hash},
+        }
+        def grid():
+            p = copy.deepcopy(owner.payload)
+            if owner.wrong_map: p['data'][0] = 100
+            return NS(header=NS(frame_id=p['frame']),data=p['data'],
+                      info=NS(width=p['width'],height=p['height'],resolution=p['resolution'],
+                              origin=NS(position=NS(x=p['origin'][0],y=p['origin'][1],z=p['origin'][2]),
+                                        orientation=NS(x=p['origin'][3],y=p['origin'][4],z=p['origin'][5],w=p['origin'][6]))))
+        class Node:
+            def create_subscription(self, kind,topic,callback,qos):
+                assert topic in ('/navigation/health','/map','/odom','/station/telemetry','/camera/image_raw','/camera/camera_info')
+                if topic=='/camera/image_raw':assert qos.depth==1 and qos.reliability=='reliable'
+                owner.callbacks[topic] = callback
+                if topic == '/map': callback(grid())
+                return NS(topic=topic)
+            def destroy_subscription(self, sub):
+                owner.callbacks.pop(sub.topic,None)
+            def create_publisher(self,*args,**kwargs):
+                raise AssertionError('Proximity must never publish a control or measurement topic')
+            def create_client(self,kind,path):
+                assert path.endswith('/get_parameters') or path == '/map_server/map'
+                def call(request):
+                    owner.reads.append((path,getattr(request,'names',None)))
+                    if owner.call_hook: owner.call_hook(path)
+                    if path == '/map_server/map': value = NS(map=grid())
+                    else:
+                        values = parameters[path.removesuffix('/get_parameters')].copy()
+                        if owner.wrong_params and path == '/amcl/get_parameters': values['map_topic'] = 'wrong_map'
+                        value = NS(values=[values[name] for name in request.names])
+                    return NS(done=lambda:True,result=lambda:value)
+                client = NS(service_is_ready=lambda:True,call_async=call)
+                owner.clients.append(client)
+                return client
+            def destroy_client(self,client):
+                owner.clients.remove(client)
+            def get_publishers_info_by_topic(self,topic):
+                if topic=='/odom' and owner.missing_odom_publisher: return []
+                if topic=='/station/telemetry' and owner.missing_telemetry_publisher:return []
+                if topic.startswith('/camera/') and owner.missing_camera_publisher:return []
+                owners = NAV_TOPICS.get(topic,BASE_TOPICS.get(topic,[]))
+                if topic=='/station/telemetry':owners=[('station_telemetry','std_msgs/msg/String')]
+                if topic.startswith('/camera/'):
+                    owners=[('ros_gz_bridge','sensor_msgs/msg/'+('Image' if topic.endswith('image_raw') else 'CameraInfo'))]
+                return [NS(node_name=name,node_namespace='/',topic_type=kind,
+                           endpoint_gid=[i+1]*(23)+[2 if owner.changed_gid else 1],
+                           qos_profile=NS(durability='transient_local')) for i,(name,kind) in enumerate(owners)]
+            def get_subscriptions_info_by_topic(self,topic):
+                assert topic == '/map'
+                return [NS(node_name=name,node_namespace=namespace,topic_type='nav_msgs/msg/OccupancyGrid',
+                           qos_profile=NS(durability='transient_local',reliability='reliable'))
+                        for name,namespace in (('amcl','/'),('global_costmap','/global_costmap'))]
+            def get_clock(self):
+                return NS(now=lambda:NS(nanoseconds=owner.sim))
+            def get_parameter(self,name):
+                assert name == 'use_sim_time'
+                return NS(value=not owner.clock_mode_changed)
+            def destroy_node(self): owner.destroyed = True
+        class Buffer:
+            def __init__(self,**kwargs): pass
+            def lookup_transform(self,parent,child,stamp):
+                assert parent=='map' and child in ('base_footprint','camera_optical_frame')
+                owner.lookups.append(stamp.nanoseconds)
+                owner.camera_lookups.append((child,stamp.nanoseconds))
+                if owner.no_tf: raise LookupError('controlled missing transform')
+                if owner.lookup_hook: owner.lookup_hook()
+                result = transform(stamp.nanoseconds+int(owner.wrong_tf),*owner.pose)
+                if child=='camera_optical_frame':
+                    x,y,yaw = owner.pose
+                    sr,cr = math.sin(-1.570796/2),math.cos(-1.570796/2)
+                    ox,oy,oz,ow = sr*cr,sr*sr,cr*sr,cr*cr
+                    z,w = math.sin(yaw/2),math.cos(yaw/2)
+                    result.child_frame_id = child
+                    result.transform.translation = NS(x=x+.28*math.cos(yaw),y=y+.28*math.sin(yaw),z=.34+int(owner.wrong_camera_tf))
+                    result.transform.rotation = NS(x=w*ox-z*oy,y=w*oy+z*ox,z=w*oz+z*ow,w=w*ow-z*oz)
+                return result
+        def spin(node,timeout_sec):
+            owner.wall += timeout_sec
+            if not owner.paused: owner.sim += round(timeout_sec*1e9)
+            owner.sequence += 1
+            if owner.spin_hook: owner.spin_hook()
+            if not owner.drop_health and '/navigation/health' in owner.callbacks:
+                owner.callbacks['/navigation/health'](NS(data=health(owner.sequence,owner.sim/1e9,
+                    healthy=not owner.unhealthy,epoch=int(owner.changed_epoch))))
+            if not owner.drop_odom and '/odom' in owner.callbacks:
+                pose = transform(owner.sim,*owner.pose).transform
+                stamp = owner.sim-owner.odom_delay_ns
+                owner.callbacks['/odom'](NS(header=NS(frame_id='odom',stamp=NS(sec=stamp//10**9,nanosec=stamp%10**9)),
+                    child_frame_id='base_footprint',pose=NS(pose=NS(position=pose.translation,orientation=pose.rotation)),
+                    twist=NS(twist=NS(linear=NS(x=.1 if owner.moving else 0.,y=0.,z=0.),angular=NS(x=0.,y=0.,z=0.)))))
+            if '/station/telemetry' in owner.callbacks and owner.sim>=owner.next_telemetry:
+                owner.next_telemetry = owner.sim+500000000
+                packet = owner.telemetry_model.sample(owner.sim)
+                owner.last_telemetry = copy.deepcopy(packet)
+                if owner.telemetry_hook:packet=owner.telemetry_hook(packet)
+                if not owner.drop_telemetry and packet is not None:
+                    owner.callbacks['/station/telemetry'](NS(data=json.dumps(packet)))
+            if '/camera/image_raw' in owner.callbacks and owner.sim>=owner.next_camera:
+                owner.next_camera = owner.sim+200000000
+                focal = 640/(2*math.tan(.6))
+                header = NS(frame_id='camera_optical_frame',stamp=NS(sec=owner.sim//10**9,nanosec=owner.sim%10**9))
+                messages = {'image':NS(header=copy.deepcopy(header),width=640,height=480,encoding='rgb8',step=1920,
+                                       is_bigendian=0,data=bytes((7,31,193))*(640*480)),
+                            'info':NS(header=copy.deepcopy(header),width=640,height=480,distortion_model='plumb_bob',
+                                      d=[0.]*5,k=[focal,0.,320.,0.,focal,240.,0.,0.,1.],r=[1.,0.,0.,0.,1.,0.,0.,0.,1.],
+                                      p=[focal,0.,320.,0.,0.,focal,240.,0.,0.,0.,1.,0.],binning_x=0,binning_y=0,
+                                      roi=NS(x_offset=0,y_offset=0,width=0,height=0,do_rectify=False))}
+                for kind in owner.camera_order:
+                    if getattr(owner,'drop_'+kind):continue
+                    message = messages[kind]
+                    if owner.camera_hook:owner.camera_hook(kind,message)
+                    owner.callbacks['/camera/'+('image_raw' if kind=='image' else 'camera_info')](message)
+        def unregister(): owner.unregistered = True
+        def shutdown(): owner.shutdown = True
+        exports = {
+            'rclpy':{'init':lambda **kw:None,'create_node':lambda *a,**kw:Node(),'spin_once':spin,'try_shutdown':shutdown},
+            'rclpy.clock':{'ClockType':NS(ROS_TIME=1)},
+            'rclpy.time':{'Time':lambda **kw:NS(**kw)},
+            'rclpy.parameter':{'Parameter':lambda *a,**kw:NS(),'parameter_value_to_python':lambda v:v},
+            'rclpy.qos':{'QoSProfile':NS,'DurabilityPolicy':NS(TRANSIENT_LOCAL='transient_local'),'ReliabilityPolicy':NS(RELIABLE='reliable'),'qos_profile_sensor_data':NS()},
+            'std_msgs.msg':{'String':NS},'nav_msgs.msg':{'OccupancyGrid':NS,'Odometry':NS},
+            'sensor_msgs.msg':{'Image':NS,'CameraInfo':NS},
+            'nav_msgs.srv':{'GetMap':NS(Request=NS)},'rcl_interfaces.srv':{'GetParameters':NS(Request=NS)},
+            'tf2_ros':{'Buffer':Buffer,'TransformException':LookupError,'TransformListener':lambda *a:NS(unregister=unregister)},
+        }
+        self.modules = {name:ModuleType(name) for name in ('std_msgs','nav_msgs','rcl_interfaces')}
+        for name,values in exports.items():
+            self.modules[name] = ModuleType(name)
+            self.modules[name].__dict__.update(values)
+
+    def run(self,timeout=2.,invoke=None,require_settled=False):
+        with patch.dict(sys.modules,self.modules):
+            spec = importlib.util.spec_from_file_location('orbital.ros_map_binding',ROOT/'orbital/ros_map_binding.py')
+            mapping = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(mapping)
+            mapping.time = NS(monotonic=lambda:self.wall)
+            with patch.dict(sys.modules,{'orbital.ros_map_binding':mapping}):
+                if invoke is not None:
+                    return invoke()
+                return ros_proximity.run(self.root,'pump',timeout=timeout,now=lambda:self.wall,require_settled=require_settled)
