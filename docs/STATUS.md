@@ -36,6 +36,13 @@ Later map, CLI and maintenance integrations still await their coordinated
 deployment. Next: explicitly load the revised map/localization and commission
 the observation tools before live arming, measured stopping and route trials.
 
+The [native station startup proof](DURABLE_MAINTENANCE.md#native-startup-proof)
+now passes six controls across nine actual CLI children on isolated Jazzy domain
+84: unprepared startup, fresh public telemetry, consumed-generation restart
+refusal, explicit fresh-fixture identity, clock regression and unavailable-source
+observation. Its synthetic clock does not establish live-world or maintenance
+acceptance. All staged source pins and live service identities stayed unchanged.
+
 **OM-066: persistent scripted gateway implemented; native acceptance pending.**
 [Mission runtime](MISSION_RUNTIME.md) now uses one ROS session for the public
 policy and existing navigation/inspection/maintenance clients. Exact command
