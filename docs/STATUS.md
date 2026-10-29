@@ -732,7 +732,7 @@ capture before physical-loss and route acceptance. The recorder never commands a
 stop or cancels a goal; armed trials retain the independent guardian. See
 [TRAJECTORY.md](TRAJECTORY.md) for capture timing, artifacts and evidence limits.
 
-**OM-022: bounded navigation commands pass local tests; native DDS is pending.**
+**OM-022: bounded navigation commands pass native DDS; live deployment is pending.**
 `scripts/orbital-navigate.py` observes status or sends one request, explicit arm
 or exact-target cancel. It pins supervisor run/sequence, rejects stale targets
 and ambiguous peers, uses a per-checkout/domain lock and never retries an
@@ -746,11 +746,17 @@ All 164 local tests pass, including 37 new protocol/CLI cases. The actual CLI
 adapter drives production supervisor callbacks with controlled ROS transport,
 covering request/arm/cancel, retained pending arm, stale tokens and competing
 publishers. Deadline, restart, sequence, malformed input, local lock and input
-boundary tests pass. No native process was changed: Thor SSH still times out.
-Next: native isolated CLI commissioning alongside OM-018, then the coordinated
-OM-021 map reload, physical loss/recovery gates and measured tour. Independent
-trajectory recording is implemented locally as OM-023 above. See
-[NAVIGATION_CLIENT.md](NAVIGATION_CLIENT.md) for the operator/receipt contract.
+boundary tests pass. On 2026-10-29, all 37 focused tests passed again, followed by
+eight native protocol controls using 14 actual CLI subprocesses in empty-checked
+domain 84. The old-token, competing-publisher and lock controls sent no command;
+the lost-reply control returned uncertain after one delivery and retained the
+target until explicit cancellation. Nine commands were received, with no Nav2
+goal or drive output. Final state was idle/latched; live services were unchanged.
+
+Next: reviewed source deployment, the coordinated OM-021 map reload, physical
+loss/recovery gates and measured tour under #30. Independent trajectory recording
+is implemented locally as OM-023 above. [NAVIGATION_CLIENT.md](NAVIGATION_CLIENT.md)
+records the native source/driver identities, retained evidence and receipt limits.
 
 **OM-021: inspection-pose geometry is accepted offline; deployment is pending.**
 The waypoint loader, map generator and artifact binding now validate the three

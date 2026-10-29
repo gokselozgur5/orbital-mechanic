@@ -2,7 +2,7 @@
 
 `scripts/orbital-navigate.py` provides `status`, `request`, `arm` and `cancel`
 through the supervisor's existing run/sequence and exact-target protocol. OM-022
-is implemented and tested locally. Native DDS commissioning is still pending;
+passes local and native DDS protocol tests. Live deployment remains pending;
 no route, physical stop or machine arrival is accepted by these client tests.
 
 ## Operating sequence
@@ -94,7 +94,7 @@ These checks are not authentication or a cross-host transaction. Trusted local
 ROS processes remain the deployment assumption. Domain 42 must use LOCALHOST;
 domain 84 is reserved for an independently verified isolated fixture.
 
-## Evidence and next native gate
+## Evidence and next deployment gate
 
 All 164 local tests pass, including 37 new protocol and CLI tests. Controlled
 transport drives the actual CLI adapter and production supervisor callbacks for
@@ -104,10 +104,40 @@ publication, malformed input, changed pre-publication state, wrong environment,
 local lock contention and geometry refusal before ROS. Cancellation through an
 invalid local map config remains accepted by the production callback fixture.
 
-The callback tests deliberately retain a pending arm response and show that the
-client can acknowledge intent without any Nav2 goal dispatch. They are not native
-DDS, service-lifecycle or physical-motion evidence. Once Thor access returns,
-commission real CLI subprocesses in empty-checked domain 84 with production
-guard/supervisor, synthetic health and a goal-rejecting action stand-in. Verify
-receipt/exit semantics, no duplicate publication and negative ownership cases
-before using the CLI in a guarded physical route trial.
+On 2026-10-29, `scripts/check-navigation-cli.py` passed eight native protocol
+checks through 14 actual CLI subprocesses on Thor ARM64 / Jazzy / Python 3.12.3.
+The fixture checks localhost domain 84 is empty before constructing the production
+guard/supervisor, synthetic health/odometry and a goal-rejecting action peer.
+It records received commands before delegating to the production callback;
+its lost-reply control suppresses state publication after command reception.
+
+- Status creates no command; a saved request receipt selects the exact cancel target.
+- A released token, competing command publisher and held checkout lock each refuse
+  publication with `not_sent` / exit 2.
+- Moving feedback produces an explicit arm `rejected` / exit 1 without a guard reset.
+- Arm acknowledgment precedes its deliberately held guard response; the target
+  remains owned without dispatch until the late response is resolved.
+- A lost reply returns `uncertain` / exit 3 after exactly one command. A fresh
+  status still shows the owned target, which a subsequent explicit cancel resolves.
+
+Nine command deliveries were observed. No Nav2 goal or drive command was sent;
+final state was idle/latched. All 158 staged source hashes stayed unchanged, the
+proof cgroup exited, and live service identities/selected source hashes were
+unchanged. The 37 local client/protocol tests also pass on Python 3.12.13.
+
+The tested application source was `41cca9a1f7dc729042fecc67812f68cc757850de`,
+with driver SHA-256
+`21d3319715ad030aa3dd0aa6d43d0f45d51975d872e984b73d77231c4303307c`.
+Raw child receipts, source pins and service records are retained in
+`reviews/orbital-native-resume-20261029/cli-evidence` in the operator workspace.
+The 39-file manifest SHA-256 is
+`a419b2a8d473f8da1b53bd657c4554824fc50e32a4a939b6a872a488e83f77b4`.
+
+Repeat inside `tmux orbital-work` from a fresh staged checkout, after sourcing
+Jazzy with domain 84 and LOCALHOST discovery. Run the script in a disposable user
+service with `KillMode=control-group` and a 90-second runtime limit. It requires
+an unused `runtime/navigation-cli-proof` directory and retains every child log;
+do not remove earlier trial evidence to reuse that path.
+
+Live source deployment, explicit revised-map loading, readiness and independently
+measured motion remain separate gates in [#30](https://github.com/gokselozgur5/orbital-mechanic/issues/30).
