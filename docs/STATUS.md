@@ -11,6 +11,56 @@ original localization branch; six migrated commits do not count as new deliverie
 [Draft PR #16](https://github.com/gokselozgur5/orbital-mechanic/pull/16) links #6/#7,
 which remain open until full live localization/navigation acceptance and review.
 
+**OM-061: local mission transition contract validated; native mission acceptance pending.**
+[Mission state](MISSION_STATE.md) connects existing navigation, inspection and
+maintenance request/result identities. It reserves before entering a gateway,
+keeps one unresolved step, separates navigation request/arm ACKs from measured
+completion and prohibits new work after unknown delivery, cancellation or expiry.
+Exact prior maintenance results and new control revisions precede the next action.
+Healthy/recovered outcomes require a new public verification window; energization
+or a previous window cannot supply success.
+
+All 751 local tests pass, including 31 new mission tests and two camera fixture
+controls. The causal baseline, 191 Python AST files, 17 shell scripts and two XML
+sources pass; executable source hashes remain unchanged throughout the final
+360.374-second cumulative run. Four deliberate transition mutations fail
+their intended assertions. Actual clients, the inspection owner and durable station
+effects are exercised over controlled navigation peers, camera workers and hold
+feedback. This does not establish a native route or camera-child mission.
+
+Three retained gateway input sequences reproduce healthy, recovered and
+effect-with-lost-reply states through the same contract offline. The last sequence
+retains unresolved ownership while the actual model is already isolated; the
+contract does not invent the missing result. Same-code replay is reproducibility,
+not independent mission scoring. The previous composed endpoint tests separately
+exercise real camera children; those are not the mission fixture's workers.
+
+Prepublication regressions cover telemetry after completion, the actual navigation
+supervisor's optional maintenance-hold rejection reason, a telemetry callback that
+first crosses the idle deadline, and malformed arm receipts. Identical retained
+tests fail before and pass after the respective corrections. The original terminal
+regression retains a 26-test file; the final mission file has 31 tests.
+
+An initial 746-test cumulative run failed in an existing composed cancellation
+case: its restore capture correctly refused an expired selected sample. A separate
+deterministic recreation at the recorded camera phase reproduces selection at the
+settling boundary, where the preceding frame is too early and the next frame is
+outside the allowed skew. The original selected/settled stamps were not logged.
+The positive external-station fixture now starts delivery after settling plus a
+camera period, with actual sample stamps and production limits unchanged. A
+separate zero-warmup control preserves that refusal. The formerly failing composed
+case and final cumulative suite pass. This fixture correction receives no extra
+delivery credit; the original source and failed log remain retained.
+
+This is a state contract, not an automatic diagnosis policy or live mission
+service. No durable mission restart, cross-process gateway lock or native mission
+acceptance is claimed. Issue #11 remains open/In Progress; independent evaluation
+#10 and full scenario acceptance #12 remain pending. Work is isolated on
+`codex/scripted-mission`, stacked on the unmerged maintenance branch. Source-bound
+evidence is in operator workspace `reviews/orbital-delivery-20261028/om061`, with
+final validation and retained inputs under `publication/`. Hosted CI and native access
+must be checked separately; local validation supplies neither acceptance.
+
 **OM-060: independent maintenance sequence recorder implemented; native acceptance pending.**
 [Sequence evidence](MAINTENANCE_SEQUENCE_EVIDENCE.md) now retains the actual
 command/state/result/telemetry messages from a powered idle baseline through a

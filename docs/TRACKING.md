@@ -49,3 +49,13 @@ Policy review #2 is complete. ROS integration #3 passed its Thor deployment and 
 live route/obstacle/stopping acceptance and review are complete. Native isolated
 configuration and service proofs are recorded in STATUS.md; they do not close the
 live acceptance gates. Preserve the individual atomic commits when merging.
+
+## Scripted mission contract
+
+Issue [#11](https://github.com/gokselozgur5/orbital-mechanic/issues/11) now has a local
+[executable state contract](MISSION_STATE.md) on `codex/scripted-mission`, stacked
+on the maintenance work in [draft #20](https://github.com/gokselozgur5/orbital-mechanic/pull/20).
+It binds existing client/owner results and preserves uncertain ownership. Automatic
+policy, live mission orchestration, independent evaluation #10 and native scenario
+acceptance remain open. This prototype does not close the earlier phase gates or
+its own issue.

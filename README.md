@@ -84,6 +84,12 @@ Include a healthy scenario and an unrecoverable fault so success cannot mean bli
 
 Read [AGENTS.md](AGENTS.md) and [docs/STATUS.md](docs/STATUS.md). The status file distinguishes measured capabilities, prototype-only behavior and remaining work. Foxglove client opening is user-confirmed and its camera/TF subscriptions are visible in the server logs.
 
+[Mission state transitions](docs/MISSION_STATE.md) bind navigation, inspection and
+maintenance steps to one mission, retaining uncertain ownership and separating
+acknowledgement, terminal action results and a new public recovery window. Local
+client/station tests pass; automatic diagnosis, the live mission runner and native
+mission acceptance remain open.
+
 [Durable maintenance ownership](docs/DURABLE_MAINTENANCE.md) retains scenario,
 mission and action identities across station-process loss. A station-only restart
 cannot reclaim a generation or renew old attempts. Each explicit full-demo start

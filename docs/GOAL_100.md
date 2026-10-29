@@ -124,14 +124,14 @@ All items below start pending except the goal-contract commit itself. Dependenci
 
 | ID | Deliverable | Acceptance gate |
 | --- | --- | --- |
-| OM-061 | Mission state contract | Define inspect/diagnose/intervene/verify/escalate terminal states. |
+| OM-061 | Mission state contract | Local executable transitions bind existing client/owner results, retain uncertain steps and require new public recovery. Automatic policy, live gateway ownership and native mission acceptance remain pending. |
 | OM-062 | Evidence-driven inspection order | Choose bounded inspection order without hidden evaluator state. |
 | OM-063 | Deterministic diagnosis policy | Map public observations to hypotheses with explicit uncertainty. |
 | OM-064 | Healthy-machine preservation | Do not intervene on healthy observations. |
 | OM-065 | Ambiguous-evidence handling | Collect another observation or stop rather than reset blindly. |
 | OM-066 | Recoverable-fault mission | Complete diagnosis and interlocked recovery from a fresh scenario. |
 | OM-067 | Persistent-fault escalation | Report evidence and leave the machine safe when recovery is unavailable. |
-| OM-068 | Mission cancellation propagation | Cancel navigation/inspection/maintenance ownership coherently. |
+| OM-068 | Mission cancellation propagation | Propagate cancellation through actual navigation/inspection/maintenance owners and verify final containment. Reuse OM-061's local sticky intent and exact pending identities without duplicate delivery credit. |
 | OM-069 | Interrupted mission recovery | Resume only after revalidating machine and robot state. |
 | OM-070 | Complete scripted mission acceptance | Run the original station-power mission without an LLM. |
 
