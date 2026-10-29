@@ -294,6 +294,19 @@ class CancellationTests(CancellationFixture):
         self.assertEqual(value['error_code'],'precondition_failed')
         self.assertIsNone(value['verification'])
 
+    def test_deadline_crossed_during_authority_io_cannot_report_success(self):
+        self.isolated(); self.cancel_isolate(self.request,timeout=.2)
+        for _ in range(2):
+            self.clock.advance(.05); self.owner.telemetry(canonical(self.model.sample(self.clock.sim)))
+        self.owner.authority=lambda:self.clock.advance(.11)
+        self.owner.tick()
+        value=result(self.results[-1])
+        self.assertGreater(self.clock.wall,self.workflow.deadline)
+        self.assertEqual((value['status'],value['error_code']),('timed_out','deadline_exceeded'))
+        self.assertEqual(value['final_state'],'isolated')
+        self.assertIsNone(value['isolation_request'])
+        self.assertEqual(self.model.control_revision,1)
+
     def test_final_pair_after_child_cannot_be_replaced_by_cached_isolation_result(self):
         self.restored(); self.cancel_isolate(self.restore_request); self.launch_isolation(); self.apply()
         self.sample(.05); self.sample(.05)

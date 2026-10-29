@@ -175,6 +175,10 @@ class Cancellation:
         self.finish(verification)
 
     def finish(self, verification):
+        # Source/registry reads in this tick can cross the total deadline even
+        # while the final observation pair remains fresh.
+        if self.owner.now() >= self.deadline:
+            self.stop('timed_out', 'deadline_exceeded')
         final_state = ('isolated' if not verification['samples'][-1]['powered'] else 'energized') if verification else 'unverified'
         status, code = self.stop_reason or ('succeeded', None)
         value = {'schema_version':4, 'kind':'maintenance_result', **self.identity(),

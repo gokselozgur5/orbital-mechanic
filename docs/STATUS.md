@@ -42,12 +42,24 @@ actual model effect had advanced the authoritative control revision. The same
 regression fails before and passes after a final current-control check. Both
 evidence variants are retained; this correction earns no additional delivery.
 
-Final validation passes all 662 tests (34 new), the causal baseline, 179 Python
+Initial validation passes all 662 tests (34 new), the causal baseline, 179 Python
 AST files, 17 shell scripts and two XML sources with pinned source bytes unchanged.
 Four deliberate ownership/freshness/power/observer-loss mutations are detected
 by their intended tests. The invalid-pair mutants also reach a result-schema
 rejection before terminal publication; they are sensitivity controls, separate
 from the reproduced candidate revision defect above.
+
+After initial publication, a further controlled regression crossed the total
+deadline inside source-authority I/O while both off-state samples remained fresh.
+The published candidate incorrectly reported success. The identical regression
+passes after checking the deadline again at the terminal decision; it reports
+`timed_out` while retaining the actual observed isolation. This is an OM-056
+correction, not an additional delivery. Original source and failure logs remain
+in the evidence directory; final source validation is under `om056/correction`.
+
+Corrected validation passes all 663 tests (35 new), the causal baseline,
+179 Python AST files, 17 shell scripts and two XML sources. All four deliberate
+mutations are detected again, and pinned executable source bytes remain unchanged.
 
 This adds the missing server-owned workflow, reusing existing cancellation,
 isolation and idempotency controls without duplicate delivery credit. Holds are

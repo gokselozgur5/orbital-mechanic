@@ -34,6 +34,8 @@ The schema-1 wire operation is `cancel_isolate`, with `machine_id`,
 `station_run_id`, `target_action_id` and `timeout_s`. It accepts no caller pose,
 power measurement, path, hold token or compensation ID. The finite 0.1–30-second
 deadline covers the complete workflow; it never gives each phase a fresh budget.
+Completion rechecks that deadline after evidence I/O. A still-fresh isolated
+measurement can accompany a timed-out workflow; it cannot turn expiry into success.
 
 `--no-wait` reports admission only. Client loss, interruption or an observation
 timeout returns uncertainty without retrying or implicitly aborting the explicit
