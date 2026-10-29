@@ -17,6 +17,7 @@ Created 2026-10-24. GitHub is the authority for current open/closed state; this 
 
 - [#6 — [P2] Establish the known map and localization contract](https://github.com/gokselozgur5/orbital-mechanic/issues/6)
 - [#7 — [P2] Integrate Nav2 through guarded motion](https://github.com/gokselozgur5/orbital-mechanic/issues/7)
+- [#30 — [P2] Complete native navigation acceptance after integration merge](https://github.com/gokselozgur5/orbital-mechanic/issues/30)
 
 ## [Phase 3 — Maintenance capabilities](https://github.com/gokselozgur5/orbital-mechanic/milestone/4)
 
@@ -39,27 +40,30 @@ Created 2026-10-24. GitHub is the authority for current open/closed state; this 
 
 Phase 0 scope and setup are accepted based on the user-approved baseline, docs/EVIDENCE.md, confirmed Mac Gazebo/Foxglove viewing and this dependency-ordered backlog. Its acceptance issue and milestone are closed after publishing these documents.
 
-Policy review #2 is complete. ROS integration #3 passed its Thor deployment and motion checks; evidence is in STATUS.md and MOTION.md. Failure acceptance #4 passed; detailed results are in MOTION_EVIDENCE.md. Operator controls and user-rendered camera/lidar/state/velocity panels now pass #5; accepted identities and evidence are in OPERATOR.md. Phase 1 is accepted for that baseline. Next: #6, beginning with live verification of the prepared frame-height correction, then known-map localization.
+Policy review #2, ROS integration #3, failure acceptance #4 and operator controls
+#5 are complete for the recorded Phase 1 baseline. Evidence is in STATUS.md,
+MOTION.md, MOTION_EVIDENCE.md and OPERATOR.md. The next active phase gate is native
+navigation acceptance in #30; implementation merges do not close that gate.
 
 
 ## Navigation integration PR
 
-[Draft PR #16](https://github.com/gokselozgur5/orbital-mechanic/pull/16) links #6 and
-#7 with closing references. Both issues remain open until localization recovery,
-live route/obstacle/stopping acceptance and review are complete. Native isolated
-configuration and service proofs are recorded in STATUS.md; they do not close the
-live acceptance gates. Preserve the individual atomic commits when merging.
+[PR #16](https://github.com/gokselozgur5/orbital-mechanic/pull/16) was merged by the
+owner on 2026-10-29, closing #6 and #7 while preserving its individual commits.
+The remaining source deployment, localization recovery, live routes, collision
+and physical stopping checks are tracked in #30. Native arm and CLI protocol
+proofs pass, but do not close those physical acceptance gates or the milestone.
 
 ## Scripted mission contract
 
-Issue [#11](https://github.com/gokselozgur5/orbital-mechanic/issues/11) now has a local
-[executable state contract](MISSION_STATE.md) on `codex/scripted-mission`, stacked
-on the maintenance work in [draft #20](https://github.com/gokselozgur5/orbital-mechanic/pull/20).
-It binds existing client/owner results and preserves uncertain ownership.
-[Draft #21](https://github.com/gokselozgur5/orbital-mechanic/pull/21) also carries the
-[public inspection/diagnosis policy](MISSION_POLICY.md), with bounded uncertainty
-and artifact-to-source validation. The [persistent mission gateway](MISSION_RUNTIME.md)
-now integrates the policy with actual clients, durable intent and bounded
-cancellation. Interrupted-mission reconciliation, independent evaluation #10 and
-native scenario acceptance remain open. Issue #11 and draft #21 stay In Progress;
-local adapter tests do not close the earlier phase gates or this issue.
+The owner merged the machine, maintenance and scripted-mission implementations in
+[PR #19](https://github.com/gokselozgur5/orbital-mechanic/pull/19),
+[PR #20](https://github.com/gokselozgur5/orbital-mechanic/pull/20) and
+[PR #21](https://github.com/gokselozgur5/orbital-mechanic/pull/21) on 2026-10-29.
+They include the [state contract](MISSION_STATE.md),
+[public diagnosis policy](MISSION_POLICY.md) and
+[persistent gateway](MISSION_RUNTIME.md). These bind actual client/owner results,
+durable intent, evidence and bounded cancellation while preserving uncertainty.
+Issues #8, #9 and #11 remain open for their native acceptance. Interrupted-mission
+reconciliation, independent evaluation #10 and the full scenario suite remain
+pending; local adapter tests and merged implementations do not close those gates.
