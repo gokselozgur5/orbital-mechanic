@@ -11,6 +11,62 @@ original localization branch; six migrated commits do not count as new deliverie
 [Draft PR #16](https://github.com/gokselozgur5/orbital-mechanic/pull/16) links #6/#7,
 which remain open until full live localization/navigation acceptance and review.
 
+**OM-080: retained mission claims independently joined to actual evidence.**
+[Mission evaluation](MISSION_EVALUATION.md) joins raw gateway callbacks and actual
+publication attempts, prior durable intent, real capture files and actual private
+station state at the original terminal claim.
+
+Later station recovery cannot validate an earlier false success; rejected and
+unnecessary mutation attempts remain visible even without an applied effect.
+
+The optional collision join requires matching runtime/service and navigation
+generations, exact audited commands and full wall/simulation interval coverage.
+
+It evaluates the entire covering trace and leaves continuous collision freedom
+and overall acceptance unknown.
+
+All 896 local tests pass, including 30 new tests, the causal baseline, 230 Python
+AST files, 17 shell scripts and two XML sources; all 249 executable pins remained
+unchanged throughout the 1208.318-second full validation.
+
+Five deliberate mutants fail their intended assertions for future recovery,
+unnecessary attempts, collision generation, actual packet and final source binding.
+
+Eight retained actual gateway/station/capture runs reopen
+17 image bundles and complete private histories.
+
+Three actual owned-process SIGKILL cuts at native arm publication, final payload
+sync and manifest creation preserve incomplete witnesses, including visible end
+bytes without an authoritative completion manifest.
+
+The initial concurrent harness missed a 30-second checkpoint deadline; its failure
+is retained, while a separate bounded 300-second observer run reached all cuts.
+
+No production timeout or guard changed.
+
+Local fixtures use controlled graph/navigation/robot/camera peers and in-process
+worker lifecycle; the collision fixture is explicitly synthetic.
+
+Upgrading maintenance to real capture files exposed an older outer packet being
+replayed after synchronous capture advanced telemetry; the fixture now follows
+production's publication-before-owner-tick order, without weakening any guard.
+
+Evidence: operator workspace `reviews/orbital-delivery-20261028/om080`.
+
+Branch `codex/mission-evaluation` is stacked on `codex/station-evaluation`.
+
+This is one coherent local delivery, with no extra scenario acceptance credit.
+
+The witness shares the trusted gateway process; private hashes/permissions do
+not establish OS isolation, source authentication or loaded-code attestation.
+
+Native commissioning, independent robot interlocks, real blocked/noisy fixtures,
+OS/planner boundaries, interrupted recovery, complete cancellation containment,
+matched native trials and the 25-trial freeze remain open.
+
+Issue #10 remains In Progress and #12 remains To-do; Thor SSH timed out before
+command execution, and previous hosted Actions runs were account-blocked.
+
 **OM-079: actual private station observations and offline station scoring implemented.**
 [Station evaluation](STATION_EVALUATION.md) retains actual causal-model state and
 applied effects inside the trusted station process, then independently scores

@@ -4,6 +4,7 @@ This reports the causal station axis. Collision, independently measured robot
 interlocks, all command attempts and complete mission acceptance remain separate.
 """
 import copy
+from contextlib import contextmanager
 import hashlib
 import math
 import os
@@ -241,13 +242,16 @@ def read_private(parent, name, maximum, check):
     finally:os.close(fd)
 
 
-def evaluate(root, trial_id):
-    """Read a stopped station under its existing owner lock; never amend history."""
+@contextmanager
+def evidence(root, trial_id):
+    """Hold the stopped station through a joined read; defer output until exit."""
     identifier(trial_id)
     registry=MachineRegistry.load(root)
     lock=OwnerLock(root,service='station-service')
     journal=None;parents=[]
     try:
+        # A query of missing history must not create a replacement empty journal.
+        os.stat('events.jsonl',dir_fd=lock.directory_fd,follow_symlinks=False)
         journal=Journal(lock)
         scenario=journal.history.scenarios.get(trial_id)
         if scenario is None or 'configuration_sha256' not in scenario:raise ValueError('configured_scenario_missing')
@@ -261,22 +265,31 @@ def evaluate(root, trial_id):
         journal_raw=os.pread(journal.fd,JOURNAL_BYTES+1,0)
         journal.verify()
         report=replay(observations,specification,scenario,journal.history,journal_raw)
-        # Refuse replacement during parsing/scoring, including either private directory.
-        for name,fd,filename,pin in ((INPUTS,parent,trial_id+'.json',config_pin),
-                                     (DIRECTORY,observation_parent,trial_id+'.jsonl',observation_pin)):
-            current=directory(lock.directory_fd,name)
-            try:
-                private_directory(current)
-                old,new=os.fstat(fd),os.fstat(current)
-                if (old.st_dev,old.st_ino)!=(new.st_dev,new.st_ino) or fingerprint(os.stat(filename,dir_fd=current,follow_symlinks=False))!=pin:
-                    raise ValueError('evaluation_input_changed')
-            finally:os.close(current)
-        journal.verify();registry.verify_current()
-        if (specification['source_revision']!=scenario_spec.source_revision()
-                or scenario['observations_closed']['source_revision']!=source_revision()):
-            raise ValueError('evaluation_source_changed')
-        return report
+        def check():
+            # Refuse replacement during parsing/scoring, including either directory.
+            for name,fd,filename,pin in ((INPUTS,parent,trial_id+'.json',config_pin),
+                                         (DIRECTORY,observation_parent,trial_id+'.jsonl',observation_pin)):
+                current=directory(lock.directory_fd,name)
+                try:
+                    private_directory(current)
+                    old,new=os.fstat(fd),os.fstat(current)
+                    if (old.st_dev,old.st_ino)!=(new.st_dev,new.st_ino) or fingerprint(os.stat(filename,dir_fd=current,follow_symlinks=False))!=pin:
+                        raise ValueError('evaluation_input_changed')
+                finally:os.close(current)
+            journal.verify();registry.verify_current()
+            if (specification['source_revision']!=scenario_spec.source_revision()
+                    or scenario['observations_closed']['source_revision']!=source_revision()):
+                raise ValueError('evaluation_source_changed')
+        check()
+        yield {'report':report,'specification':specification,'scenario':scenario,
+               'history':journal.history,'observations':observations,'registry':registry}
+        check()
     finally:
         for fd in reversed(parents):os.close(fd)
         if journal is not None:journal.close()
         lock.close()
+
+
+def evaluate(root, trial_id):
+    """Read retained evidence without amending history; publish only after fences."""
+    with evidence(root,trial_id) as value:return value['report']

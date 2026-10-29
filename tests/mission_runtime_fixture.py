@@ -120,8 +120,15 @@ class RuntimeBus:
         self.f.hold.acknowledged=True
         if self.f.hold.release_at is not None:self.f.hold.released=True
         for worker in self.f.workers:worker.exited=True
-        packet=ResetFixture.sample(self.f,max(duration,.001))
+        # Publish the sampled packet before ticking an owner whose controlled
+        # capture may synchronously advance the station and publish newer ones.
+        # This matches the production timer/publication-before-owner-tick order.
+        self.clock.advance(max(duration,.001))
+        packet=self.f.model.sample(self.clock.sim)
+        self.f.packet=packet
+        self.f.owner.telemetry(canonical(packet))
         if not self.drop_telemetry:self.deliver('/station/telemetry',canonical(packet))
+        self.f.owner.tick()
         self.inspection.tick()
         self.deliver('/inspection/state',canonical(self.inspection.state()))
         self.deliver('/maintenance/state',canonical(self.f.owner.state()))

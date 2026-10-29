@@ -5,6 +5,13 @@ from types import SimpleNamespace as NS
 from orbital.ros_mission import OWNERS, SOURCES
 
 
+def runtime_identity(registry):
+    """Explicit controlled service envelope; never evidence of native services."""
+    return {'manifest_identity':'a'*64,'world_sha256':registry.public()['source_sha256']['world'],
+        'service_invocations':{'orbital-demo.service':'b'*32,
+            'orbital-localization.service':'c'*32,'orbital-navigation.service':'d'*32}}
+
+
 class MissionRos:
     def __init__(self, bus):
         self.bus=bus

@@ -4,6 +4,12 @@ These are design contracts with locally implemented inspection and maintenance
 subsets. The [scripted runtime](MISSION_RUNTIME.md) now uses their persistent ROS
 gateway; the external planner tool interface and native acceptance remain open.
 
+[Retained mission evaluation](MISSION_EVALUATION.md) joins actual gateway attempts,
+terminal observations, private station state and capture bundles at the claimed
+time. Its optional collision input requires exact generations, command audit and
+full interval coverage. This privileged offline report is never a planner input;
+sampled clearance and station success do not imply overall mission acceptance.
+
 The read-only [station observation CLI](STATION_OBSERVATION.md) now implements
 fresh public telemetry consumption. The [machine observation CLI](INSPECTION_OBSERVATION.md)
 combines a selected public sample with exact same-time settled robot state. These
