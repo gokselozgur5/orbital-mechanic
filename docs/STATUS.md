@@ -41,6 +41,14 @@ not commission maintenance effects or a route. Next: commission the independent
 trajectory recorder, then live arming, measured stopping and three-machine trials.
 See [the rollout evidence](NAVIGATION.md#coordinated-native-deployment).
 
+The first live recorder attempt refused Gazebo's generated `sunVisual` entity.
+The [light-visual correction](TRAJECTORY.md#native-light-visual-regression--2026-10-29)
+passes 79 focused tests and the same five retained native messages that the old
+parser rejects. An explicitly identified observer candidate captured 278 idle
+samples with exact-time TF and no sampled geometry event. Installed-recorder,
+negative-TF and guarded moving-capture acceptance remain open; live source stayed
+unchanged during that candidate proof.
+
 The [native station startup proof](DURABLE_MAINTENANCE.md#native-startup-proof)
 now passes six controls across nine actual CLI children on isolated Jazzy domain
 84: unprepared startup, fresh public telemetry, consumed-generation restart

@@ -4,9 +4,38 @@ OM-023 implements a read-only evaluator that records simulator truth, localizati
 at the same simulation timestamp and exact supervisor command identities. OM-027
 extends it with observed link/obstacle poses and a versioned geometry snapshot for
 [sampled collision evaluation](COLLISION_EVALUATION.md). Local tests pass.
-Native Gazebo Python bindings, DDS transport and moving-robot capture
-have **not** been commissioned; Thor access is currently unavailable. This does
-not accept a route, machine arrival, collision result or physical stopping test.
+Native bindings and an idle observer candidate have now been exercised on Thor.
+The first installed-recorder attempt exposed the light-visual regression below;
+the corrected installed capture, negative TF controls and moving-robot acceptance
+remain pending. No route, machine arrival or physical stopping test is accepted.
+
+## Native light-visual regression — 2026-10-29
+
+The first actual capture on deployed `0373a75` refused the scene before recording
+any samples. Five retained Gazebo protobuf batches contain 35 entities, including
+`sunVisual`; the declared topology expected only 34. Gazebo's
+[SdfEntityCreator](https://github.com/gazebosim/gz-sim/blob/43d9baf13eac134914ebbd826de800724fca0a87/src/SdfEntityCreator.cc#L660)
+creates a child visual named `<light-name>Visual` for each declared light.
+
+The parser now requires those exact generated names in its complete multiset.
+It does not allow arbitrary extra visuals. Missing, duplicated or renamed light
+visuals and aliases of collision-model names are refused. The same three new
+regressions fail on the old parser; all 79 geometry/evaluator/trajectory tests
+pass after the correction. The fixture now includes the generated light visual.
+
+The old parser rejects all five retained native batches; the candidate accepts
+each complete scene. A separately identified observer-only module override then
+records 278 capture samples over five seconds with exact-time TF, zero command
+activity and no sampled geometry event. Maximum truth gaps are 20 ms simulation
+and 28.4 ms receipt time. Before/after live inventory and stationary pose checks
+pass; its disposable cgroup exits. The trace explicitly records the candidate
+module hash separately from the unchanged installed-source manifest.
+
+Evidence: operator workspace
+`reviews/orbital-navigation-rollout-20261029/observer-fix-evidence`, 71-file manifest
+SHA-256 `d15d57cf89d362c01e51d8298ba776e7f8719fe3d0630b5023f707b997d9c1be`.
+This candidate proof does not establish installed deployment, negative-TF,
+moving-robot or between-sample collision acceptance.
 
 ## Sources and timing
 
@@ -25,7 +54,8 @@ The publisher/subscriber pair follows the
 [ROS 2 QoS compatibility contract](https://github.com/ros2/ros2_documentation/blob/jazzy/source/Concepts/Intermediate/About-Quality-of-Service-Settings.rst).
 
 The world already loads SceneBroadcaster. The full pose output includes models,
-links, visuals and lights. The observer checks the complete declared name multiset
+links, visuals and lights, including each generated light child visual. The
+observer checks the complete source-derived name multiset
 and pins entity generations; it preserves all collision-bearing model/link poses.
 Unexpected, missing or replaced scene entities invalidate capture. The reviewed
 upstream implementation stamps each batch with simulation time. See the pinned
@@ -165,8 +195,8 @@ Legacy model-only traces remain readable by the integrity verifier, but lack the
 link/world evidence required for collision evaluation; recapture with this source.
 
 Those doubles do not establish native ABI, transport QoS, delivery rate or moving
-robot accuracy. Next native acceptance must verify installed Python bindings,
-capture an idle control with independent endpoint comparison, then a guarded
+robot accuracy. The native candidate proof above exercises bindings and idle
+capture; next verify the corrected installed recorder, then a guarded
 bounded movement with measured displacement and exact target audit. Preserve a
 negative run with unavailable/wrong-time TF and prove its failure. Only after that
 should this recorder supply physical-loss stopping and three-machine arrival
