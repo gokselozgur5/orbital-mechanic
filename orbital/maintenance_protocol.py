@@ -9,23 +9,32 @@ from orbital.reset_evidence import basis as reset_basis
 REJECTION_CODES = frozenset(('invalid_argument', 'wrong_run', 'action_conflict', 'unavailable',
                              'busy', 'history_full', 'unknown_action', 'wrong_station_state',
                              'isolation_required', 'reset_not_eligible', 'reset_attempt_exhausted',
-                             'reset_required', 'restore_not_eligible', 'restore_attempt_exhausted'))
+                             'reset_required', 'restore_not_eligible', 'restore_attempt_exhausted',
+                             'cancellation_target_required', 'cancellation_conflict', 'target_superseded'))
 ERROR_CODES = frozenset(('hold_acquisition_unavailable', 'deadline_exceeded', 'cancel_requested',
     'owner_shutdown', 'inspection_unavailable', 'precondition_failed', 'effect_unknown',
     'station_run_changed', 'isolation_not_verified', 'clock_regressed', 'maintenance_hold_lost',
-    'precondition_lost', 'maintenance_evidence_unavailable', 'reset_not_verified', 'restore_not_verified'))
+    'precondition_lost', 'maintenance_evidence_unavailable', 'reset_not_verified', 'restore_not_verified',
+    'cancellation_evidence_unavailable', 'cancellation_isolation_failed'))
 
 
 def command(text):
     value = decode(text)
     if (set(value) != {'schema_version', 'run_id', 'mission_id', 'action_id', 'command_id', 'op', 'arguments'}
             or type(value['schema_version']) is not int or value['schema_version'] != 1
-            or value['op'] not in ('isolate', 'reset', 'restore', 'cancel', 'query') or not isinstance(value['arguments'], dict)):
+            or value['op'] not in ('isolate', 'reset', 'restore', 'cancel_isolate', 'cancel', 'query') or not isinstance(value['arguments'], dict)):
         raise ValueError('invalid_argument')
     for name in ('run_id', 'mission_id', 'action_id', 'command_id'):
         identifier(value[name])
     args = value['arguments']
-    if value['op'] in ('isolate', 'reset', 'restore'):
+    if value['op'] == 'cancel_isolate':
+        if set(args) != {'machine_id', 'station_run_id', 'target_action_id', 'timeout_s'} or args['machine_id'] not in MACHINE_IDS:
+            raise ValueError('invalid_argument')
+        identifier(args['station_run_id']); identifier(args['target_action_id'])
+        if args['target_action_id'] == value['action_id']:
+            raise ValueError('invalid_argument')
+        args['timeout_s'] = finite(args['timeout_s'], .1, 30.)
+    elif value['op'] in ('isolate', 'reset', 'restore'):
         fields = {'machine_id', 'station_run_id', 'control_revision', 'timeout_s'}
         if value['op'] == 'reset': fields.add('isolation_action_id')
         if value['op'] == 'restore': fields.add('reset_action_id')
@@ -62,6 +71,9 @@ def observation(value):
 
 
 def result(value):
+    if isinstance(value, dict) and value.get('operation') == 'cancel_isolate':
+        from orbital.cancellation_protocol import result as cancellation_result
+        return cancellation_result(value)
     fields = {'schema_version', 'kind', 'run_id', 'mission_id', 'action_id', 'request_sha256', 'operation',
               'machine_id', 'station_run_id', 'status', 'error_code', 'started_sim_stamp_ns',
               'finished_sim_stamp_ns', 'wall_duration_s', 'observation', 'state_change', 'hold_released'}
@@ -157,6 +169,9 @@ def result(value):
 
 
 def action_view(value):
+    if isinstance(value, dict) and 'cancellation' in value:
+        from orbital.cancellation_protocol import action_view as cancellation_view
+        return cancellation_view(value)
     if not isinstance(value, dict) or set(value) != {'run_id', 'mission_id', 'action_id', 'request_sha256',
             'machine_id', 'phase', 'stop_reason', 'result'}:
         raise ValueError('invalid_action')

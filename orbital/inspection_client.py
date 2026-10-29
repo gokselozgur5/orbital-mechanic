@@ -114,12 +114,15 @@ class InspectionClient:
             return self.receipt('terminal')
         return self.receipt('uncertain', 'cancellation_unconfirmed')
 
+    def requires_ready(self, value):
+        return value['op'] == self.operation
+
     def execute(self, value, *, wait=True):
         value = self.protocol.command(canonical(value))
         self.pending, self.ack, self.terminal = value, None, None
         if not self.valid() or value['run_id'] != self.latest['run_id']:
             return self.receipt('not_sent', self.family+'_server_unavailable')
-        if value['op'] == self.operation and not self.latest['ready']:
+        if self.requires_ready(value) and not self.latest['ready']:
             return self.receipt('not_sent', self.family+'_server_not_ready')
         try:
             self.publish(canonical(value))

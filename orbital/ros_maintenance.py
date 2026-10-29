@@ -79,6 +79,7 @@ class StationMaintenance:
             self.owner = MaintenanceOwner(root, model, self.live, self.holds,
                 lambda payload:CaptureProcess(root, self.lock.fd, payload, now()), now=now,
                 sim_ns=lambda:node.get_clock().now().nanoseconds,
+                authority=self.authority,
                 on_result=lambda result:self.publish('/maintenance/result', result))
             node.create_subscription(String, '/maintenance/command', self.receive, QoSProfile(depth=16))
             node.create_subscription(String, '/motion/state', lambda msg:self.holds.on_guard(msg.data), 10)

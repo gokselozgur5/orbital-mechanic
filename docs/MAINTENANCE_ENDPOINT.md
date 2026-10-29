@@ -6,7 +6,9 @@ No second station model is started in the capture process. OM-054 adds
 [bounded reset](RESET_OPERATION.md) after an exact owned isolation, using retained
 powered observations, cooldown and a second live inspection. OM-055 adds
 [owned power restoration](RESTORE_OPERATION.md) after verified reset and a third
-inspection. Recovery and restart reconciliation remain separate work.
+inspection. OM-056 adds an explicit [cancel-isolate workflow](CANCELLATION_OPERATION.md)
+which resolves the original and, when needed, admits one new interlocked
+isolation. Recovery and restart reconciliation remain separate work.
 
 Local controls execute the actual station adapter, motion guard, navigation
 supervisor, separate capture process and artifact reader with controlled ROS
@@ -25,6 +27,7 @@ python3 scripts/maintain-machine.py reset pump --run-id RUN --mission-id MISSION
 python3 scripts/maintain-machine.py restore pump --run-id RUN --mission-id MISSION --reset-action-id RESET --timeout 15
 python3 scripts/maintain-machine.py query --run-id RUN --mission-id MISSION --action-id ACTION
 python3 scripts/maintain-machine.py cancel --run-id RUN --mission-id MISSION --action-id ACTION
+python3 scripts/maintain-machine.py cancel-isolate pump --run-id RUN --mission-id MISSION --target-action-id ACTION --timeout 20
 ```
 
 The IDs are placeholders for the exact 32-character lowercase hex values in the
@@ -41,6 +44,12 @@ The client sends each isolation/reset/restore once. Loss/timeout/interrupt trigg
 cancel attempt, never another power request. A lost reply can be recovered with
 same-run query. Server restart requires reconciliation, not replaying the
 operation with a new run or action ID.
+
+For `cancel-isolate`, client loss returns uncertainty without sending an implicit
+cancel of that policy. The server continues within its own deadline. Its schema-4
+result preserves original and isolation child outcomes and distinguishes observed
+isolation, observed energization and an unverified current state. No unknown
+effect can authorize compensation; see the separate workflow contract above.
 
 ## Transport and identity
 

@@ -12,6 +12,7 @@ from orbital.proximity import Unavailable
 from orbital.station_control import EffectRejected
 from orbital.telemetry_observation import TelemetryEvidence
 from orbital.reset_evidence import ResetEvidence, MAX_RESET_TEMPERATURE_C
+from orbital.maintenance_cancellation import admit as admit_cancellation
 
 
 class InspectionGuard:
@@ -69,31 +70,44 @@ class Action:
 
 class MaintenanceOwner:
     def __init__(self, root, model, live, hold, worker, *, now, sim_ns, on_result=lambda _: None,
-                 inspection_factory=InspectionOwner, load=load_result):
+                 inspection_factory=InspectionOwner, load=load_result, authority=lambda: None):
         self.root, self.model, self.live, self.hold, self.worker = root, model, live, hold, worker
         self.now, self.sim_ns, self.on_result = now, sim_ns, on_result
         self.inspection_factory, self.load = inspection_factory, load
+        self.authority = authority
         self.run_id = uuid.uuid4().hex
         self.actions, self.missions = {}, {}
         self.active = self.last_result = None
+        self.cancellations, self.reservations = {}, {}
+        self.cancellation = None
         self.closing = False
         self.sequence = 0
         self.reset_evidence = ResetEvidence(model.registry)
 
     def ready(self):
+        return self.cancellation is None and self._ready()
+
+    def capacity(self):
+        return MAX_ACTIONS-len(self.actions)-len(self.cancellations)-len(self.reservations)
+
+    def _ready(self, *, reserved=False):
         try:
-            return (not self.closing and self.active is None and len(self.actions) < MAX_ACTIONS
+            return (not self.closing and self.active is None and (self.capacity() > 0 or reserved)
                     and self.model.sequence > 0 and self.live.ready() and self.hold.available())
         except (ValueError, OSError, RuntimeError):
             return False
 
     def handle(self, text):
-        reply = {'schema_version': 1, 'kind': 'maintenance_reply', 'run_id': self.run_id,
-                 'command_id': None, 'accepted': False, 'error_code': 'invalid_argument', 'action': None}
         try:
             request = command(text)
         except (ValueError, TypeError, UnicodeError):
-            return reply
+            return {'schema_version': 1, 'kind': 'maintenance_reply', 'run_id': self.run_id,
+                    'command_id': None, 'accepted': False, 'error_code': 'invalid_argument', 'action': None}
+        return self._handle(request)
+
+    def _handle(self, request, *, cancellation=None):
+        reply = {'schema_version': 1, 'kind': 'maintenance_reply', 'run_id': self.run_id,
+                 'command_id': None, 'accepted': False, 'error_code': 'invalid_argument', 'action': None}
         reply.update({key:request[key] for key in ('command_id', 'mission_id', 'action_id', 'op')})
 
         def reject(code):
@@ -102,6 +116,30 @@ class MaintenanceOwner:
 
         if request['run_id'] != self.run_id:
             return reject('wrong_run')
+        workflow = self.cancellations.get(request['action_id'])
+        if workflow is not None:
+            if (workflow.request['mission_id'] != request['mission_id']
+                    or (request['op'] == 'cancel_isolate' and request_digest(request) != workflow.digest)
+                    or request['op'] not in ('cancel_isolate', 'cancel', 'query')):
+                return reject('action_conflict')
+            if request['op'] == 'cancel' and workflow.result is None:
+                workflow.stop('cancelled', 'cancel_requested')
+            reply.update(accepted=True, error_code=None, action=workflow.view())
+            return reply
+        internal = (cancellation is not None and cancellation is self.cancellation
+                    and request is cancellation.child_request and request['op'] == 'isolate'
+                    and self.reservations.get(request['action_id']) == cancellation.request['action_id'])
+        if request['action_id'] in self.reservations and not internal:
+            return reject('action_conflict')
+        if request['op'] == 'cancel_isolate':
+            if request['action_id'] in self.actions:
+                return reject('action_conflict')
+            try:
+                workflow = admit_cancellation(self, request)
+            except ValueError as error:
+                return reject(str(error))
+            reply.update(accepted=True, error_code=None, action=workflow.view())
+            return reply
         action = self.actions.get(request['action_id'])
         if action is not None and action.request['mission_id'] != request['mission_id']:
             return reject('action_conflict')
@@ -111,11 +149,11 @@ class MaintenanceOwner:
                 if digest != action.digest:
                     return reject('action_conflict')
             else:
-                if self.active is not None:
+                if self.active is not None or (self.cancellation is not None and not internal):
                     return reject('busy')
-                if len(self.actions) >= MAX_ACTIONS:
+                if self.capacity() <= 0 and not internal:
                     return reject('history_full')
-                if not self.ready():
+                if not self._ready(reserved=internal):
                     return reject('unavailable')
                 args = request['arguments']
                 if (args['station_run_id'] != self.model.run_id or args['control_revision'] != self.model.control_revision
@@ -148,6 +186,7 @@ class MaintenanceOwner:
                 # Record ownership before publication: a transport exception is
                 # not proof that the guard could not receive this acquire.
                 self.actions[request['action_id']] = self.active = action
+                if internal: self.reservations.pop(request['action_id'])
                 self.missions[request['mission_id']] = self.model.run_id
                 try:
                     self.hold.begin(token)
@@ -172,10 +211,12 @@ class MaintenanceOwner:
     def shutdown(self):
         self.closing = True
         self.stop('cancelled', 'owner_shutdown')
+        if self.cancellation is not None: self.cancellation.stop('cancelled', 'owner_shutdown')
 
     def telemetry(self, text):
         now, sim = self.now(), self.sim_ns()
         self.reset_evidence.observe(text, now, sim)
+        if self.cancellation is not None: self.cancellation.telemetry(text, now, sim)
         action = self.active
         if action is not None and action.verifier is not None:
             if action.verifier.observe(text, now, sim):
@@ -331,6 +372,11 @@ class MaintenanceOwner:
         action.phase = 'releasing'
 
     def tick(self):
+        if self.cancellation is not None: self.cancellation.guard()
+        self._tick_action()
+        if self.cancellation is not None: self.cancellation.tick()
+
+    def _tick_action(self):
         action = self.active
         if action is None:
             return
@@ -405,5 +451,6 @@ class MaintenanceOwner:
         return {'schema_version': 1, 'kind': 'maintenance_state', 'run_id': self.run_id,
                 'station_run_id': self.model.run_id, 'control_revision': self.model.control_revision,
                 'sequence': self.sequence, 'sim_stamp_ns': self.sim_ns(), 'ready': self.ready(),
-                'capacity_remaining': MAX_ACTIONS-len(self.actions),
-                'active': None if self.active is None else self.active.view(), 'last_result': copy.deepcopy(self.last_result)}
+                'capacity_remaining': self.capacity(),
+                'active': self.cancellation.view() if self.cancellation is not None else (
+                    None if self.active is None else self.active.view()), 'last_result': copy.deepcopy(self.last_result)}

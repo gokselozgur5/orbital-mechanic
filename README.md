@@ -84,6 +84,11 @@ Include a healthy scenario and an unrecoverable fault so success cannot mean bli
 
 Read [AGENTS.md](AGENTS.md) and [docs/STATUS.md](docs/STATUS.md). The status file distinguishes measured capabilities, prototype-only behavior and remaining work. Foxglove client opening is user-confirmed and its camera/TF subscriptions are visible in the server logs.
 
+[Cancellation with observed isolation](docs/CANCELLATION_OPERATION.md) resolves
+an exact owned maintenance action and, when still powered, requests one separately
+identified isolation with new live interlocks and camera evidence. Unknown
+effects remain owned; native sequence acceptance is pending.
+
 [Named navigation commands](docs/NAVIGATION_CLIENT.md) provide explicit target
 request, arm and cancel operations. Their local protocol/CLI tests pass; native
 commissioning and route acceptance remain pending.

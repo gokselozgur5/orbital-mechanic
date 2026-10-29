@@ -187,6 +187,13 @@ restore can retain an observed energized outcome; there is no implicit rollback.
 Durable reconciliation remains open. The current API is
 documented separately.
 
+OM-056 provides an explicit [cancel-isolate policy](CANCELLATION_OPERATION.md).
+It reuses these ordinary action controls while owning the additional cancel,
+resolution, possible new isolation and post-release observation sequence. A
+disconnected client does not silently abort that policy. Unknown effects remain
+unresolved; a deadline or known failure cannot be labeled safely isolated without
+new evidence. This adds a workflow, not duplicate cancellation/idempotency credit.
+
 ## Acceptance and remaining work
 
 Local checks execute the actual causal model and public decoder: isolated reset

@@ -11,6 +11,50 @@ original localization branch; six migrated commits do not count as new deliverie
 [Draft PR #16](https://github.com/gokselozgur5/orbital-mechanic/pull/16) links #6/#7,
 which remain open until full live localization/navigation acceptance and review.
 
+**OM-056: cancellation with observed isolation implemented; native acceptance pending.**
+The explicit [cancel-isolate workflow](CANCELLATION_OPERATION.md) stops an exact
+owned maintenance action and waits for its known result, capture reap and hold
+release. Two new same-control public samples determine whether isolation is
+already observed or one separate `isolate` action is needed. That child has a
+reserved identity, new hold and camera capture, and unchanged final interlocks.
+Another fresh pair after child release establishes the workflow's final state.
+
+Schema-4 results preserve both requests/results and distinguish `isolated`,
+`energized` and `unverified`. Only verified isolation can succeed. Known failures
+can report the actual energized state; unknown effects stay nonterminal and
+owned even after deadlines. Client loss never implicitly cancels the explicit
+server policy. Replay, identity/capacity reservation, source loss, deadlines and
+shutdown controls do not silently retry or adopt old work after restart.
+
+The local composed cases use actual station/guard/navigation and three or four
+real capture children. Cancellation after energization performs a fourth new
+inspection and verified isolation. Before-effect cancellation confirms existing
+isolation without another effect. A late real artifact leaves energized failure
+explicit; cancellation after the isolation effect retains its actual record.
+The scenario-wide fixture budget includes the extra capture and observations;
+production deadlines and freshness bounds are unchanged. One initial unit fixture
+used its sample-invalid flag to simulate readiness loss; the fixture's separate
+availability flag now exercises the intended admission refusal. Original evidence
+is retained under `reviews/orbital-delivery-20261028/om056`.
+
+Review also reproduced a candidate completing from a fresh pair after another
+actual model effect had advanced the authoritative control revision. The same
+regression fails before and passes after a final current-control check. Both
+evidence variants are retained; this correction earns no additional delivery.
+
+Final validation passes all 662 tests (34 new), the causal baseline, 179 Python
+AST files, 17 shell scripts and two XML sources with pinned source bytes unchanged.
+Four deliberate ownership/freshness/power/observer-loss mutations are detected
+by their intended tests. The invalid-pair mutants also reach a result-schema
+rejection before terminal publication; they are sensitivity controls, separate
+from the reproduced candidate revision defect above.
+
+This adds the missing server-owned workflow, reusing existing cancellation,
+isolation and idempotency controls without duplicate delivery credit. Holds are
+sequential, not one continuous mission token. Native DDS/timing, independent
+composite replay, durable reconciliation, mission recovery and full acceptance
+remain open. The independent isolation recorder does not certify this workflow.
+
 **OM-055: owned power restoration implemented; native acceptance pending.**
 The [restore endpoint](RESTORE_OPERATION.md) requires the same owner's verified
 reset, retained eligible history, current cooldown and a third live inspection.

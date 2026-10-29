@@ -54,6 +54,9 @@ Cancellation never silently rolls back power or claims safe isolation.
 Compensating isolation, if required, must be another identified action under
 current interlocks; it is not part of this operation.
 
+OM-056's explicit [cancel-isolate workflow](CANCELLATION_OPERATION.md) now owns
+that separate sequence. Ordinary restore/cancel behavior is unchanged.
+
 Unknown actuator outcomes, missing verification or lost ownership stay
 nonterminal and cannot authorize a new release. If release was already sent,
 later observation loss cannot prove the token remains held. Preserve that
