@@ -88,7 +88,13 @@ Read [AGENTS.md](AGENTS.md) and [docs/STATUS.md](docs/STATUS.md). The status fil
 [Private scenario inputs](docs/SCENARIOS.md) now bind repeatable station conditions
 to durable generations without exposing fault selectors as ROS parameters.
 Four profiles run through the local station adapter; blocked geometry, noisy
-observations, process isolation, independent scoring and native trials remain open.
+observations, process isolation and native trials remain open.
+
+[Actual station evaluation](docs/STATION_EVALUATION.md) now records private causal
+state and independently scores sampled recovery, applied and unnecessary
+interventions after a verified clean closure. Local adapter and capture tests
+pass; collision, independent robot interlocks and complete mission acceptance
+remain outside this station-only report.
 
 [Mission state transitions](docs/MISSION_STATE.md) bind navigation, inspection and
 maintenance steps to one mission, retaining uncertain ownership and separating

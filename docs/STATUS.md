@@ -21,6 +21,40 @@ original localization branch; six migrated commits do not count as new deliverie
 [Draft PR #16](https://github.com/gokselozgur5/orbital-mechanic/pull/16) links #6/#7,
 which remain open until full live localization/navigation acceptance and review.
 
+**OM-079: actual private station observations and offline station scoring implemented.**
+[Station evaluation](STATION_EVALUATION.md) retains actual causal-model state and
+applied effects inside the trusted station process, then independently scores
+sampled healthy duration, interventions, unnecessary actions and recorded
+precondition/effect deviations. Mission success and the model's recovery flag
+cannot substitute for the observed window. A healthy bus after isolation alone
+is not repair; every effect and sample gap over one second restarts the window.
+
+The bounded private stream is joined to the exact input, source files, registry,
+station/owner generation and durable applied actions. Clean settled shutdown
+syncs and reads back the end payload before a separate `observations_closed`
+journal event seals the generation. The same regression first reproduced a
+visible but failed-sync end being accepted; it passes with the separate closure.
+Short writes, capacity exhaustion, changed sources/files and actual process
+SIGKILL cannot manufacture a complete report or re-admit the consumed generation.
+
+All 866 local tests pass, including 28 new tests, the causal baseline, 216 Python
+AST files, 17 shell scripts and two XML sources. All 235 executable source hashes
+remain unchanged through the final 457.810-second validation. Five deliberate
+mutations fail their intended voltage-only recovery, unnecessary-action,
+sample-gap, final pre-effect file and final source validation assertions.
+Four adapter profiles, actual owned repair/isolation-only runs and three owned
+SIGKILL cuts are retained with reopened private files and durable history.
+Evidence lives in operator workspace `reviews/orbital-delivery-20261028/om079`.
+Branch `codex/station-evaluation` is stacked on `codex/scenario-evaluation`.
+
+This is one coherent local station-axis delivery with no duplicate scenario
+acceptance credit. `overall_acceptance` remains null; collision, independent
+robot interlocks, pre-admission rejected commands and mission escalation/false
+claims remain unmeasured. Cooperative private files are not OS isolation or
+same-user authentication, and declared file pins are not loaded-code attestation.
+Issue #10 remains In Progress and #12 remains To-do. Native commissioning,
+blocked/noisy fixtures, the complete mission join and 25-trial freeze stay open.
+
 **OM-071: private scenario fixtures implemented; complete evaluation remains open.**
 [Private inputs](SCENARIOS.md) now bind deterministic initial conditions to an
 exact durable station generation, source/registry identities and a private file
@@ -53,8 +87,8 @@ Evidence is retained in operator workspace `reviews/orbital-delivery-20261028/om
 with final validation under `verified/`. Branch `codex/scenario-evaluation` is
 stacked on `codex/scripted-mission`; #10 remains open/In Progress and #12 remains
 To-do. This single fixture delivery does not accept OM-072 or the full scenario set.
-Native commissioning, actual OS isolation, blocked/noisy fixtures, independent
-recovery/collision/interlock scoring and the 25-trial freeze remain open. Thor
+Native commissioning, actual OS isolation, blocked/noisy fixtures, complete
+mission/collision/interlock scoring and the 25-trial freeze remain open. Thor
 access timed out; the previously observed hosted Actions account block is not
 treated as a code failure or a CI pass. No deployment, merge or paid call occurred.
 

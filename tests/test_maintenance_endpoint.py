@@ -23,6 +23,7 @@ from orbital.machine_registry import MachineRegistry
 from orbital.isolation_trace import IsolationTrace, TOPICS as TRACE_TOPICS, verify_isolation
 from orbital.maintenance_trace import MaintenanceTrace, verify_maintenance
 from orbital.trajectory import TraceWriter
+from orbital.station_evaluation import evaluate as evaluate_station
 from inspection_transport_fixture import SharedClock, transport
 from test_isolation_trace import sources as trace_sources
 import test_map_binding as map_fixture
@@ -297,6 +298,10 @@ class MaintenanceEndpointTests(unittest.TestCase):
         for value in outputs['/maintenance/result']:
             self.assertEqual(history.actions[value['action_id']]['result'], value)
         self.assertEqual(history.status()['unresolved_count'], 0)
+        self.station_evaluation = evaluate_station(self.root, prepared['trial_id'])
+        self.assertEqual(self.station_evaluation['applied_interventions'], station.model.control_revision)
+        self.assertEqual(self.station_evaluation['unnecessary_interventions'], 0)
+        self.assertIsNone(self.station_evaluation['overall_acceptance'])
         return terminal, outputs
 
     def test_cancel_isolate_after_energization_uses_fourth_real_capture(self):
@@ -352,6 +357,8 @@ class MaintenanceEndpointTests(unittest.TestCase):
 
     def test_restore_uses_third_real_capture_then_independent_recovery_window(self):
         terminal, output = self.run_endpoint(restore=True, recovery=True, sequence_retained=True)
+        self.assertEqual(self.station_evaluation['outcome'], 'recovered')
+        self.assertTrue(self.station_evaluation['station_criteria_passed'])
         self.assertTrue(verify_maintenance(self.root,self.retained_path)['observation']['post_restore_recovery_verified'])
         self.assertEqual(terminal['status'], 'succeeded', self.endpoint_diagnostic)
         self.assertEqual(terminal['operation'], 'restore')

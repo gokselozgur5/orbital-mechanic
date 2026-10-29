@@ -81,7 +81,9 @@ A changed input cannot be restored into permission within that process; station 
 
 This protects cooperative ownership and accidental public disclosure, not malicious same-user reads/edits, coherent journal rollback, another checkout or authenticated DDS access.
 
-The full hidden-truth isolation/leakage audit, private evaluator process/filesystem boundary, blocked geometry, noisy/missing observations, held-out seeds, independent outcome scoring and 25 native trials remain open under #10/#12.
+[Station evaluation](STATION_EVALUATION.md) now consumes the exact private generation and retained actual station state offline, after an authoritative clean closure.
+
+The full hidden-truth isolation/leakage audit, enforced process/filesystem boundary, blocked geometry, noisy/missing observations, held-out seeds, complete independent mission scoring and 25 native trials remain open under #10/#12.
 
 ## Local validation
 
@@ -91,4 +93,4 @@ The shipped shell preflight is executed with component startup cut off before ca
 
 Negative controls cover coherent input replacement, read/write/sync/capacity failures, late changes before an actual effect, stale or consumed launch IDs and generation changes between preflight and station startup.
 
-These checks do not score a mission, establish native timing or replace independent collision/interlock/recovery evidence.
+These fixture checks do not score a mission or establish native timing; station-axis scoring has its own tests and still does not replace independent collision/interlock evidence.

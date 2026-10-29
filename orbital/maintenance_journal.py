@@ -178,6 +178,11 @@ class Journal:
     def terminal(self, result):
         self.record('terminal',{'scenario_id':self.claimed['scenario_id'],'result':result})
 
+    def complete_observations(self, chain_sha256, records, source_revision):
+        self.record('observations_closed', {'scenario_id':self.claimed['scenario_id'],
+            'station_run_id':self.claimed['station_run_id'], 'chain_sha256':chain_sha256,
+            'records':records, 'source_revision':source_revision})
+
     def close(self):
         if self.fd is not None: os.close(self.fd); self.fd = None
 
