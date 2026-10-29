@@ -124,15 +124,15 @@ All items below start pending except the goal-contract commit itself. Dependenci
 
 | ID | Deliverable | Acceptance gate |
 | --- | --- | --- |
-| OM-061 | Mission state contract | Define inspect/diagnose/intervene/verify/escalate terminal states. |
-| OM-062 | Evidence-driven inspection order | Choose bounded inspection order without hidden evaluator state. |
-| OM-063 | Deterministic diagnosis policy | Map public observations to hypotheses with explicit uncertainty. |
-| OM-064 | Healthy-machine preservation | Do not intervene on healthy observations. |
-| OM-065 | Ambiguous-evidence handling | Collect another observation or stop rather than reset blindly. |
-| OM-066 | Recoverable-fault mission | Complete diagnosis and interlocked recovery from a fresh scenario. |
+| OM-061 | Mission state contract | Local executable transitions bind existing client/owner results, retain uncertain steps and require new public recovery. Live gateway ownership and native mission acceptance remain pending. |
+| OM-062 | Evidence-driven inspection order | Local bounded order and diagnosis bind actual inspection files to retained public samples. One coherent delivery with OM-063; live gateway integration remains pending. |
+| OM-063 | Deterministic diagnosis policy | Implemented with OM-062: public model hypotheses, sticky contradiction history and explicit uncertainty. No separate delivery credit or physical diagnosis claim. |
+| OM-064 | Healthy-machine preservation | OM-062 locally inspects all three healthy machines without intervention, then requires a new public health window. Reuse without extra credit; native acceptance remains pending. |
+| OM-065 | Ambiguous-evidence handling | OM-062 locally bounds repeated inspection and changing candidates before escalation. Reuse without extra credit; native acceptance remains pending. |
+| OM-066 | Recoverable-fault mission | Persistent ROS gateway integrates public diagnosis and actual owned client results, durable intent and new recovery. Controlled adapter/station tests pass; native fresh-scenario recovery remains pending. One coherent delivery includes shared cancellation and restart-refusal foundations, without duplicate credit. |
 | OM-067 | Persistent-fault escalation | Report evidence and leave the machine safe when recovery is unavailable. |
-| OM-068 | Mission cancellation propagation | Cancel navigation/inspection/maintenance ownership coherently. |
-| OM-069 | Interrupted mission recovery | Resume only after revalidating machine and robot state. |
+| OM-068 | Mission cancellation propagation | OM-066 connects exact cancellation to actual clients and retains lost results/effects locally. Reuse without extra credit; complete native owner containment and final electrical isolation remain pending. |
+| OM-069 | Interrupted mission recovery | OM-066 durably refuses unfinished missions, including actual process death. Resume/reconciliation still requires revalidating exact machine and robot ownership; refusal alone is not recovery acceptance. |
 | OM-070 | Complete scripted mission acceptance | Run the original station-power mission without an LLM. |
 
 ### Independent evaluation

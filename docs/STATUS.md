@@ -11,6 +11,141 @@ original localization branch; six migrated commits do not count as new deliverie
 [Draft PR #16](https://github.com/gokselozgur5/orbital-mechanic/pull/16) links #6/#7,
 which remain open until full live localization/navigation acceptance and review.
 
+**OM-066: persistent scripted gateway implemented; native acceptance pending.**
+[Mission runtime](MISSION_RUNTIME.md) now uses one ROS session for the public
+policy and existing navigation/inspection/maintenance clients. Exact command
+intent is fsynced before publication. Source/receipt freshness is checked after
+graph/file I/O, and one bounded cancellation preserves uncertain ownership and
+actual observed effects. Full owner observations are retained before closing the
+durable mission admission; process death or incomplete history cannot admit a new
+mission. Interrupted-mission reconciliation remains deliberately unavailable.
+
+Focused local checks compose the actual ROS adapter, capture/manifest reader and
+durable station with controlled peers, worker lifecycle and hold feedback.
+Recovery, healthy/persistent/ambiguous/blocked paths, cancellation, lost results,
+actual SIGKILL admission retention, startup budget, graph changes and storage
+failures are exercised. Before/after regressions reproduce stale command and
+terminal acceptance during the last graph read. This is one coherent delivery;
+shared OM-068 cancellation and OM-069 restart-refusal pieces earn no extra credit.
+
+All 811 local tests pass, including 35 new runtime/journal/ROS tests. The causal
+baseline, 203 Python AST files, 17 shell scripts and two XML sources pass; all 222
+executable source hashes stayed unchanged during the final 440.166-second run.
+Five retained actual-adapter runs and seven capture bundles reopen with validated
+mission journals: recovered, healthy, persistent, ambiguous and blocked.
+Four final deliberate mutations fail their intended publication-age, durable
+prior-intent, terminal-evidence and startup-budget assertions. An earlier
+terminal-age-only mutation remained refused by the independent journal guard;
+it is retained and excluded from mutation-detection claims.
+
+A separate regression reproduced shutdown of a caller-owned ROS context after
+initialization refusal. The adapter now cleans only its successfully initialized
+context, including its own subsequent node-construction failure. The same
+before/after control and both ownership branches pass. The preliminary 809-test
+pass predates this correction; final acceptance uses the full 811-test run.
+The temporary incorrect integer-validator import is also retained as a corrected
+candidate failure, not accepted validation.
+
+Evidence is retained in operator workspace `reviews/orbital-delivery-20261028/om066`,
+with final executable validation and complete retained runs under `verified/`.
+No native mission, final electrical isolation for all cancellations, interrupted
+mission resume, independent scoring, hosted CI acceptance or issue closure is
+claimed. Issue #11 and draft #21 remain In Progress; the earlier phase gates and
+full 100-delivery goal remain open.
+
+**OM-062: public inspection/diagnosis policy implemented.**
+[Mission policy](MISSION_POLICY.md) selects bounded inspection order from public
+measurements and binds actual inspection manifests/images to the exact retained
+telemetry sample. The selected sample and current consecutive pair must agree and
+remain fresh after artifact I/O. Historical high vibration cannot be erased by
+later low readings. At most two inspections per machine and six overall precede
+a decision or escalation; healthy stations require all three inspections and a new
+public recovery window without intervention.
+
+All 776 local tests pass, including 25 new policy tests, with the actual capture adapter, artifact reader,
+inspection client/owner and durable causal station over controlled ROS peers.
+Candidate regressions retain the original owner-generation fixture refusal,
+forgotten high-vibration history, exhausted global budget and coerced JSON boolean
+measurement failures before correction. A final source-read delay regression
+additionally reproduced acceptance of stale data: lifecycle and clock checks now
+run after registry I/O, with identical wall/simulation/admission controls failing
+before and passing after the correction. The policy verifies image integrity but
+does not classify pixels. Persistent escalation does not assert physical stopping
+or electrical isolation. OM-063 and the local OM-064/065 controls share this single
+delivery, with no duplicate credit. Evidence is in operator workspace
+`reviews/orbital-delivery-20261028/om062`.
+
+The causal baseline, 194 Python AST files, 17 shell scripts and two XML sources
+also pass; all 213 executable source hashes stayed unchanged during the final
+390.523-second run. Four deliberate mutations fail the intended type, artifact-I/O
+freshness, vibration-history and sticky-failure assertions. Five retained public
+input sequences and seven actual capture bundles reproduce healthy, recovered,
+persistent, ambiguous and blocked outcomes through the corrected policy offline.
+This same-code replay is reproducibility, not independent scenario scoring.
+
+The initial cumulative run was invalidated by our SIGINT during investigation of
+the registry-delay defect: the adapter caught the interrupt and its incomplete
+trace failed while the suite continued. That failed 773-test run is preserved,
+not accepted. The final corrected run passes the affected case and entire suite.
+The first failure-latch mutation only changed the initial error message and was
+excluded as latch proof; the corrected mutation preserves that error and fails
+when the restored file is wrongly accepted on a second decision.
+
+OM-066 adds the persistent gateway and bounded cancellation integration above.
+Interrupted-mission reconciliation, independent hidden-truth separation/scoring
+and the complete native scenario matrix remain open. Local checks do not supply
+hosted CI or native acceptance.
+
+**OM-061: retained local mission transition contract; native acceptance pending.**
+[Mission state](MISSION_STATE.md) connects existing navigation, inspection and
+maintenance request/result identities. It reserves before entering a gateway,
+keeps one unresolved step, separates navigation request/arm ACKs from measured
+completion and prohibits new work after unknown delivery, cancellation or expiry.
+Exact prior maintenance results and new control revisions precede the next action.
+Healthy/recovered outcomes require a new public verification window; energization
+or a previous window cannot supply success.
+
+All 751 local tests pass, including 31 new mission tests and two camera fixture
+controls. The causal baseline, 191 Python AST files, 17 shell scripts and two XML
+sources pass; executable source hashes remain unchanged throughout the final
+360.374-second cumulative run. Four deliberate transition mutations fail
+their intended assertions. Actual clients, the inspection owner and durable station
+effects are exercised over controlled navigation peers, camera workers and hold
+feedback. This does not establish a native route or camera-child mission.
+
+Three retained gateway input sequences reproduce healthy, recovered and
+effect-with-lost-reply states through the same contract offline. The last sequence
+retains unresolved ownership while the actual model is already isolated; the
+contract does not invent the missing result. Same-code replay is reproducibility,
+not independent mission scoring. The previous composed endpoint tests separately
+exercise real camera children; those are not the mission fixture's workers.
+
+Prepublication regressions cover telemetry after completion, the actual navigation
+supervisor's optional maintenance-hold rejection reason, a telemetry callback that
+first crosses the idle deadline, and malformed arm receipts. Identical retained
+tests fail before and pass after the respective corrections. The original terminal
+regression retains a 26-test file; the final mission file has 31 tests.
+
+An initial 746-test cumulative run failed in an existing composed cancellation
+case: its restore capture correctly refused an expired selected sample. A separate
+deterministic recreation at the recorded camera phase reproduces selection at the
+settling boundary, where the preceding frame is too early and the next frame is
+outside the allowed skew. The original selected/settled stamps were not logged.
+The positive external-station fixture now starts delivery after settling plus a
+camera period, with actual sample stamps and production limits unchanged. A
+separate zero-warmup control preserves that refusal. The formerly failing composed
+case and final cumulative suite pass. This fixture correction receives no extra
+delivery credit; the original source and failed log remain retained.
+
+This is a state contract; the policy is now provided separately by OM-062. No live
+mission service, durable mission restart, cross-process gateway lock or native mission
+acceptance is claimed. Issue #11 remains open/In Progress; independent evaluation
+#10 and full scenario acceptance #12 remain pending. Work is isolated on
+`codex/scripted-mission`, stacked on the unmerged maintenance branch. Source-bound
+evidence is in operator workspace `reviews/orbital-delivery-20261028/om061`, with
+final validation and retained inputs under `publication/`. Hosted CI and native access
+must be checked separately; local validation supplies neither acceptance.
+
 **OM-060: independent maintenance sequence recorder implemented; native acceptance pending.**
 [Sequence evidence](MAINTENANCE_SEQUENCE_EVIDENCE.md) now retains the actual
 command/state/result/telemetry messages from a powered idle baseline through a

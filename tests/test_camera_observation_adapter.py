@@ -10,6 +10,9 @@ from unittest.mock import patch
 
 from orbital import ros_proximity
 from orbital.inspection_artifacts import CaptureStore,read_capture
+from orbital.machine_registry import MachineRegistry
+from orbital.machine_telemetry import MachineTelemetry
+from inspection_transport_fixture import transport
 from proximity_fixture import Harness
 import test_map_binding as map_fixture
 
@@ -53,6 +56,40 @@ class CameraObservationAdapterTests(unittest.TestCase):
             self.assertEqual(result['camera']['telemetry_offset_ns'],offset)
             self.assertIn(('base_footprint',result['camera']['stamp_ns']),harness.camera_lookups)
             self.assertEqual(result['robot_state']['pose_stamp_ns'],result['sample_stamp_ns'])
+
+    def station_boundary_capture(self, warmup_ns):
+        class Clock:
+            def __init__(self): self.value = 1000.
+            def now(self): return self.value
+            def advance(self, seconds): self.value += seconds
+        clock = Clock()
+        harness = transport(self.root, 992.22, clock, writer=True, external_telemetry=True,
+                            station_warmup_ns=warmup_ns)
+        model = MachineTelemetry(MachineRegistry.load(self.root))
+        next_sample = 8800000000
+        def publish():
+            nonlocal next_sample
+            if harness.sim >= next_sample:
+                packet = model.sample(harness.sim)
+                next_sample = harness.sim+520000000
+                (self.root/'runtime/endpoint-test-telemetry.json').write_text(json.dumps(packet))
+        harness.spin_hook = publish
+        with patch('inspection_transport_fixture.time.sleep'):
+            return harness.run(invoke=lambda:ros_proximity.capture_machine_observation(
+                self.root,'pump',timeout=5.,now=clock.now))
+
+    def test_positive_external_station_fixture_waits_for_post_settling_pair(self):
+        value = self.station_boundary_capture(700000000)
+        self.assertGreater(value['sample_stamp_ns'],value['settled_at_sim_stamp_ns']+200000000)
+        self.assertGreaterEqual(value['camera']['stamp_ns'],value['settled_at_sim_stamp_ns'])
+        self.assertLessEqual(abs(value['camera']['telemetry_offset_ns']),100000000)
+        record,_ = read_capture(self.root,value['observation_id'],value['capture_artifact']['manifest_sha256'])
+        self.assertEqual(record['sample_stamp_ns'],value['sample_stamp_ns'])
+
+    def test_settling_boundary_without_matching_camera_still_refuses_capture(self):
+        with self.assertRaisesRegex(ValueError,'inspection_sample_expired'):
+            self.station_boundary_capture(0)
+        self.assertEqual(self.accepted_files(),[])
 
     def test_missing_image_info_or_publisher_cannot_publish_a_capture(self):
         for attribute in ('drop_image','drop_info','missing_camera_publisher'):

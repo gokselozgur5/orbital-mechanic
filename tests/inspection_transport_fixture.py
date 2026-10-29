@@ -43,7 +43,7 @@ class SharedClock:
     def close(self): self.memory.close(); self.file.close()
 
 
-def transport(root, origin, clock=None, writer=False, external_telemetry=False):
+def transport(root, origin, clock=None, writer=False, external_telemetry=False, *, station_warmup_ns=700000000):
     prepared = MapSnapshot.prepare(MachineRegistry.load(root))
     case = NS(root=root, directory=prepared.yaml_path.parent, payload=prepared.bundle()['grid'])
     harness = Harness(case)
@@ -57,6 +57,7 @@ def transport(root, origin, clock=None, writer=False, external_telemetry=False):
     harness.next_telemetry = (harness.sim//500000000+3)*500000000
     harness.next_camera = ((harness.sim-50000000)//200000000+1)*200000000+50000000
     station_callback = None
+    first_station_stamp = None
     last_station = None
     def deliver_station():
         nonlocal last_station
@@ -65,6 +66,7 @@ def transport(root, origin, clock=None, writer=False, external_telemetry=False):
         text = path.read_text()
         if text == last_station: return
         packet = json.loads(text)
+        if first_station_stamp is not None and packet['stamp_ns'] < first_station_stamp: return
         if not 0 <= harness.sim-packet['stamp_ns'] < 1000000000: return
         last_station = text
         station_callback(NS(data=text))
@@ -97,9 +99,14 @@ def transport(root, origin, clock=None, writer=False, external_telemetry=False):
         value = create(*args, **kwargs)
         subscribe = value.create_subscription
         def subscription(kind, topic, callback, qos):
-            nonlocal station_callback
+            nonlocal station_callback, first_station_stamp
             if topic == '/station/telemetry' and external_telemetry:
                 station_callback = callback
+                # This positive fixture starts its actual station stream after
+                # settling plus one camera period. Otherwise startup phase can
+                # select a sample whose nearest frame precedes settling. Keep
+                # both timestamps and every production freshness check intact.
+                first_station_stamp = 10**9+round((now()-origin)*1e9)+station_warmup_ns
                 return NS(topic=topic)
             if topic == '/station/telemetry':
                 # Bind provider startup to subscription, not map-preparation CPU time.

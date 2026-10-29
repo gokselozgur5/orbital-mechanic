@@ -85,6 +85,24 @@ Include a healthy scenario and an unrecoverable fault so success cannot mean bli
 
 Read [AGENTS.md](AGENTS.md) and [docs/STATUS.md](docs/STATUS.md). The status file distinguishes measured capabilities, prototype-only behavior and remaining work. Foxglove client opening is user-confirmed and its camera/TF subscriptions are visible in the server logs.
 
+[Mission state transitions](docs/MISSION_STATE.md) bind navigation, inspection and
+maintenance steps to one mission, retaining uncertain ownership and separating
+acknowledgement, terminal action results and a new public recovery window. Local
+client/station tests pass; native acceptance remains open.
+
+[Persistent scripted missions](docs/MISSION_RUNTIME.md) now connect the policy to
+navigation, inspection and maintenance through one ROS session, with durable
+intent, bounded cancellation and unfinished-mission refusal. Local adapter and
+station tests pass; native commissioning, restart reconciliation and independent
+mission scoring remain pending.
+
+[Public inspection and diagnosis policy](docs/MISSION_POLICY.md) chooses a bounded
+inspection order, verifies actual capture files against retained public telemetry
+and handles contradictory or changing measurements before intervention. Local
+tests cover all three healthy machines, recovery and bounded escalation. Diagnosis
+uses the simplified model's public measurements; native integration and independent
+scenario scoring remain pending.
+
 [Durable maintenance ownership](docs/DURABLE_MAINTENANCE.md) retains scenario,
 mission and action identities across station-process loss. A station-only restart
 cannot reclaim a generation or renew old attempts. Each explicit full-demo start
@@ -163,6 +181,6 @@ precede release; power stays off. Local controlled-transport checks pass;
 [owned restoration](docs/RESTORE_OPERATION.md) adds verified reset ownership,
 a third inspection and one reserved energization attempt. It reports actual
 powered measurements, including after cancellation. Observed recovery is a
-separate ten-second public measurement window. Full mission recovery orchestration
-and native maintenance acceptance remain pending; durable
+separate ten-second public measurement window. The scripted gateway orchestrates
+that recovery locally; native maintenance acceptance remains pending. Durable
 restart refusal and retained identity/history are implemented locally.
