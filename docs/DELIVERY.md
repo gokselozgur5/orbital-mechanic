@@ -39,6 +39,11 @@ provide prompts, but cannot automatically set a milestone or validate evidence.
 
 ## Commit, review and merge
 
+Validate each atomic commit locally, then publish a batch once it is ready.
+The model workflow checks pull requests and pushes to `main`; feature-branch
+pushes do not start a duplicate run. Reading existing run logs starts no jobs.
+Retry a failed run only after diagnosing its failure.
+
 1. Keep each commit to one coherent change with its related tests and docs.
    Verify repo-local personal email `gokselozgur5@gmail.com` before committing.
 2. Run the checks relevant to the changed behavior. Keep negative controls and
