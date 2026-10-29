@@ -84,6 +84,11 @@ Include a healthy scenario and an unrecoverable fault so success cannot mean bli
 
 Read [AGENTS.md](AGENTS.md) and [docs/STATUS.md](docs/STATUS.md). The status file distinguishes measured capabilities, prototype-only behavior and remaining work. Foxglove client opening is user-confirmed and its camera/TF subscriptions are visible in the server logs.
 
+[Private scenario inputs](docs/SCENARIOS.md) now bind repeatable station conditions
+to durable generations without exposing fault selectors as ROS parameters.
+Four profiles run through the local station adapter; blocked geometry, noisy
+observations, process isolation, independent scoring and native trials remain open.
+
 [Mission state transitions](docs/MISSION_STATE.md) bind navigation, inspection and
 maintenance steps to one mission, retaining uncertain ownership and separating
 acknowledgement, terminal action results and a new public recovery window. Local

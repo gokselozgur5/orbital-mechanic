@@ -2,7 +2,18 @@
 set -eo pipefail
 ROOT=$(cd "$(dirname "$0")/.." && pwd)
 # Each explicit full-demo launch creates a new world, never resumes an old mission.
-/usr/bin/python3 "$ROOT/scripts/maintenance-journal.py" prepare --new-world
+# Only the opaque public identity crosses into long-lived process arguments/env.
+if [[ $# == 0 ]]; then
+  assignment=$(/usr/bin/python3 "$ROOT/scripts/maintenance-journal.py" prepare --new-world)
+  trial_id=$(printf '%s' "$assignment" | /usr/bin/python3 -c 'import json,sys; print(json.load(sys.stdin)["trial_id"])')
+elif [[ $# == 2 && $1 == --trial-id ]]; then
+  trial_id=$2
+else
+  echo 'Usage: start-demo.sh [--trial-id PREPARED_TRIAL_ID]' >&2
+  exit 2
+fi
+/usr/bin/python3 "$ROOT/scripts/maintenance-journal.py" check-prepared --trial-id "$trial_id"
+export ORBITAL_TRIAL_ID="$trial_id"
 mkdir -p "$ROOT"/{logs,runtime/ros,runtime/gazebo-home,runtime/config,runtime/cache,runtime/data,runtime/tmp}
 ulimit -c 0
 # Gazebo 8 uses ~/.gz despite the XDG paths; keep the actual data in this project.

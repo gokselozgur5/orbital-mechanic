@@ -77,8 +77,9 @@ Every complete JSON telemetry sample includes:
 The original causal model and allowed temperature/current/vibration/power
 projection are reused. All current fault scenarios produce the same registry;
 the sample never serializes a model instance or publishes its hidden fault cause.
-The operator-only ROS `scenario` parameter remains outside the future planner
-gateway. A public projection is not process isolation or ROS authentication.
+The ROS `scenario` parameter has been removed. Versioned [private inputs](SCENARIOS.md)
+now configure the station under its durable owner lock. A public projection is
+not process isolation or ROS authentication.
 
 The adapter requires `use_sim_time=true` at startup and before every measurement.
 The existing demo launcher already passes that setting. The upstream

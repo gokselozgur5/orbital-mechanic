@@ -16,11 +16,13 @@ bash scripts/launch-thor.sh
 
 The launcher first requires the previous demo service to finish cleanup.
 
-Before spawning any component, `start-demo.sh` now runs `maintenance-journal.py prepare --new-world` under the station owner lock.
+Before spawning any component, `start-demo.sh` prepares and validates a versioned [private scenario input](SCENARIOS.md) under the station owner lock.
+
+An explicitly selected `--trial-id` validates that existing unclaimed input instead of replacing it with the default.
 
 That explicit full-demo start prepares a new opaque scenario generation, then starts a new Gazebo world.
 
-The station consumes that generation exactly once, binding its owner run, station run and current registry identity.
+The station consumes that generation exactly once, binding its owner run, station run, current registry identity and exact private input digest.
 
 Starting only `machine-telemetry.py` without a prepared generation, or restarting it against a claimed generation, fails before publishing station measurements.
 
@@ -48,7 +50,7 @@ The journal lives at `runtime/station-service/events.jsonl`, outside Git.
 
 | Record | Meaning |
 | --- | --- |
-| Scenario | An explicit new-world generation was prepared against a registry identity. |
+| Scenario | An explicit new-world generation was prepared against a registry identity. New `scenario_v2` records also bind a private configuration digest; legacy records remain readable. |
 | Claim | One owner/station generation consumed it; another claim is refused. |
 | Admission | Exact request, mission and action identity were retained before hold acquisition. A cancellation also reserves its child identity before stopping the original. |
 | Effect intent | One named attempt was retained before the final live checks and actuator call. An intent alone never proves application. |

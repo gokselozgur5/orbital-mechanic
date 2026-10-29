@@ -139,7 +139,7 @@ All items below start pending except the goal-contract commit itself. Dependenci
 
 | ID | Deliverable | Acceptance gate |
 | --- | --- | --- |
-| OM-071 | Scenario fixture schema | Define repeatable seeds and initial conditions outside planner observations. |
+| OM-071 | Scenario fixture schema | Versioned private seeds/initial conditions bind to actual station claims and opaque launch IDs. Four local profiles run; blocked geometry, noisy telemetry, native trials and independent isolation/scoring remain open. One coherent fixture delivery, not OM-072 acceptance. |
 | OM-072 | Hidden-truth isolation check | Prove planner/tool inputs cannot read evaluator-only fields. |
 | OM-073 | Healthy scenario acceptance | Score correct non-intervention and unnecessary actions. |
 | OM-074 | Recoverable scenario acceptance | Score measured recovery rather than reported success. |

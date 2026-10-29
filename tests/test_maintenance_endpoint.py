@@ -17,7 +17,7 @@ from orbital import inspection_owner, ros_machine_telemetry, ros_maintenance
 from orbital.inspection_artifacts import read_capture
 from orbital.inspection_protocol import canonical
 from orbital.maintenance_protocol import result, state
-from orbital.maintenance_journal import prepare_scenario, read_history
+from orbital.maintenance_journal import prepare_configured_scenario, read_history
 from orbital.maintenance_observation import RecoveryEvidence
 from orbital.machine_registry import MachineRegistry
 from orbital.isolation_trace import IsolationTrace, TOPICS as TRACE_TOPICS, verify_isolation
@@ -41,7 +41,7 @@ class MaintenanceEndpointTests(unittest.TestCase):
                      cancel_isolate=False, sequence_retained=False):
         self.assertFalse(cancel_isolate and (retained or recovery))
         self.assertFalse(retained and sequence_retained)
-        prepare_scenario(self.root)
+        prepared = prepare_configured_scenario(self.root, 'recoverable', 0)
         host_started = time.monotonic()
         clock = SharedClock(self.root, create=True)
         self.addCleanup(clock.close)
@@ -253,7 +253,7 @@ class MaintenanceEndpointTests(unittest.TestCase):
                 not recovery or h.sim-values[-1]['state_change']['effect']['applied_stamp_ns'] >= 12000000000)
         h.modules['rclpy'].spin_once = spin
         try:
-            with patch.dict(sys.modules, h.modules), patch.object(ros_maintenance, 'StationMaintenance', side_effect=station_owner), patch('orbital.inspection_worker.subprocess.Popen', side_effect=launch), patch.object(inspection_owner, 'read_capture', side_effect=read):
+            with patch.dict(os.environ, {'ORBITAL_TRIAL_ID':prepared['trial_id']}), patch.dict(sys.modules, h.modules), patch.object(ros_maintenance, 'StationMaintenance', side_effect=station_owner), patch('orbital.inspection_worker.subprocess.Popen', side_effect=launch), patch.object(inspection_owner, 'read_capture', side_effect=read):
                 for name in ('ros_health_interlock', 'ros_navigation_action', 'ros_navigation_supervisor'):
                     navigation = load('orbital.'+name, ROOT/'orbital'/f'{name}.py')
                 motion = load('maintenance_test_motion', ROOT/'scripts/motion-guard.py')
@@ -285,6 +285,9 @@ class MaintenanceEndpointTests(unittest.TestCase):
             'guard_failure': station.holds.failure}
         self.assertTrue(outputs['/maintenance/reply'][0]['accepted'])
         history = read_history(self.root)
+        self.assertEqual(history.current, prepared['trial_id'])
+        self.assertEqual(history.scenarios[history.current]['configuration_sha256'], station.model.configuration_sha256)
+        self.assertEqual(history.scenarios[history.current]['claim']['station_run_id'], station.model.run_id)
         for value in outputs['/maintenance/result']:
             self.assertEqual(history.actions[value['action_id']]['result'], value)
         self.assertEqual(history.status()['unresolved_count'], 0)

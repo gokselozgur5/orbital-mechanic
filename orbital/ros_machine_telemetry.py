@@ -1,10 +1,9 @@
 """Publish the causal station and serialize maintenance on that same instance."""
 import json
+import os
 import time
 
 from orbital.machine_registry import MachineRegistry
-from orbital.machine_telemetry import MachineTelemetry
-from orbital.machines import Fault
 
 
 def run(root, *, stop_requested=lambda:False, now=time.monotonic):
@@ -22,11 +21,13 @@ def run(root, *, stop_requested=lambda:False, now=time.monotonic):
             if node.get_parameter('use_sim_time').value is not True:
                 raise ValueError('Machine telemetry requires use_sim_time=true')
         require_sim_time()
-        node.declare_parameter('scenario', 'latched_controller')
-        model = MachineTelemetry(registry, Fault(node.get_parameter('scenario').value))
+        # Private initial conditions are read under the station owner lock. ROS
+        # parameters/events and process arguments never carry a fault selector.
+        maintenance = StationMaintenance(root, node, None, now=now,
+                                         expected_trial_id=os.environ.get('ORBITAL_TRIAL_ID'))
+        model = maintenance.model
         telemetry = node.create_publisher(String, '/station/telemetry', 5)
         voltage = node.create_publisher(Float32, '/station/bus_voltage', 5)
-        maintenance = StationMaintenance(root, node, model, now=now)
 
         def update():
             require_sim_time()
