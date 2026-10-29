@@ -26,15 +26,20 @@ native navigation acceptance is now tracked in
 [#30](https://github.com/gokselozgur5/orbital-mechanic/issues/30). Phase 2 remains
 open. Issues #8/#9/#11 also remain open for native acceptance despite their
 implementation merges. Earlier delivery notes below retain their historical
-validation counts; [TRACKING.md](TRACKING.md) records the updated handoff.
+validation counts and deployment snapshots; [TRACKING.md](TRACKING.md) records
+the updated handoff. The following paragraph is the current live deployment.
 
-SSH access returned on 2026-10-29. Native domain-84 arm and CLI protocol proofs
-pass with synthetic feedback. The live OM-017 baseline now includes the single
-OM-018 supervisor fix: guarded readiness, map binding, native TF attribution and
-independent stationary localization pass after a navigation-only restart.
-Later map, CLI and maintenance integrations still await their coordinated
-deployment. Next: explicitly load the revised map/localization and commission
-the observation tools before live arming, measured stopping and route trials.
+On 2026-10-29, source `0373a75` was deployed in one deliberate new-world restart.
+All 161 packaged source files match; navigation records 160 startup source pins
+under identity `e07200d7b7cad39bf8b762eb9cffe20560b75dc009b9eba555295aacf7c84634`.
+Revised map `f02e11a9cb0e4f2f`, sensors/frames, unseeded refusal, explicit origin
+seed, guarded Nav2 activation, native TF attribution, CLI status and fresh public
+station observations pass. Independent stationary error is 0.00809 m / 0.01144 rad.
+The new durable station generation has zero missions/actions; the supervisor is
+healthy, idle and latched, with zero command/audit/forwarded counters. This does
+not commission maintenance effects or a route. Next: commission the independent
+trajectory recorder, then live arming, measured stopping and three-machine trials.
+See [the rollout evidence](NAVIGATION.md#coordinated-native-deployment).
 
 The [native station startup proof](DURABLE_MAINTENANCE.md#native-startup-proof)
 now passes six controls across nine actual CLI children on isolated Jazzy domain
