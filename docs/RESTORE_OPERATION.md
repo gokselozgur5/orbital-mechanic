@@ -69,6 +69,10 @@ bound this chain to three records; recursive restore prerequisites are refused.
 Command/state envelopes and public telemetry keep their existing versions.
 The isolation recorder does not verify restoration or full sequence recovery.
 
+OM-060's separate [sequence recorder](MAINTENANCE_SEQUENCE_EVIDENCE.md) now binds
+the observed isolation/reset/restore ancestry and raw post-effect packets, with
+an optional required public recovery window. Native sequence acceptance remains open.
+
 ## Recovery and evidence limits
 
 The existing `RecoveryEvidence` independently requires all machines powered,

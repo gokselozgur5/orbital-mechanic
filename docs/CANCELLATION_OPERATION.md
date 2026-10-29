@@ -128,7 +128,9 @@ revision check. This was corrected before publication within OM-056.
 
 The cooperative fixture clock isolates ownership from host scheduling; production
 uses real monotonic clocks and unchanged freshness limits. These controls do not
-prove native DDS/timing, complete sequence replay, physical electrical isolation,
-repair or mission acceptance. The independent isolation recorder does not yet
-replay this composite workflow. Source-bound evidence is retained in operator
-workspace `reviews/orbital-delivery-20261028/om056`.
+prove native DDS/timing, physical electrical isolation, repair or mission acceptance.
+The single-isolation recorder does not replay this composite workflow; OM-060's
+separate [sequence recorder](MAINTENANCE_SEQUENCE_EVIDENCE.md) now verifies its
+retained public results and raw sample references locally. Native sequence
+acceptance remains pending. Original source-bound cancellation evidence is in
+operator workspace `reviews/orbital-delivery-20261028/om056`.

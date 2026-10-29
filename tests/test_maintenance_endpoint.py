@@ -21,6 +21,7 @@ from orbital.maintenance_journal import prepare_scenario, read_history
 from orbital.maintenance_observation import RecoveryEvidence
 from orbital.machine_registry import MachineRegistry
 from orbital.isolation_trace import IsolationTrace, TOPICS as TRACE_TOPICS, verify_isolation
+from orbital.maintenance_trace import MaintenanceTrace, verify_maintenance
 from orbital.trajectory import TraceWriter
 from inspection_transport_fixture import SharedClock, transport
 from test_isolation_trace import sources as trace_sources
@@ -37,8 +38,9 @@ class MaintenanceEndpointTests(unittest.TestCase):
             shutil.copyfile(ROOT/name, self.root/name)
 
     def run_endpoint(self, mode='success', *, retained=False, reset=False, restore=False, recovery=False,
-                     cancel_isolate=False):
+                     cancel_isolate=False, sequence_retained=False):
         self.assertFalse(cancel_isolate and (retained or recovery))
+        self.assertFalse(retained and sequence_retained)
         prepare_scenario(self.root)
         host_started = time.monotonic()
         clock = SharedClock(self.root, create=True)
@@ -51,6 +53,7 @@ class MaintenanceEndpointTests(unittest.TestCase):
         station = None
         trace = trace_writer = None
         mission_id, action_id = uuid.uuid4().hex, uuid.uuid4().hex
+        final_id = uuid.uuid4().hex
         workers = []
         request = None
         cancelled = False
@@ -159,12 +162,14 @@ class MaintenanceEndpointTests(unittest.TestCase):
         def station_owner(*args, **kw):
             nonlocal station, trace, trace_writer
             station = real_station(*args, **kw)
-            if retained:
+            if retained or sequence_retained:
                 registry = station.owner.model.registry
-                trace_writer = TraceWriter(self.root, 'composed-isolation')
+                trace_writer = TraceWriter(self.root, 'composed-sequence' if sequence_retained else 'composed-isolation')
                 self.addCleanup(lambda:trace_writer.stream.close() if not trace_writer.closed else None)
-                trace = IsolationTrace(registry, {'run_id': station.owner.run_id,
-                    'mission_id': mission_id, 'action_id': action_id, 'machine_id': 'pump'}, writer=trace_writer)
+                identity = {'run_id':station.owner.run_id,'mission_id':mission_id,
+                    'action_id':final_id if sequence_retained else action_id,'machine_id':'pump'}
+                if sequence_retained: identity['require_recovery'] = recovery
+                trace = (MaintenanceTrace if sequence_retained else IsolationTrace)(registry, identity, writer=trace_writer)
                 trace.begin(round(now()*1e9), h.sim, trace_sources(registry))
             return station
 
@@ -197,6 +202,8 @@ class MaintenanceEndpointTests(unittest.TestCase):
                     'command_id': uuid.uuid4().hex, 'op': sequence[index],
                     'arguments': {'machine_id': 'pump', 'station_run_id': status['station_run_id'],
                                   'control_revision': status['control_revision'], 'timeout_s': 15.}}
+                if sequence_retained and not cancel_isolate and index == len(sequence)-1:
+                    request['action_id'] = final_id
                 if index == 1: request['arguments']['isolation_action_id'] = action_id
                 if index == 2: request['arguments']['reset_action_id'] = outputs['/maintenance/result'][-1]['action_id']
                 deliver('/maintenance/command', NS(data=canonical(request)))
@@ -213,6 +220,7 @@ class MaintenanceEndpointTests(unittest.TestCase):
                             'station_run_id':request['arguments']['station_run_id'],
                             'target_action_id':request['action_id'], 'timeout_s':20.}}
                         if cancel_isolate else {**request,'op':'cancel','arguments':{}})
+                    if sequence_retained and cancel_isolate: cancellation_request['action_id'] = final_id
                     deliver('/maintenance/command', NS(data=canonical(cancellation_request)))
                     cancelled = True
                 workflow = station.owner.cancellation
@@ -239,9 +247,8 @@ class MaintenanceEndpointTests(unittest.TestCase):
             return value
         def finished():
             values = outputs.get('/maintenance/result', [])
-            if cancel_isolate:
-                return bool(values and values[-1]['operation'] == 'cancel_isolate')
-            return len(values) == len(sequence) and (
+            done = bool(values and values[-1]['operation'] == 'cancel_isolate') if cancel_isolate else len(values) == len(sequence)
+            return done and (
                 trace is None or trace.assess(round(now()*1e9), h.sim) is not None) and (
                 not recovery or h.sim-values[-1]['state_change']['effect']['applied_stamp_ns'] >= 12000000000)
         h.modules['rclpy'].spin_once = spin
@@ -284,7 +291,10 @@ class MaintenanceEndpointTests(unittest.TestCase):
         return terminal, outputs
 
     def test_cancel_isolate_after_energization_uses_fourth_real_capture(self):
-        terminal,output=self.run_endpoint('cancel_after_effect',restore=True,cancel_isolate=True)
+        terminal,output=self.run_endpoint('cancel_after_effect',restore=True,cancel_isolate=True,sequence_retained=True)
+        observed=verify_maintenance(self.root,self.retained_path)['observation']
+        self.assertEqual(len(observed['actions']),5)
+        self.assertFalse(observed['final_measurements']['powered'])
         self.assertEqual((terminal['status'],terminal['final_state']),('succeeded','isolated'),self.endpoint_diagnostic)
         self.assertEqual(terminal['target_result']['status'],'cancelled')
         self.assertTrue(terminal['target_result']['state_change']['verification']['powered'])
@@ -302,21 +312,29 @@ class MaintenanceEndpointTests(unittest.TestCase):
             self.assertGreater(sample['stamp_ns'],terminal['isolation_result']['finished_sim_stamp_ns'])
 
     def test_cancel_isolate_before_real_restore_reap_confirms_existing_isolation(self):
-        terminal,output=self.run_endpoint('cancel',restore=True,cancel_isolate=True)
+        terminal,output=self.run_endpoint('cancel',restore=True,cancel_isolate=True,sequence_retained=True)
+        observed=verify_maintenance(self.root,self.retained_path)['observation']
+        self.assertFalse(observed['observed_reset_restore_chain'])
         self.assertEqual((terminal['status'],terminal['final_state']),('succeeded','isolated'),self.endpoint_diagnostic)
         self.assertEqual(terminal['target_result']['state_change']['disposition'],'not_applied')
         self.assertIsNone(terminal['isolation_request'])
         self.assertEqual(output['/station/telemetry'][-1]['control']['revision'],2)
 
     def test_cancel_isolate_late_real_artifact_keeps_energized_failure_explicit(self):
-        terminal,output=self.run_endpoint('compensation_late',restore=True,cancel_isolate=True)
+        terminal,output=self.run_endpoint('compensation_late',restore=True,cancel_isolate=True,sequence_retained=True)
+        observed=verify_maintenance(self.root,self.retained_path)['observation']
+        self.assertTrue(observed['final_measurements']['powered'])
+        self.assertEqual(observed['server_status'],'failed')
         self.assertEqual((terminal['status'],terminal['final_state']),('failed','energized'),self.endpoint_diagnostic)
         self.assertEqual(terminal['isolation_result']['state_change']['disposition'],'not_applied')
         self.assertTrue(output['/station/telemetry'][-1]['machines']['pump']['powered'])
         self.assertEqual(output['/station/telemetry'][-1]['control']['revision'],3)
 
     def test_cancel_isolate_second_cancel_after_effect_retains_applied_isolation(self):
-        terminal,output=self.run_endpoint('compensation_cancel',restore=True,cancel_isolate=True)
+        terminal,output=self.run_endpoint('compensation_cancel',restore=True,cancel_isolate=True,sequence_retained=True)
+        observed=verify_maintenance(self.root,self.retained_path)['observation']
+        self.assertEqual(observed['server_status'],'cancelled')
+        self.assertFalse(next(v for v in observed['actions'] if v['operation']=='cancel_isolate')['reported_state_observed'])
         self.assertEqual(terminal['status'],'cancelled',self.endpoint_diagnostic)
         self.assertEqual(terminal['final_state'],'unverified')
         self.assertEqual(terminal['isolation_result']['state_change']['disposition'],'applied')
@@ -324,7 +342,8 @@ class MaintenanceEndpointTests(unittest.TestCase):
         self.assertEqual(output['/station/telemetry'][-1]['control']['revision'],4)
 
     def test_restore_uses_third_real_capture_then_independent_recovery_window(self):
-        terminal, output = self.run_endpoint(restore=True, recovery=True)
+        terminal, output = self.run_endpoint(restore=True, recovery=True, sequence_retained=True)
+        self.assertTrue(verify_maintenance(self.root,self.retained_path)['observation']['post_restore_recovery_verified'])
         self.assertEqual(terminal['status'], 'succeeded', self.endpoint_diagnostic)
         self.assertEqual(terminal['operation'], 'restore')
         self.assertEqual(terminal['reset'], output['/maintenance/result'][1])

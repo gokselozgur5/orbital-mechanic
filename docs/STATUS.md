@@ -11,6 +11,48 @@ original localization branch; six migrated commits do not count as new deliverie
 [Draft PR #16](https://github.com/gokselozgur5/orbital-mechanic/pull/16) links #6/#7,
 which remain open until full live localization/navigation acceptance and review.
 
+**OM-060: independent maintenance sequence recorder implemented; native acceptance pending.**
+[Sequence evidence](MAINTENANCE_SEQUENCE_EVIDENCE.md) now retains the actual
+command/state/result/telemetry messages from a powered idle baseline through a
+named terminal action. The read-only observer starts no service or effect.
+Replay binds requests, exact separately observed prior/child results, the complete
+control chain, reset eligibility and paired postconditions to raw source packets.
+Nested successful results or recomputed hashes cannot replace missing/contradictory
+source evidence. Internal cancellation intent is explicitly owner-reported;
+its separate public child result and effect observations remain mandatory.
+
+Historical decisions and final current measurements are checked separately.
+Optional required recovery reuses the existing public ten-second checker after
+the last observed restoration; energization, cancellation outcome and recovery
+remain distinct. Unmatched/rejected commands have no terminal observation in
+this recorder and leave it incomplete; admission replies remain client diagnostics.
+The existing bounded source/trace recorder and OM-058/059 model/refusal/loss gates
+are reused without duplicate delivery credit.
+
+All 718 local tests pass, including 30 new sequence/subscriber/CLI controls and
+five existing composed cases now retaining and replaying full sequences with
+three/four real camera children. The causal baseline, 189 Python AST files,
+17 shell scripts and two XML sources pass; executable source hashes stayed
+unchanged throughout validation. Four deliberate mutations are detected by
+the intended source-binding, reset-basis, final-pair and recovery-origin tests.
+A candidate regression incorrectly credited
+a previous mission's restoration to a later cancelled/unapplied intervention;
+the identical test fails before and passes after requiring restoration inside the
+captured control chain. The retained regression file has 23 tests; the final
+sequence file adds a separate final-pair freshness control.
+
+An initial instrumented 718-test run failed on five cleanup copies of a missing
+`ready.json`: the direct fixture writes a ready boundary, while the actual ROS
+adapter creates that marker. All five retained raw traces independently replay.
+The corrected evidence helper preserves the original files and does not create
+a fictitious marker. Product bytes are unchanged; the corrected cumulative run
+passes all 718 tests in 342.732 wall seconds, with all five copied raw traces
+independently replayed. Evidence is in operator workspace
+`reviews/orbital-delivery-20261028/om060`, with final validation under `final/`.
+Native DDS/timing/three-machine traces,
+independent camera/hold acceptance and full mission evaluation/recovery remain open.
+The known hosted-CI account block does not establish a remote test pass.
+
 **OM-057: durable scenario/action ownership implemented; native acceptance pending.**
 [Retained maintenance history](DURABLE_MAINTENANCE.md) now joins the actual station,
 owner and full-demo launcher. The explicit new-world start prepares one opaque
@@ -48,8 +90,8 @@ separate from the historical core reproduction and two candidate regressions.
 Source-bound evidence is in operator workspace
 `reviews/orbital-delivery-20261028/om057`.
 
-Native commissioning, independent composite sequence replay, mission recovery and
-full maintenance acceptance remain open. The previously reported GitHub Actions
+OM-060 now implements independent local composite replay. Native commissioning,
+mission recovery and full maintenance acceptance remain open. The previously reported GitHub Actions
 account payment/spending-limit block is unresolved; no remote CI pass is claimed.
 
 **OM-056: cancellation with observed isolation implemented; native acceptance pending.**
@@ -105,9 +147,9 @@ mutations are detected again, and pinned executable source bytes remain unchange
 This adds the missing server-owned workflow, reusing existing cancellation,
 isolation and idempotency controls without duplicate delivery credit. Holds are
 sequential, not one continuous mission token. OM-057 adds local durable history
-and restart refusal. Native DDS/timing, independent composite replay, live mission
-recovery and full acceptance remain open. The independent isolation recorder does
-not certify this workflow.
+and restart refusal. OM-060 adds a separate local composite replay; the original
+single-isolation recorder does not certify this workflow. Native DDS/timing,
+live mission recovery and full acceptance remain open.
 
 **OM-055: owned power restoration implemented; native acceptance pending.**
 The [restore endpoint](RESTORE_OPERATION.md) requires the same owner's verified

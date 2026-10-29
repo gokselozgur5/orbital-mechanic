@@ -5,7 +5,7 @@ one reset attempt after a verified isolation. The same station executor owns
 sampling, replay history and mutation. A reset application is observable control
 state; it does not prove fault clearance, successful repair or recovery. Power
 stays off. OM-055 now supplies [owned restoration](RESTORE_OPERATION.md) as a
-separate explicit action. Restart reconciliation remains open.
+separate explicit action. OM-057 supplies [durable restart refusal and historical records](DURABLE_MAINTENANCE.md); live mission recovery remains open.
 
 ## Request and eligibility
 
@@ -52,9 +52,10 @@ The station reserves the machine's one attempt immediately before the synchronou
 pulse. A known mutation-free model rejection can release that reservation; an
 unexpected exception retains it even when `reset_count` did not advance. Another
 action or owner cannot use an unknown attempt again. Successful exact replay
-returns history without another gate or pulse. This is in-memory station-run
-ownership, not durable recovery across power/process loss. A new station run
-invalidates the old mission; restarting cannot authorize its continuation.
+returns history without another gate or pulse. OM-057 additionally persists scenario,
+mission/action and attempt boundaries in the live station. A station-only restart
+refuses publication; a new explicit world requires new mission/action IDs.
+Historical records do not adopt an old mission or establish power-loss recovery.
 
 ## Verification, cancellation and limits
 
@@ -76,7 +77,9 @@ inspection reference and exact effect/verification. Nested reset prerequisites
 are forbidden. Command/state envelopes remain schema 1 and public telemetry
 remains schema 2; isolation results remain unchanged. This historical result is
 not current permission or a retained independent source trace. The isolation
-recorder cannot verify a reset. Independent reset/sequence evidence is pending.
+recorder cannot verify a reset. OM-060's separate
+[sequence recorder](MAINTENANCE_SEQUENCE_EVIDENCE.md) now resolves reset/restore
+and cancellation evidence to actual retained public packets locally; native acceptance remains pending.
 
 Local controls use the actual station/guard/navigation code, separate real
 capture child and artifact reader over controlled ROS transport. They cover

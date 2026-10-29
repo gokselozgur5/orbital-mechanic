@@ -11,7 +11,8 @@ from orbital.ros_proximity import authority
 from orbital.ros_trajectory import runtime_snapshot, message_text
 
 
-def run(root, writer, identity, *, duration=60., warmup=10., now=time.monotonic_ns):
+def run(root, writer, identity, *, duration=60., warmup=10., now=time.monotonic_ns,
+        trace_factory=IsolationTrace, node_prefix='orbital_isolation_observer'):
     node = None
     initialized = complete = False
     code, details = 1, {}
@@ -21,14 +22,14 @@ def run(root, writer, identity, *, duration=60., warmup=10., now=time.monotonic_
         finite(duration, .1, 120.); finite(warmup, .1, 30.)
         registry = MachineRegistry.load(root)
         before = runtime_snapshot(root)
-        trace = IsolationTrace(registry, identity, writer=writer)
+        trace = trace_factory(registry, identity, writer=writer)
         import rclpy
         from rclpy.parameter import Parameter
         from rclpy.signals import SignalHandlerOptions
         from std_msgs.msg import String
         rclpy.init(args=[], signal_handler_options=SignalHandlerOptions.NO)
         initialized = True
-        node = rclpy.create_node('orbital_isolation_observer_'+uuid.uuid4().hex[:12],
+        node = rclpy.create_node(node_prefix+'_'+uuid.uuid4().hex[:12],
                                 parameter_overrides=[Parameter('use_sim_time', value=True)])
         expected = {name:[('station_telemetry', 'std_msgs/msg/String')] for name in TOPICS[1:]}
         expected['/clock'] = BASE_TOPICS['/clock']

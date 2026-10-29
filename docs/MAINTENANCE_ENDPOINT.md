@@ -145,7 +145,8 @@ trace. The [independent recorder](ISOLATION_EVIDENCE.md) now retains source pack
 for isolation replay; it explicitly refuses reset results as isolation evidence.
 Reset results use schema 2 with the prior isolation result and powered eligibility
 references, plus temperature in their post-effect verification. Existing isolation
-results keep schema 1. Independent reset replay and native acceptance remain open.
+results keep schema 1. OM-060's [sequence recorder](MAINTENANCE_SEQUENCE_EVIDENCE.md)
+adds independent local reset/restore/cancellation replay; native acceptance remains open.
 Restore results use schema 3 with their prior reset chain and actual energized
 measurements. Cancel after restore can report a verified applied effect with
 power on; it is not a rollback or an isolation claim. Successful restoration is
