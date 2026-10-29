@@ -776,7 +776,7 @@ map binding and readiness; an already-loaded old revision is intentionally
 rejected. No native process or simulation was changed. OM-018/019/020 and the
 measured tour remain pending; SSH access to the configured Thor is unresolved.
 
-**OM-018: arm callback races are fixed locally; native commissioning is pending.**
+**OM-018: arm callback races pass native protocol tests; live deployment is pending.**
 The command callback now expires the health lease before admitting a request or
 arm. If moving feedback arrives while a guard-arm response is pending, that
 target is invalidated even when stationary feedback returns before the next tick.
@@ -786,12 +786,20 @@ Seven transport-controlled tests execute the production supervisor, health
 interlock and action session. Four fail on `b712384` and all seven pass with the
 fix; the full local suite passes 107 tests. Positive controls retain dispatch
 after a fresh acknowledgment and ownership while an arm response is unresolved.
-`scripts/check-navigation-arm.py` provides seven corresponding native ROS cases,
-but has not run: SSH to the configured Thor timed out from the current network.
-Local tests use ROS transport doubles and do not establish DDS or physical-motion
-acceptance. The live deployment remains last verified at OM-017. Next: run the
-native negative/positive controls, inspect current service ownership, deploy the
-reviewed fix and finish stationary-arm commissioning before physical-loss trials.
+On 2026-10-29, SSH access returned and `scripts/check-navigation-arm.py` passed all
+seven cases through native Jazzy middleware on Thor. The identical driver on
+pre-fix `b712384` reproduced expired-health arm acceptance; merged source
+`41cca9a` passed. The goal-rejecting stand-in recorded one positive-control request
+after its guard reply. Final state was idle/latched with no forwarded commands.
+Disposable proof cgroups exited; the live service identities and selected source
+hashes stayed unchanged. [NAV2_INTEGRATION.md](NAV2_INTEGRATION.md) records exact
+source/driver identities, the retained setup failure and the evidence manifest.
+
+This used synthetic health/odometry in empty-checked domain 84, without a world or
+drive connection. The live deployment remains at OM-017. Next: commission the
+actual navigation CLI, deploy the reviewed source with explicit map/localization
+checks, then verify live stationary arming and physical-loss stopping. Remaining
+native acceptance is tracked in [#30](https://github.com/gokselozgur5/orbital-mechanic/issues/30).
 
 **OM-017: map revision binding is deployed and accepted.**
 Startup validates the loaded map-server revision and artifacts; readiness also

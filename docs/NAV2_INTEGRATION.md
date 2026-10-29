@@ -624,7 +624,7 @@ Raw artifacts and pre-deployment backups are in private
 No route goal was requested; independent arrival and physical failure stopping
 remain required. The prior startup-manifest mismatch is resolved by this explicit
 deployment, while earlier manifests remain historical evidence.
-## OM-018 arm callback regression: native acceptance pending
+## OM-018 arm callback regression: native protocol accepted
 
 The supervisor must validate health on command admission, even if its periodic
 timer is delayed. A guard response must not dispatch a target after an intervening
@@ -637,9 +637,40 @@ expired-health request, expired-health arm, moving-feedback acknowledgment and
 move/recovery-before-tick. The fixed source passes all seven and the full
 107-test local suite. The same test file was used on both source variants.
 
-The native counterpart is `scripts/check-navigation-arm.py`, restricted to empty
-localhost ROS domain 84 with the production guard/supervisor, synthetic health
-and a Nav2 stand-in that records and rejects goals. Its seven cases are prepared,
-not accepted: the configured Thor SSH connection timed out on 2026-10-28. No
-runtime deployment or physical-arm acceptance follows from the local result.
-Run the native regression and positive controls before deploying this change.
+On 2026-10-29, `scripts/check-navigation-arm.py` ran on Thor ARM64 / ROS 2 Jazzy
+with Python 3.12.3, after checking that localhost ROS domain 84 was empty. The
+production guard/supervisor consumed synthetic health and odometry; a Nav2
+stand-in recorded and rejected goals. Both source variants used the identical
+driver, SHA-256
+`1debfb95e841303030440ef26c404bcb41d424e3d4ef2b67721c618a3c86160b`.
+
+The pre-fix source `b71238410eeefe3f1470ffc8c62398b4efd35ad2` failed at
+`Expired health accepted while periodic tick was delayed`. The merged source
+`41cca9a1f7dc729042fecc67812f68cc757850de` passed all seven cases:
+
+- Expired health refuses arm even while the supervisor timer is delayed.
+- Moving feedback refuses arm before a guard RPC.
+- Guard unlatching without its response cannot dispatch.
+- Lost stationarity during a pending arm invalidates the target.
+- A move/recovery pair before the next timer cannot revive the old target.
+- A fresh stationary target dispatches only after the guard response.
+- A late response cannot dispatch or rearm the old target; pending RPC ownership
+  is retained until resolved.
+
+The positive control recorded exactly one rejected goal, after its guard reply.
+Final supervisor state was idle/latched, with no target and zero forwarded drive
+commands. Source hashes stayed unchanged. Both disposable proof cgroups exited
+and were absent on readback; the live demo/localization/navigation InvocationIDs
+and ten inventoried source hashes were unchanged before and after each run.
+
+An initial launcher failed before ROS initialization because it enabled shell
+`nounset` before sourcing Jazzy. Its log is retained and excluded from protocol
+acceptance; the corrected launcher sources ROS before enabling `nounset`.
+
+Raw logs, source pins, launch scripts and service receipts are retained in the
+operator workspace at `reviews/orbital-native-resume-20261029/arm-evidence`.
+Its 12-file manifest SHA-256 is
+`af64eb5e283824147be23fcf231fd6dae8f6b26ce5e13d5448b18cf4b7286bb6`.
+This establishes native middleware protocol behavior, not live deployment,
+physical arming/stopping or route acceptance. Those remaining gates are tracked
+in [#30](https://github.com/gokselozgur5/orbital-mechanic/issues/30).
